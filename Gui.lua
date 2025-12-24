@@ -33,7 +33,23 @@ do
     end
 end
 
--- [2] CREATE WINDOW
+-- [2] REGISTER ICONS (Lucide & Geist)
+-- Using standard Lucide Asset IDs for Roblox
+WindUI.Creator.AddIcons("lucide", {
+    ["home"]        = "rbxassetid://10723406988",
+    ["settings"]    = "rbxassetid://10734950309",
+    ["info"]        = "rbxassetid://10709752906",
+    ["play"]        = "rbxassetid://10723404337",
+    ["stop"]        = "rbxassetid://10709791437", -- X-circle style usually
+    ["trash"]       = "rbxassetid://10747373176",
+    ["refresh"]     = "rbxassetid://10709790666", -- or similar
+    ["check"]       = "rbxassetid://10709790646",
+    ["search"]      = "rbxassetid://10709791437",
+    ["tag"]         = "rbxassetid://10709791523",
+    ["log-out"]     = "rbxassetid://10734949856",
+})
+
+-- [3] CREATE WINDOW
 local Window = WindUI:CreateWindow({
     Title = "XZNE ScriptHub",
     SubTitle = "Trading Market Manager",
@@ -50,11 +66,13 @@ local Window = WindUI:CreateWindow({
     
     -- [FEATURE] Floating Open Button (Bubble)
     OpenButton = {
-        Title = "XZNE",
+        Title = "Open XZNE",
+        Icon = "lucide:home", -- Use our custom icon
         CornerRadius = UDim.new(1, 0), -- Round
         StrokeThickness = 0,
         Enabled = true,
         Draggable = true,
+        OnlyMobile = false, -- [IMPORTANT] Forces bubble on PC
         Color = ColorSequence.new(
             Color3.fromHex("#30FF6A"), 
             Color3.fromHex("#26D254")
@@ -62,27 +80,28 @@ local Window = WindUI:CreateWindow({
     }
 })
 
--- [FEATURE] Version Tag
+-- [FEATURE] Version Tag (No conflicting icon)
 Window:Tag({
     Title = "v0.0.01",
-    Icon = "github", -- Uses internal WindUI icon mapping if available
+    -- Icon = nil, -- Usage of nil removes it, or use a generic one
+    Icon = "lucide:tag", 
     Color = Color3.fromHex("#30ff6a"),
     Radius = 4,
 })
 
--- [3] TABS & SECTIONS
+-- [4] TABS & SECTIONS
 
 -- == MANAGER TAB ==
 local ManagerTab = Window:Tab({
     Title = "Manager",
-    Icon = "home",
+    Icon = "lucide:home",
 })
 
 local MainSection = ManagerTab:Section({ Title = "Automation" })
 
 MainSection:Toggle({
     Title = "Auto Claim Booth",
-    Desc = "Automatically finds and claims free booths",
+    Desc = "Target and claim empty booths",
     Default = Controller.Config.AutoClaim,
     Callback = function(val)
         Controller.Config.AutoClaim = val
@@ -91,7 +110,7 @@ MainSection:Toggle({
 
 MainSection:Toggle({
     Title = "Auto List Items",
-    Desc = "Lists items matching Attribute 'f' & 'c'",
+    Desc = "List items (Attr 'f' & 'c')",
     Default = Controller.Config.AutoList,
     Callback = function(val)
         Controller.Config.AutoList = val
@@ -102,12 +121,14 @@ MainSection:Space()
 
 MainSection:Button({
     Title = "Unclaim Booth",
-    Desc = "Release current booth ownership",
+    Desc = "Release ownership",
+    Icon = "lucide:log-out",
     Callback = function()
         Controller.UnclaimBooth()
         WindUI:Notify({
             Title = "Booth",
             Content = "Unclaimed command executed",
+            Icon = "lucide:check",
             Duration = 2
         })
     end
@@ -117,7 +138,7 @@ MainSection:Button({
 -- == CONFIG TAB ==
 local ConfigTab = Window:Tab({
     Title = "Settings",
-    Icon = "settings",
+    Icon = "lucide:settings",
 })
 
 local ItemSection = ConfigTab:Section({ Title = "Item Configuration" })
@@ -126,6 +147,7 @@ ItemSection:Input({
     Title = "Target Item Name",
     Desc = "Internal name (Attribute 'f')",
     Default = Controller.Config.TargetName,
+    Icon = "lucide:tag",
     Callback = function(text)
         Controller.Config.TargetName = text
     end
@@ -133,9 +155,10 @@ ItemSection:Input({
 
 ItemSection:Input({
     Title = "Listing Price",
-    Desc = "Price for each listed item",
+    Desc = "Price for each item",
     Default = tostring(Controller.Config.Price),
     Numeric = true,
+    Icon = "lucide:tag", -- Currency/Tag icon
     Callback = function(text)
         local num = tonumber(text)
         if num then
@@ -148,7 +171,7 @@ local PerfSection = ConfigTab:Section({ Title = "Performance Tweaks" })
 
 PerfSection:Slider({
     Title = "Listing Delay",
-    Desc = "Wait time between actions (seconds)",
+    Desc = "Seconds between actions",
     Min = 0.1,
     Max = 10,
     Default = Controller.Config.ListDelay,
@@ -160,12 +183,14 @@ PerfSection:Slider({
 
 PerfSection:Button({
     Title = "Clear Item Cache",
-    Desc = "Reset memory of listed items",
+    Desc = "Reset internal memory",
+    Icon = "lucide:trash",
     Callback = function()
         Controller.ClearCache()
         WindUI:Notify({
             Title = "System",
             Content = "Cache cleared successfully",
+            Icon = "lucide:check",
             Duration = 2
         })
     end
@@ -175,27 +200,29 @@ PerfSection:Button({
 -- == INFO TAB ==
 local InfoTab = Window:Tab({
     Title = "Info",
-    Icon = "info",
+    Icon = "lucide:info",
 })
 
 local InfoSection = InfoTab:Section({ Title = "About" })
 
 InfoSection:Paragraph({
     Title = "XZNE ScriptHub v0.0.01",
-    Desc = "A refined trading automation tool.\n\nCredits:\n• Logic: v2.0 (Verified)\n• UI: WindUI Library"
+    Desc = "Trading Market Automation\n\n• Logic: Verified v2.0\n• UI: WindUI (Deep Polish)\n• Icons: Lucide Standard"
 })
 
 InfoSection:Button({
     Title = "Destroy UI",
     Desc = "Close interface completely",
+    Icon = "lucide:stop",
     Callback = function()
         Window:Destroy()
     end
 })
 
--- [4] NOTIFICATION 
+-- [5] FINAL NOTIFICATION 
 WindUI:Notify({
     Title = "XZNE Loaded",
     Content = "Version v0.0.01 Ready.",
+    Icon = "lucide:check",
     Duration = 4
 })
