@@ -8,10 +8,6 @@ Refactored directly from v18.0 Logic Core.
 Execute the following script in your executor (Solara, Wave, Synapse X, etc.):
 
 ```lua
--- 1. Load Logic Core
-loadstring(game:HttpGet("https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/Main.lua"))()
-
--- 2. Load UI (WindUI)
 loadstring(game:HttpGet("https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/Loader.lua"))()
 ```
 
