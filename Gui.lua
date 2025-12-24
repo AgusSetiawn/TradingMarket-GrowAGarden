@@ -1,5 +1,5 @@
 --[[
-    💠 XZNE SCRIPTHUB v18.0 - UI LOADER (WindUI)
+    💠 XZNE SCRIPTHUB v0.0.01 - UI LOADER (WindUI)
     
     🎨 Style: macOS
     🔗 Connects to: Main.lua (_G.XZNE_Controller)
@@ -10,8 +10,6 @@ local Controller = _G.XZNE_Controller
 
 if not Controller then
     warn("[XZNE] Controller not found! Please run Main.lua first.")
-    -- Optional: Attempt to load Main.lua if it's in the same closure, 
-    -- but usually standard practice is to run the script bundle.
     return
 end
 
@@ -23,15 +21,14 @@ do
     if success then
         WindUI = result
     else
-        -- Fallback to loadstring (Online) if local file fails or not in Studio
         local success_online, result_online = pcall(function()
             return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
         end)
         if success_online then
             WindUI = result_online
         else
-             warn("[XZNE] Failed to load WindUI!")
-             return
+            warn("[XZNE] Failed to load WindUI!")
+            return
         end
     end
 end
@@ -40,16 +37,37 @@ end
 local Window = WindUI:CreateWindow({
     Title = "XZNE ScriptHub",
     SubTitle = "Trading Market Manager",
-    Icon = "rbxassetid://14633327344", -- Keep original icon
-    Author = "v18.0", 
+    Icon = "rbxassetid://14633327344", 
+    Author = "By XZNE Team",
     Folder = "XZNE-Trading",
-    Transparent = true, -- Acrylic effect
+    Transparent = true,
     Theme = "Dark",
     
     Topbar = {
         Height = 44,
-        ButtonsType = "Mac", -- Requested macOS style
+        ButtonsType = "Mac",
+    },
+    
+    -- [FEATURE] Floating Open Button (Bubble)
+    OpenButton = {
+        Title = "XZNE",
+        CornerRadius = UDim.new(1, 0), -- Round
+        StrokeThickness = 0,
+        Enabled = true,
+        Draggable = true,
+        Color = ColorSequence.new(
+            Color3.fromHex("#30FF6A"), 
+            Color3.fromHex("#26D254")
+        )
     }
+})
+
+-- [FEATURE] Version Tag
+Window:Tag({
+    Title = "v0.0.01",
+    Icon = "github", -- Uses internal WindUI icon mapping if available
+    Color = Color3.fromHex("#30ff6a"),
+    Radius = 4,
 })
 
 -- [3] TABS & SECTIONS
@@ -64,7 +82,7 @@ local MainSection = ManagerTab:Section({ Title = "Automation" })
 
 MainSection:Toggle({
     Title = "Auto Claim Booth",
-    Desc = "Automatically claims free booths",
+    Desc = "Automatically finds and claims free booths",
     Default = Controller.Config.AutoClaim,
     Callback = function(val)
         Controller.Config.AutoClaim = val
@@ -73,7 +91,7 @@ MainSection:Toggle({
 
 MainSection:Toggle({
     Title = "Auto List Items",
-    Desc = "Automatically lists target items",
+    Desc = "Lists items matching Attribute 'f' & 'c'",
     Default = Controller.Config.AutoList,
     Callback = function(val)
         Controller.Config.AutoList = val
@@ -84,12 +102,12 @@ MainSection:Space()
 
 MainSection:Button({
     Title = "Unclaim Booth",
-    Desc = "Drops current booth ownership",
+    Desc = "Release current booth ownership",
     Callback = function()
         Controller.UnclaimBooth()
         WindUI:Notify({
             Title = "Booth",
-            Content = "Unclaimed command sent!",
+            Content = "Unclaimed command executed",
             Duration = 2
         })
     end
@@ -98,15 +116,15 @@ MainSection:Button({
 
 -- == CONFIG TAB ==
 local ConfigTab = Window:Tab({
-    Title = "Configuration",
+    Title = "Settings",
     Icon = "settings",
 })
 
-local ItemSection = ConfigTab:Section({ Title = "Item Settings" })
+local ItemSection = ConfigTab:Section({ Title = "Item Configuration" })
 
 ItemSection:Input({
     Title = "Target Item Name",
-    Desc = "The internal name (Attribute 'f')",
+    Desc = "Internal name (Attribute 'f')",
     Default = Controller.Config.TargetName,
     Callback = function(text)
         Controller.Config.TargetName = text
@@ -115,7 +133,7 @@ ItemSection:Input({
 
 ItemSection:Input({
     Title = "Listing Price",
-    Desc = "Price to list items for",
+    Desc = "Price for each listed item",
     Default = tostring(Controller.Config.Price),
     Numeric = true,
     Callback = function(text)
@@ -126,11 +144,11 @@ ItemSection:Input({
     end
 })
 
-local SpeedSection = ConfigTab:Section({ Title = "Performance" })
+local PerfSection = ConfigTab:Section({ Title = "Performance Tweaks" })
 
-SpeedSection:Slider({
+PerfSection:Slider({
     Title = "Listing Delay",
-    Desc = "Time between listings (seconds)",
+    Desc = "Wait time between actions (seconds)",
     Min = 0.1,
     Max = 10,
     Default = Controller.Config.ListDelay,
@@ -140,14 +158,14 @@ SpeedSection:Slider({
     end
 })
 
-SpeedSection:Button({
-    Title = "Clear Cache",
-    Desc = "Reset listed items memory",
+PerfSection:Button({
+    Title = "Clear Item Cache",
+    Desc = "Reset memory of listed items",
     Callback = function()
         Controller.ClearCache()
         WindUI:Notify({
-            Title = "Memory",
-            Content = "Cache cleared!",
+            Title = "System",
+            Content = "Cache cleared successfully",
             Duration = 2
         })
     end
@@ -160,42 +178,24 @@ local InfoTab = Window:Tab({
     Icon = "info",
 })
 
-local InfoSection = InfoTab:Section({ Title = "Statistics" })
+local InfoSection = InfoTab:Section({ Title = "About" })
 
--- Live Stats Update
-local StatParams = {
-    Title = "Status",
-    Desc = "Waiting for data..."
-}
--- We can't update a Paragraph directly in WindUI standard API easily without storing the object 
--- or using a label updater if supported. 
--- For now, we'll try to re-render or use a specific element if available, 
--- but standard WindUI Paragraphs illustrate static text often. 
--- Let's use a Section Title update or similar if possible, OR just static info for now
--- since dynamic label updating depends on library version features.
--- Assuming standard usage:
 InfoSection:Paragraph({
-    Title = "Session Stats",
-    Desc = "Check server console (F9) for detailed logs.\n\nWindUI Version: " .. (WindUI.Version or "Unknown")
+    Title = "XZNE ScriptHub v0.0.01",
+    Desc = "A refined trading automation tool.\n\nCredits:\n• Logic: v2.0 (Verified)\n• UI: WindUI Library"
 })
 
-local CreditSection = InfoTab:Section({ Title = "Credits" })
-CreditSection:Paragraph({
-    Title = "XZNE ScriptHub",
-    Desc = "Refactored by Assistant.\nUsing WindUI Library."
-})
-
-CreditSection:Button({
-    Title = "Close UI",
+InfoSection:Button({
+    Title = "Destroy UI",
+    Desc = "Close interface completely",
     Callback = function()
         Window:Destroy()
-        -- Controller.Config.Running = false -- Optional: Stop logic too?
     end
 })
 
--- [4] NOTIFICATION
+-- [4] NOTIFICATION 
 WindUI:Notify({
-    Title = "XZNE Hub Loaded",
-    Content = "Welcome back! Logic v18.0 Active.",
-    Duration = 5
+    Title = "XZNE Loaded",
+    Content = "Version v0.0.01 Ready.",
+    Duration = 4
 })
