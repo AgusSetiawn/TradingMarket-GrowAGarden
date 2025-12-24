@@ -33,16 +33,16 @@ do
     end
 end
 
--- [2] REGISTER ICONS (Lucide & Geist)
--- Using standard Lucide Asset IDs for Roblox
-WindUI.Creator.AddIcons("lucide", {
+-- [2] REGISTER ICONS (Custom Set)
+-- Renamed to 'xzne' to avoid conflict with internal 'lucide' namespace
+WindUI.Creator.AddIcons("xzne", {
     ["home"]        = "rbxassetid://10723406988",
     ["settings"]    = "rbxassetid://10734950309",
     ["info"]        = "rbxassetid://10709752906",
     ["play"]        = "rbxassetid://10723404337",
-    ["stop"]        = "rbxassetid://10709791437", -- X-circle style usually
+    ["stop"]        = "rbxassetid://10709791437",
     ["trash"]       = "rbxassetid://10747373176",
-    ["refresh"]     = "rbxassetid://10709790666", -- or similar
+    ["refresh"]     = "rbxassetid://10709790666",
     ["check"]       = "rbxassetid://10709790646",
     ["search"]      = "rbxassetid://10709791437",
     ["tag"]         = "rbxassetid://10709791523",
@@ -67,12 +67,12 @@ local Window = WindUI:CreateWindow({
     -- [FEATURE] Floating Open Button (Bubble)
     OpenButton = {
         Title = "Open XZNE",
-        Icon = "lucide:home", -- Use our custom icon
-        CornerRadius = UDim.new(1, 0), -- Round
+        Icon = "xzne:home", -- Updated reference
+        CornerRadius = UDim.new(1, 0),
         StrokeThickness = 0,
         Enabled = true,
         Draggable = true,
-        OnlyMobile = false, -- [IMPORTANT] Forces bubble on PC
+        OnlyMobile = false,
         Color = ColorSequence.new(
             Color3.fromHex("#30FF6A"), 
             Color3.fromHex("#26D254")
@@ -80,11 +80,10 @@ local Window = WindUI:CreateWindow({
     }
 })
 
--- [FEATURE] Version Tag (No conflicting icon)
+-- [FEATURE] Version Tag
 Window:Tag({
     Title = "v0.0.01",
-    -- Icon = nil, -- Usage of nil removes it, or use a generic one
-    Icon = "lucide:tag", 
+    Icon = "xzne:tag", 
     Color = Color3.fromHex("#30ff6a"),
     Radius = 4,
 })
@@ -94,7 +93,7 @@ Window:Tag({
 -- == MANAGER TAB ==
 local ManagerTab = Window:Tab({
     Title = "Manager",
-    Icon = "lucide:home",
+    Icon = "xzne:home",
 })
 
 local MainSection = ManagerTab:Section({ Title = "Automation" })
@@ -122,13 +121,13 @@ MainSection:Space()
 MainSection:Button({
     Title = "Unclaim Booth",
     Desc = "Release ownership",
-    Icon = "lucide:log-out",
+    Icon = "xzne:log-out",
     Callback = function()
         Controller.UnclaimBooth()
         WindUI:Notify({
             Title = "Booth",
             Content = "Unclaimed command executed",
-            Icon = "lucide:check",
+            Icon = "xzne:check",
             Duration = 2
         })
     end
@@ -138,7 +137,7 @@ MainSection:Button({
 -- == CONFIG TAB ==
 local ConfigTab = Window:Tab({
     Title = "Settings",
-    Icon = "lucide:settings",
+    Icon = "xzne:settings",
 })
 
 local ItemSection = ConfigTab:Section({ Title = "Item Configuration" })
@@ -147,7 +146,7 @@ ItemSection:Input({
     Title = "Target Item Name",
     Desc = "Internal name (Attribute 'f')",
     Default = Controller.Config.TargetName,
-    Icon = "lucide:tag",
+    Icon = "xzne:tag",
     Callback = function(text)
         Controller.Config.TargetName = text
     end
@@ -158,7 +157,7 @@ ItemSection:Input({
     Desc = "Price for each item",
     Default = tostring(Controller.Config.Price),
     Numeric = true,
-    Icon = "lucide:tag", -- Currency/Tag icon
+    Icon = "xzne:tag",
     Callback = function(text)
         local num = tonumber(text)
         if num then
@@ -184,13 +183,13 @@ PerfSection:Slider({
 PerfSection:Button({
     Title = "Clear Item Cache",
     Desc = "Reset internal memory",
-    Icon = "lucide:trash",
+    Icon = "xzne:trash",
     Callback = function()
         Controller.ClearCache()
         WindUI:Notify({
             Title = "System",
             Content = "Cache cleared successfully",
-            Icon = "lucide:check",
+            Icon = "xzne:check",
             Duration = 2
         })
     end
@@ -200,20 +199,20 @@ PerfSection:Button({
 -- == INFO TAB ==
 local InfoTab = Window:Tab({
     Title = "Info",
-    Icon = "lucide:info",
+    Icon = "xzne:info",
 })
 
 local InfoSection = InfoTab:Section({ Title = "About" })
 
 InfoSection:Paragraph({
     Title = "XZNE ScriptHub v0.0.01",
-    Desc = "Trading Market Automation\n\n• Logic: Verified v2.0\n• UI: WindUI (Deep Polish)\n• Icons: Lucide Standard"
+    Desc = "Trading Market Automation\n\n• Logic: Verified v2.0\n• UI: WindUI (Deep Polish)\n• Icons: Lucide (Custom hosted)"
 })
 
 InfoSection:Button({
     Title = "Destroy UI",
     Desc = "Close interface completely",
-    Icon = "lucide:stop",
+    Icon = "xzne:stop",
     Callback = function()
         Window:Destroy()
     end
@@ -223,6 +222,6 @@ InfoSection:Button({
 WindUI:Notify({
     Title = "XZNE Loaded",
     Content = "Version v0.0.01 Ready.",
-    Icon = "lucide:check",
+    Icon = "xzne:check",
     Duration = 4
 })
