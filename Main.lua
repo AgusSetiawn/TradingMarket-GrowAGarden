@@ -138,21 +138,79 @@ Controller.UpdateCache() -- Init
 -- Load saved config immediately after initialization
 Controller.LoadConfig()
 
+-- [PERFORMANCE] Caches
+local BoothCache = { booth = nil, time = 0 }
+local DataCache = { data = nil, time = 0 }
+local PlayerLookupCache = {}
+
+-- [PERFORMANCE] Debounce Cleanup (runs every 30s)
+task.spawn(function()
+    while true do
+        task.wait(30)
+        local currentTime = tick()
+        for uuid, timestamp in pairs(ListingDebounce) do
+            if currentTime - timestamp > 10 then
+                ListingDebounce[uuid] = nil
+            end
+        end
+        -- Cleanup player lookup cache
+        for userId, cacheEntry in pairs(PlayerLookupCache) do
+            if currentTime - cacheEntry.time > 5 then
+                PlayerLookupCache[userId] = nil
+            end
+        end
+    end
+end)
+
 local function GetBoothsData()
-    if BoothsReceiver then return BoothsReceiver:GetData()
-    elseif TradeBoothsData then return TradeBoothsData:GetData() end
-    return nil
+    local currentTime = tick()
+    -- Cache for 1 second to avoid repeated calls in same loop
+    if DataCache.data and (currentTime - DataCache.time < 1) then
+        return DataCache.data
+    end
+    
+    local data = nil
+    if BoothsReceiver then data = BoothsReceiver:GetData()
+    elseif TradeBoothsData then data = TradeBoothsData:GetData() end
+    
+    DataCache.data = data
+    DataCache.time = currentTime
+    return data
 end
 
 local function GetMyBooth()
+    local currentTime = tick()
+    -- Cache for 2 seconds
+    if BoothCache.booth and (currentTime - BoothCache.time < 2) then
+        return BoothCache.booth
+    end
+    
     local folder = Workspace:FindFirstChild("TradeWorld")
     if folder then folder = folder:FindFirstChild("Booths") end
     for _, b in pairs(folder and folder:GetChildren() or {}) do
         local oid = b:GetAttribute("OwnerId") or b:GetAttribute("UserId")
         if not oid then local v = b:FindFirstChild("OwnerId"); if v then oid = v.Value end end
-        if tostring(oid) == tostring(LocalUserId) then return b end
+        if tostring(oid) == tostring(LocalUserId) then
+            BoothCache.booth = b
+            BoothCache.time = currentTime
+            return b
+        end
     end
+    BoothCache.booth = nil
+    BoothCache.time = currentTime
     return nil
+end
+
+local function GetCachedPlayer(userId)
+    local currentTime = tick()
+    local cached = PlayerLookupCache[userId]
+    if cached and (currentTime - cached.time < 5) then
+        return cached.player
+    end
+    
+    local player = Players:GetPlayerByUserId(userId)
+    PlayerLookupCache[userId] = { player = player, time = currentTime }
+    return player
 end
 
 -- [5] CORE LOGIC
@@ -166,6 +224,8 @@ local function RunAutoBuy()
     
     local targetType = Config.BuyCategory == "Pet" and "Pet" or "Holdable"
     local targetLower = CachedTargets.Buy
+    if targetLower == "" then return end -- Early exit
+    
     local maxPrice = Config.MaxPrice
     
     for playerKey, playerData in pairs(data.Players) do
@@ -179,15 +239,15 @@ local function RunAutoBuy()
                         local realName = itemData.Name or itemData.ItemName or itemData.PetType or (itemData.ItemData and itemData.ItemData.ItemName) or ""
                         
                         if string.find(string.lower(tostring(realName)), targetLower) then
-                            -- Buy!
+                            -- Buy with cached player lookup!
                             local ownerId = tonumber(string.match(playerKey, "Player_(%d+)"))
-                            local owner = Players:GetPlayerByUserId(ownerId)
+                            local owner = GetCachedPlayer(ownerId)
                             
                             if owner then
                                 print("🔫 Sniping: " .. realName .. " @ " .. listingInfo.Price)
                                 pcall(function() BuyListingRemote:InvokeServer(owner, listingUUID) end)
                                 Stats.SnipeCount = Stats.SnipeCount + 1
-                                task.wait(0.5) -- Prevent multi-buy spam of same item if laggy
+                                task.wait(0.5)
                             end
                         end
                     end
@@ -201,6 +261,9 @@ end
 local function RunAutoList()
     if not Config.AutoList then return end
     
+    local targetLower = CachedTargets.List
+    if targetLower == "" then return end -- Early exit
+    
     -- Check Active Listings (Avoid Duplicates)
     local data = GetBoothsData()
     local myData = data and data.Players[MyPlayerKey]
@@ -209,7 +272,6 @@ local function RunAutoList()
         for _, v in pairs(myData.Listings) do listedUUIDs[v.ItemId] = true end
     end
     
-    local targetLower = CachedTargets.List
     local targetType = Config.ListCategory == "Pet" and "Pet" or "Holdable"
     local price = Config.Price
     local currentTime = tick()
@@ -239,8 +301,8 @@ local function RunAutoList()
                 if not Config.Running or not Config.AutoList then break end
                 
                 if item:IsA("Tool") then
-                    local realName = item:GetAttribute("f") -- Name
-                    local uuid = item:GetAttribute("c")     -- UUID
+                    local realName = item:GetAttribute("f")
+                    local uuid = item:GetAttribute("c")
                     
                     if realName and uuid and not listedUUIDs[uuid] and (not ListingDebounce[uuid] or currentTime - ListingDebounce[uuid] > 5) then
                          if string.find(string.lower(realName), targetLower) then
@@ -259,11 +321,13 @@ end
 local function RunAutoClear()
     if not Config.AutoClear then return end
     
+    local targetLower = CachedTargets.Remove
+    if not Config.DeleteAll and targetLower == "" then return end -- Early exit
+    
     local data = GetBoothsData()
     if not data then return end
     local myData = data.Players[MyPlayerKey]
     
-    local targetLower = CachedTargets.Remove
     local targetType = Config.RemoveCategory == "Pet" and "Pet" or "Holdable"
     
     if myData and myData.Listings then
