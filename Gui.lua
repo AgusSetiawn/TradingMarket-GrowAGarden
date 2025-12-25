@@ -170,11 +170,16 @@ local function UpdateTargetDropdown(CategoryVal, TargetElement)
     if TargetElement then
         local newDB = (CategoryVal == "Pet") and PetDatabase or ItemDatabase
         
-        -- INSTANT: Only update Values, NO Refresh() call!
+        -- Update Values
         TargetElement.Values = newDB
         TargetElement.Desc = "🔍 Search " .. #newDB .. " items (A-Z sorted)..."
         
-        -- NO task.spawn, NO Refresh, INSTANT switch!
+        -- CRITICAL: Call Refresh to update UI (but it's instant since already rendered!)
+        if TargetElement.Refresh then
+            pcall(function() 
+                TargetElement:Refresh(newDB)
+            end)
+        end
     end
 end
 
