@@ -8,14 +8,26 @@ print("[XZNE] Controller Found. Loading WindUI...")
 
 -- [1] LOAD WINDUI (Force Online to prevent nil value errors)
 do
-    local success, result = pcall(function()
-        return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+    local success, windUICode = pcall(function()
+        return game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua")
     end)
     
-    if success and result then
-        WindUI = result
+    if success and windUICode then
+        local loadFunc = loadstring(windUICode)
+        if loadFunc then
+            local execSuccess, result = pcall(loadFunc)
+            if execSuccess and result then
+                WindUI = result
+            else
+                warn("[XZNE] Failed to execute WindUI: " .. tostring(result))
+                return
+            end
+        else
+            warn("[XZNE] Failed to compile WindUI!")
+            return
+        end
     else
-        warn("[XZNE] Failed to load WindUI lib!")
+        warn("[XZNE] Failed to download WindUI!")
         return
     end
 end
