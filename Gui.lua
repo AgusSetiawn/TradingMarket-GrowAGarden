@@ -119,7 +119,13 @@ local ItemDatabase = {
     "Wereplant", "Wild Carrot", "Wild Pineapple", "Willowberry", "Wisp Flower", "Wispwing", "Wyrmvine", "Yarrow", 
     "Zebrazinkle", "Zen Rocks", "Zenflare", "Zombie Fruit", "Zucchini"
 }
-table.sort(PetDatabase); table.sort(ItemDatabase)
+
+-- [PHASE 1 OPTIMIZATION] Pre-sort databases asynchronously at startup
+task.spawn(function()
+    table.sort(PetDatabase)
+    table.sort(ItemDatabase)
+    print("✅ [XZNE] Databases sorted and ready")
+end)
 
 -- [3] REGISTER ICONS
 WindUI.Creator.AddIcons("xzne", {
@@ -150,8 +156,7 @@ local UIElements = {}
 local SniperTab = Window:Tab({ Title = "Sniper", Icon = "xzne:crosshair" })
 local SniperSection = SniperTab:Section({ Title = "Auto Buy Configuration" })
 
--- Helper for dynamic updates
--- Helper for dynamic updates
+-- [PHASE 2 OPTIMIZATION] Asynchronous dropdown refresh with micro-yield
 local function UpdateTargetDropdown(CategoryVal, TargetElement)
     if TargetElement then
         local newDB = (CategoryVal == "Pet") and PetDatabase or ItemDatabase
@@ -159,17 +164,15 @@ local function UpdateTargetDropdown(CategoryVal, TargetElement)
         -- Update the Values property
         TargetElement.Values = newDB
         
-        -- Force Refresh with pcall
-        if TargetElement.Refresh then
-            pcall(function() 
-                TargetElement:Refresh(newDB) -- Pass newDB explicitly just in case
-            end)
-        end
-        
-        -- Optional: Reset selection to avoid "ghost" values from previous category
-        if TargetElement.Select then
-            -- pcall(function() TargetElement:Select(nil) end)
-        end
+        -- Asynchronous refresh to prevent main-thread blocking
+        task.spawn(function()
+            task.wait(0.05) -- Micro-yield: allows button click animation to complete
+            if TargetElement.Refresh then
+                pcall(function() 
+                    TargetElement:Refresh(newDB)
+                end)
+            end
+        end)
     end
 end
 
