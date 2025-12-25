@@ -17,8 +17,8 @@ local function LoadScript(Script)
     end
 end
 
--- 1. Load Logic (Core.lua)
-LoadScript("Core.lua")
+-- 1. Load Logic
+LoadScript("Main.lua")
 
 -- 2. Wait for Controller (Safety Check)
 local Timeout = 0
