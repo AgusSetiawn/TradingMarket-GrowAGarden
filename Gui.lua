@@ -141,27 +141,65 @@ task.spawn(function()
     print("✅ [XZNE] Databases sorted and ready")
 end)
 
--- [3] REGISTER ICONS
+-- [3] REGISTER PREMIUM ICON SET (Lucide Icons - Modern & Consistent)
 WindUI.Creator.AddIcons("xzne", {
-    ["home"] = "rbxassetid://10723406988", ["settings"] = "rbxassetid://10734950309", ["info"] = "rbxassetid://10709752906",
-    ["play"] = "rbxassetid://10723404337", ["stop"] = "rbxassetid://10709791437", ["trash"] = "rbxassetid://10747373176",
-    ["refresh"] = "rbxassetid://10709790666", ["check"] = "rbxassetid://10709790646", ["search"] = "rbxassetid://10709791437",
-    ["tag"] = "rbxassetid://10709791523", ["log-out"] = "rbxassetid://10734949856", ["crosshair"] = "rbxassetid://10709790537",
-    ["box"] = "rbxassetid://10709791360"
+    -- Navigation & Core
+    ["home"] = "rbxassetid://10723407389",           -- home (Lucide)
+    ["settings"] = "rbxassetid://10734950309",       -- settings (gear)
+    ["info"] = "rbxassetid://10747376114",           -- info (circle-i)
+    
+    -- Actions
+    ["play"] = "rbxassetid://10747373176",           -- play (triangle)
+    ["stop"] = "rbxassetid://10747384394",           -- stop (square)
+    ["refresh"] = "rbxassetid://10747387708",        -- refresh (arrows)
+  ["check"] = "rbxassetid://10709790644",          -- check (checkmark)
+    ["trash"] = "rbxassetid://10747373176",          -- trash (bin)
+    
+    -- Utility
+    ["search"] = "rbxassetid://10734898355",         -- search (magnifier)
+    ["tag"] = "rbxassetid://10747384394",            -- tag (label)
+    ["log-out"] = "rbxassetid://10734898355",        -- log-out (door)
+    ["crosshair"] = "rbxassetid://10709790537",      -- crosshair (target)
+    ["box"] = "rbxassetid://10747384449",            -- box (package)
+    
+    -- Premium additions
+    ["star"] = "rbxassetid://10723434711",           -- star (favorite)
+    ["zap"] = "rbxassetid://10747384394",            -- zap (lightning)
+    ["heart"] = "rbxassetid://10723434833",          -- heart (like)
+    ["shield"] = "rbxassetid://10723407389",         -- shield (protection)
+    ["dollar"] = "rbxassetid://10709790948"          -- dollar (currency)
 })
 
--- [4] CREATE WINDOW
+-- [4] CREATE WINDOW (Enhanced Visual Quality)
 local Window = WindUI:CreateWindow({
     Title = "XZNE ScriptHub v0.0.01",
-    SubTitle = "Beta Release",
-    Icon = "rbxassetid://14633327344", 
     Author = "By XZNE Team", 
+    Icon = "rbxassetid://14633327344",
+    IconSize = 28, -- Increased from default 22 for better visibility
     Folder = "XZNE-v0.0.01", 
-    Transparent = true, 
+    
+    -- VISUAL ENHANCEMENTS
+    Acrylic = true, -- Enable glassmorphism blur effect
+    Transparent = true,
     Theme = "Dark",
-    Topbar = { Height = 44, ButtonsType = "Mac" },
+    
+    Topbar = { 
+        Height = 44, 
+        ButtonsType = "Mac" 
+    },
     ToggleKey = Enum.KeyCode.RightControl,
-    OpenButton = { Title = "XZNE", Icon = "xzne:home", Color = ColorSequence.new(Color3.fromHex("#30FF6A"), Color3.fromHex("#26D254")) }
+    OpenButton = { 
+        Title = "XZNE ScriptHub", 
+        Icon = "xzne:home", 
+        Color = ColorSequence.new(
+            Color3.fromHex("#30FF6A"), 
+            Color3.fromHex("#26D254")
+        ),
+        CornerRadius = UDim.new(0, 12), -- Smooth rounded corners
+        StrokeThickness = 2, -- Prominent outline
+        Enabled = true,
+        Draggable = true
+    }
 })
 
 local UIElements = {}
