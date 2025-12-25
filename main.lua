@@ -1,14 +1,11 @@
 --[[
-    💠 XZNE SCRIPTHUB v28.0 - MASTER LOADER
+    💠 XZNE SCRIPTHUB v28.0 - ENTERPRISE LOADER
     
-    🚀 Usage: loadstring(game:HttpGet(".../Loader.lua"))()
-    
-    This script automatically loads:
-    1. Logic Core (Main.lua)
-    2. User Interface (Gui.lua)
+    🚀 Usage: loadstring(game:HttpGet("https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/main.lua"))()
 ]]
 
 local Repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/"
+print("[XZNE] Booting v28.0 Enterprise Loader...")
 
 local function LoadScript(Script)
     local Success, Result = pcall(function()
@@ -20,8 +17,8 @@ local function LoadScript(Script)
     end
 end
 
--- 1. Load Logic
-LoadScript("Main.lua")
+-- 1. Load Logic (Core.lua)
+LoadScript("Core.lua")
 
 -- 2. Wait for Controller (Safety Check)
 local Timeout = 0
