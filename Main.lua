@@ -1,5 +1,5 @@
 --[[ 
-    💠 XZNE SCRIPTHUB v28.0 - LOGIC CORE
+    💠 XZNE SCRIPTHUB v0.0.01 [Beta] - LOGIC CORE
     
     🔧 FEATURES:
     - Auto Buy (Sniper) [NEW]
@@ -386,7 +386,7 @@ end
 
 -- [7] MAIN LOOP
 task.spawn(function()
-    print("[XZNE] Logic Core v28 Started")
+    print("[XZNE] Logic Core v0.0.01 [Beta] Started")
     while true do
         if not Config.Running then task.wait(1) else
             pcall(function()

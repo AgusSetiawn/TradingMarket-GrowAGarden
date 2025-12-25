@@ -1,11 +1,11 @@
 --[[
-    💠 XZNE SCRIPTHUB v28.0 - ENTERPRISE LOADER
+    💠 XZNE SCRIPTHUB v0.0.01 [Beta] - LOADER
     
     🚀 Usage: loadstring(game:HttpGet("https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/main.lua"))()
 ]]
 
 local Repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/"
-print("[XZNE] Booting v28.0 Enterprise Loader...")
+print("[XZNE] Booting v0.0.01 [Beta]...")
 
 local function LoadScript(Script)
     local Success, Result = pcall(function()
