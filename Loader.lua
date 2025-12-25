@@ -4,9 +4,9 @@
     🚀 Usage: loadstring(game:HttpGet("https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/perf-v28.1/Loader.lua"))()
 ]]
 
--- IMPORTANT: Pointing to perf-v28.1 branch for Beta access
-local Repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/perf-v28.1/"
-print("[XZNE] Booting v0.0.01 [Beta] (Modular)...")
+-- IMPORTANT: Official Main Branch
+local Repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/"
+print("[XZNE] Booting v0.0.01 [Beta] (Official Main)...")
 
 local function LoadScript(Script)
     -- Cache Busting: ?t=os.time() forces fresh download every execution
