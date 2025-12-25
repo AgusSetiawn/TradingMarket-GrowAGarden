@@ -16,20 +16,14 @@ end
 -- [1] LOAD WINDUI
 do
     local success, result = pcall(function()
-        return require(script.Parent["WindUI-1.6.62"].src.Init)
+        return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
     end)
-    if success then
+    
+    if success and result then
         WindUI = result
     else
-        local success_online, result_online = pcall(function()
-            return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
-        end)
-        if success_online then
-            WindUI = result_online
-        else
-            warn("[XZNE] Failed to load WindUI!")
-            return
-        end
+        warn("[XZNE] Failed to load WindUI lib!")
+        return
     end
 end
 
