@@ -63,26 +63,39 @@ local SniperSection = SniperTab:Section({ Title = "Auto Buy Configuration" })
 
 -- Helper for dynamic updates
 -- Helper for dynamic updates
-local function UpdateTargetDropdown(CategoryVal, TargetElement)
-    if TargetElement then
-        local newDB = (CategoryVal == "Pet") and PetDatabase or ItemDatabase
-        
-        -- Update the Values property
-        TargetElement.Values = newDB
-        
-        -- Force Refresh with pcall
-        if TargetElement.Refresh then
-            pcall(function() 
-                TargetElement:Refresh(newDB) -- Pass newDB explicitly just in case
-            end)
-        end
-        
-        -- Optional: Reset selection to avoid "ghost" values from previous category
         if TargetElement.Select then
-            -- pcall(function() TargetElement:Select(nil) end)
+             -- pcall(function() TargetElement:Select(nil) end) 
         end
     end
 end
+-- Helper for dynamic updates (ASYNC ANTI-FREEZE)
+local function UpdateTargetDropdown(CategoryVal, TargetElement)
+    if TargetElement then
+        -- Run in background to prevent UI freeze
+        task.spawn(function()
+            -- Optional: Show loading state if needed
+            -- if TargetElement.SetValues then pcall(function() TargetElement:SetValues({"Loading..."}) end) end
+            
+            local newDB = (CategoryVal == "Pet") and PetDatabase or ItemDatabase
+            TargetElement.Values = newDB
+            
+            if TargetElement.Refresh then
+                pcall(function() 
+                    TargetElement:Refresh(newDB) 
+                end)
+            end
+        end)
+    end
+end
+
+-- [KILL SWITCH TRIGGER]
+Window.OnMinimise = function() end -- Default behavior
+-- Hook into Destroy/Close (Simulated)
+-- Since WindUI 1.x doesn't expose OnClose directly easily, we rely on the Stop Button we made:
+-- But we can also try to hook the native Close button if accessible.
+-- For now, our "Destroy UI" button does the job.
+
+UIElements.BuyCategory = SniperSection:Dropdown({
 
 UIElements.BuyCategory = SniperSection:Dropdown({
     Title = "Category", Desc = "Select Item type", Values = {"Item", "Pet"}, Default = Controller.Config.BuyCategory, Searchable = true,
@@ -184,8 +197,11 @@ UIElements.DeleteAll = PerfSection:Toggle({
 })
 
 PerfSection:Button({
-    Title = "Destroy UI", Desc = "Close interface", Icon = "xzne:stop",
-    Callback = function() Window:Destroy() end
+    Title = "Destroy UI & Stop Script", Desc = "Kill all processes", Icon = "xzne:stop",
+    Callback = function() 
+        if Controller.Kill then Controller.Kill() end
+        Window:Destroy() 
+    end
 })
 
 -- [GUI SYNC v2 & ASYNC DATA LOAD]

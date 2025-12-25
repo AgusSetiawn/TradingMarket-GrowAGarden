@@ -20,44 +20,50 @@ local LocalUserId = LocalPlayer.UserId
 local MyPlayerKey = "Player_" .. LocalUserId
 
 -- [2] CONTROLLER SETUP
-_G.XZNE_Controller = {
-    Config = {
-        -- Global
-        Running = true,
-        Speed = 1.0, -- Replaces ListDelay for global speed
-        
-        -- Auto Buy (Sniper)
-        AutoBuy = false,
-        BuyCategory = "Item", -- "Item" or "Pet"
-        BuyTarget = "Bone Blossom",
-        MaxPrice = 5,
-        
-        -- Auto List
-        AutoList = false,
-        ListCategory = "Item", 
-        ListTarget = "Bone Blossom",
-        Price = 5, -- (ListPrice)
-        ListDelay = 2.0, -- Specific delay for listing (optional overriding Speed)
-        
-        -- Auto Clear
-        AutoClear = false,
-        RemoveCategory = "Item",
-        RemoveTarget = "Bone Blossom",
-        DeleteAll = false,
-        
-        -- Auto Claim
-        AutoClaim = false,
-    },
-    Stats = {
-        ListedCount = 0,
-        LastListTime = 0,
-        SnipeCount = 0
-    }
-}
+-- [2] CONTROLLER SETUP
+-- If Controller exists (from Loader), merge logic. If not, create new.
+if not _G.XZNE_Controller then
+    _G.XZNE_Controller = { Config = {} }
+end
 
 local Controller = _G.XZNE_Controller
+
+-- Ensure structure exists
+Controller.Config = Controller.Config or {}
+Controller.Stats = Controller.Stats or { ListedCount = 0, LastListTime = 0, SnipeCount = 0 }
+
+-- Default Defaults (Only apply if missing)
+local Defaults = {
+    Running = true, Speed = 1.0, 
+    AutoBuy = false, BuyCategory = "Item", BuyTarget = "Bone Blossom", MaxPrice = 5,
+    AutoList = false, ListCategory = "Item", ListTarget = "Bone Blossom", Price = 5, ListDelay = 2.0,
+    AutoClear = false, RemoveCategory = "Item", RemoveTarget = "Bone Blossom", DeleteAll = false,
+    AutoClaim = false
+}
+
+for k, v in pairs(Defaults) do
+    if Controller.Config[k] == nil then Controller.Config[k] = v end
+end
+
 local Config = Controller.Config
 local Stats = Controller.Stats
+local ListingDebounce = {}
+local CachedTargets = { Buy = "", List = "", Remove = "" }
+
+-- KILL SWITCH
+_G.XZNE_Kill = false
+function Controller.Kill()
+    print("🛑 [XZNE] KILL SIGNAL RECEIVED. Stopping all threads...")
+    _G.XZNE_Kill = true
+    Config.Running = false
+    Config.AutoBuy = false
+    Config.AutoList = false
+    Config.AutoClaim = false
+    Config.AutoClear = false
+    Config.DeleteAll = false
+    
+    -- Disconnect loops (RunService is handled by 'if _G.XZNE_Kill' checks)
+end
 local ListingDebounce = {}
 local CachedTargets = { Buy = "", List = "", Remove = "" }
 
@@ -146,6 +152,7 @@ local PlayerLookupCache = {}
 -- [PERFORMANCE] Debounce Cleanup (runs every 30s)
 task.spawn(function()
     while true do
+        if _G.XZNE_Kill then break end
         task.wait(30)
         local currentTime = tick()
         for uuid, timestamp in pairs(ListingDebounce) do
@@ -388,6 +395,7 @@ end
 task.spawn(function()
     print("[XZNE] Logic Core v0.0.01 [Beta] Started")
     while true do
+        if _G.XZNE_Kill then break end
         if not Config.Running then task.wait(1) else
             pcall(function()
                 if Config.AutoClaim then RunAutoClaim() end

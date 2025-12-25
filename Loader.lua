@@ -20,20 +20,13 @@ local function LoadScript(Script)
     end
 end
 
--- 1. Load Logic
-LoadScript("Main.lua")
+-- 1. Load GUI First (So User sees UI instantly)
+-- Pre-init controller stub so Gui doesn't error
+if not _G.XZNE_Controller then _G.XZNE_Controller = { Config = {} } end
 
--- 2. Wait for Controller (Safety Check)
-local Timeout = 0
-while not _G.XZNE_Controller and Timeout < 10 do
-    task.wait(0.2)
-    Timeout = Timeout + 0.2
-end
-
-if not _G.XZNE_Controller then
-    warn("❌ [XZNE] Controller Failed to Load! Check Main.lua.")
-    return
-end
-
--- 3. Load GUI (Clean Modular Load)
+print("🎨 [XZNE] Loading Interface...")
 LoadScript("Gui.lua")
+
+-- 2. Load Logic Core (Main.lua)
+print("🧠 [XZNE] Loading Logic...")
+LoadScript("Main.lua")
