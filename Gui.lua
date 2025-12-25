@@ -202,6 +202,9 @@ local Window = WindUI:CreateWindow({
     }
 })
 
+-- Store window reference for cleanup on re-execution
+Controller.Window = Window
+
 local UIElements = {}
 
 -- == SNIPER TAB ==

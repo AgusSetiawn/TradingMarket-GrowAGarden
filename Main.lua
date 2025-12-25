@@ -19,7 +19,16 @@ local LocalPlayer = Players.LocalPlayer
 local LocalUserId = LocalPlayer.UserId
 local MyPlayerKey = "Player_" .. LocalUserId
 
--- [2] CONTROLLER SETUP
+-- [2] CONTROLLER SETUP (Protected from double execution)
+if _G.XZNE_Controller then
+    warn("[XZNE] Controller already running! Destroying old instance...")
+    if _G.XZNE_Controller.Window then
+        pcall(function() _G.XZNE_Controller.Window:Destroy() end)
+    end
+    _G.XZNE_Controller.Config.Running = false
+    task.wait(0.5) -- Allow cleanup
+end
+
 _G.XZNE_Controller = {
     Config = {
         -- Global
@@ -52,7 +61,8 @@ _G.XZNE_Controller = {
         ListedCount = 0,
         LastListTime = 0,
         SnipeCount = 0
-    }
+    },
+    Window = nil -- Store window reference for cleanup
 }
 
 local Controller = _G.XZNE_Controller
