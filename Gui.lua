@@ -1,5 +1,4 @@
 local Controller = _G.XZNE_Controller
-print("[XZNE] Loading GUI v28.0 (Patch 2)...")
 
 local function LoadWindUI()
     local repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/WindUI-1.6.62/dist/main.lua"
