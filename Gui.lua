@@ -6,11 +6,16 @@
 ]]
 
 local WindUI
+print("[XZNE] Gui.lua Loading...")
+print("[XZNE] Checking Controller...")
 local Controller = _G.XZNE_Controller
 
 if not Controller then
-    warn("[XZNE] Controller not found! Please run Main.lua first.")
+    print("❌ [XZNE] Controller is NIL!")
+    print("❌ [XZNE] Please run Main.lua first or check for errors.")
     return
+else
+    print("✅ [XZNE] Controller Found:", tostring(Controller))
 end
 
 -- [1] LOAD WINDUI
