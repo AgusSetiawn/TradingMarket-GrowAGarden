@@ -28,4 +28,4 @@ while not _G.XZNE_Controller and Timeout < 5 do
 end
 
 -- 3. Load GUI
-LoadScript("Gui_Beta.lua")
+LoadScript("Gui.lua")

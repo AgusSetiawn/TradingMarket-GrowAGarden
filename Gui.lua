@@ -1,22 +1,6 @@
---[[
-    💠 XZNE SCRIPTHUB v0.0.01 Beta - UI LOADER
-    
-    🎨 WindUI Interface
-    🔗 Connects to: Main.lua (_G.XZNE_Controller)
-]]
-
-local WindUI
-print("[XZNE] Gui.lua Loading...")
-print("[XZNE] Checking Controller...")
+local WindUI = nil
 local Controller = _G.XZNE_Controller
-
-if not Controller then
-    print("❌ [XZNE] Controller is NIL!")
-    print("❌ [XZNE] Please run Main.lua first or check for errors.")
-    return
-else
-    print("✅ [XZNE] Controller Found:", tostring(Controller))
-end
+if not Controller then return end -- Silent fail safe for now
 
 -- [1] LOAD WINDUI
 do
