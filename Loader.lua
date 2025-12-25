@@ -4,7 +4,7 @@
     🚀 Usage: loadstring(game:HttpGet("https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/main.lua"))()
 ]]
 
-local Repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/"
+local Repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/perf-v28.1/"
 print("[XZNE] Booting v0.0.01 [Beta]...")
 
 local function LoadScript(Script)
