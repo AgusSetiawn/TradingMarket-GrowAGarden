@@ -12,7 +12,7 @@ local Repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAG
 
 local function LoadScript(Script)
     local Success, Result = pcall(function()
-        return loadstring(game:HttpGet(Repo .. Script))()
+        return loadstring(game:HttpGet(Repo .. Script .. "?t=" .. tostring(os.time())))()
     end)
     
     if not Success then

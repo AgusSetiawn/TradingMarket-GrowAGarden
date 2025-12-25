@@ -36,12 +36,18 @@ local Config = Controller.Config
 local Stats = Controller.Stats
 local ListedCache = {}
 
--- [3] REMOTES
+-- [3] REMOTES & DATA
 local TradeEvents = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("TradeEvents")
 local Booths = TradeEvents:WaitForChild("Booths")
 local CreateListingRemote = Booths:WaitForChild("CreateListing")
 local ClaimBoothRemote = Booths:WaitForChild("ClaimBooth")
 local RemoveBoothRemote = Booths:WaitForChild("RemoveBooth")
+
+-- Attempt to load TradeBoothsData for optimization
+local TradeBoothsData = nil
+pcall(function()
+    TradeBoothsData = require(ReplicatedStorage.Data.TradeBoothsData)
+end)
 
 -- [4] HELPER FUNCTIONS
 
@@ -63,12 +69,45 @@ local function GetMyBooth()
     return nil
 end
 
--- [CRITICAL] Find Target UUID - EXACT COPY from v2.0
+local function GetActiveListings()
+    local activeUUIDs = {}
+    
+    -- Method 1: Check TradeBoothsData (Best/Internal)
+    if TradeBoothsData then
+        local success, data = pcall(function() return TradeBoothsData:GetData() end)
+        if success and data and data.Players then
+            local myData = data.Players[tostring(LocalPlayer.UserId)] or data.Players[LocalPlayer.UserId]
+            if myData and myData.Listings then
+                for uuid, _ in pairs(myData.Listings) do
+                    activeUUIDs[uuid] = true
+                end
+            end
+        end
+    end
+
+    -- Method 2: Check Workspace Booth (Fallback)
+    local myBooth = GetMyBooth()
+    if myBooth and myBooth:FindFirstChild("DynamicInstances") then
+        for _, item in pairs(myBooth.DynamicInstances:GetChildren()) do
+            -- Usually the item name in DynamicInstances is the UUID or contains it
+            -- Based on game code, items in DynamicInstances are named by ItemId (UUID)
+            if item then
+                activeUUIDs[item.Name] = true
+            end
+        end
+    end
+    
+    return activeUUIDs
+end
+
+-- [CRITICAL] Find Target UUID
 local function FindTargetUUID()
     local locations = {
         LocalPlayer:FindFirstChild("Backpack"), 
         LocalPlayer.Character
     }
+    
+    local alreadyListed = GetActiveListings()
     
     for _, loc in pairs(locations) do
         if loc then
@@ -77,7 +116,9 @@ local function FindTargetUUID()
                     local realName = item:GetAttribute("f")
                     if realName and string.find(string.lower(realName), string.lower(Config.TargetName)) then
                         local uuid = item:GetAttribute("c")
-                        if uuid and not ListedCache[uuid] then
+                        
+                        -- Check internal cache AND game state
+                        if uuid and not ListedCache[uuid] and not alreadyListed[uuid] then
                             return uuid, item.Name
                         end
                     end
@@ -139,7 +180,10 @@ local function RunAutoList()
             Stats.LastListTime = tick()
             Stats.ListedCount = Stats.ListedCount + 1
         else
-            ListedCache[uuid] = nil
+            -- If failed, maybe it IS listed but we missed it, or some other error.
+            -- We don't mark as cached so we retry (unless it was a permanent error?)
+            -- For safety, we can briefly cache it to prevent spamming the same error
+            -- But getting active listings next time should catch it if it succeeded.
         end
     end
 end
