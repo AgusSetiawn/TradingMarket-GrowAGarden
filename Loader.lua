@@ -25,7 +25,23 @@ end
 if not _G.XZNE_Controller then _G.XZNE_Controller = { Config = {} } end
 
 print("🎨 [XZNE] Loading Interface...")
-LoadScript("Interface.lua")
+-- [SOLUSI ALTERNATIF CACHE]
+-- Retry Loop + Aggressive Cache Busting (Random Number)
+local GuiLoaded = false
+for i = 1, 3 do
+    local success, err = pcall(function()
+        -- Tambah math.random untuk unique URL setiap request
+        loadstring(game:HttpGet(Repo .. "Gui.lua?t=" .. tostring(os.time()) .. "&r=" .. tostring(math.random(1, 10000))))()
+    end)
+    if success then 
+        GuiLoaded = true 
+        break 
+    else
+        warn("[XZNE] Attempt " .. i .. " failed to load Gui.lua: " .. tostring(err))
+        task.wait(1)
+    end
+end
+if not GuiLoaded then warn("❌ FATAL: Could not load Gui.lua after 3 attempts.") end
 
 -- 2. Load Logic Core (Main.lua)
 print("🧠 [XZNE] Loading Logic...")
