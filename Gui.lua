@@ -28,98 +28,9 @@ do
 end
 
 -- [2] DATABASES 
-local PetDatabase = {
-    "Dog", "Golden Lab", "Bunny", "Black Bunny", "Cat", "Deer", "Chicken", "Orange Tabby", "Spotted Deer", "Rooster", 
-    "Monkey", "Pig", "Silver Monkey", "Turtle", "Cow", "Sea Otter", "Polar Bear", "Caterpillar", "Snail", "Giant Ant", 
-    "Praying Mantis", "Dragonfly", "Panda", "Hedgehog", "Kiwi", "Mole", "Frog", "Echo Frog", "Raccoon", "Night Owl", 
-    "Owl", "Grey Mouse", "Squirrel", "Brown Mouse", "Red Giant Ant", "Red Fox", "Chicken Zombie", "Blood Hedgehog", 
-    "Blood Kiwi", "Blood Owl", "Moon Cat", "Bee", "Honey Bee", "Petal Bee", "Bear Bee", "Queen Bee", "Wasp", 
-    "Tarantula Hawk", "Moth", "Butterfly", "Disco Bee", "Cooked Owl", "Pack Bee", "Starfish", "Crab", "Seagull", 
-    "Toucan", "Flamingo", "Sea Turtle", "Seal", "Orangutan", "Peacock", "Capybara", "Scarlet Macaw", "Ostrich", 
-    "Mimic Octopus", "Meerkat", "Sand Snake", "Axolotl", "Hyacinth Macaw", "Fennec Fox", "Hamster", "Bald Eagle", 
-    "Raptor", "Stegosaurus", "Triceratops", "Pterodactyl", "Brontosaurus", "Radioactive Stegosaurus", "T-Rex", 
-    "Parasaurolophus", "Iguanodon", "Pachycephalosaurus", "Dilophosaurus", "Ankylosaurus", "Spinosaurus", 
-    "Rainbow Parasaurolophus", "Rainbow Iguanodon", "Rainbow Pachycephalosaurus", "Rainbow Dilophosaurus", 
-    "Rainbow Ankylosaurus", "Rainbow Spinosaurus", "Shiba Inu", "Nihonzaru", "Tanuki", "Tanchozuru", "Kappa", 
-    "Kitsune", "Koi", "Football", "Maneki-neko", "Kodama", "Corrupted Kodama", "Raiju", "Corrupted Kitsune", 
-    "Rainbow Maneki-neko", "Rainbow Kodama", "Rainbow Corrupted Kitsune", "Bagel Bunny", "Pancake Mole", 
-    "Sushi Bear", "Spaghetti Sloth", "French Fry Ferret", "Mochi Mouse", "Junkbot", "Bacon Pig", "Hotdog Daschund", 
-    "Lobster Thermidor", "Sunny-Side Chicken", "Gorilla Chef", "Rainbow Bacon Pig", "Rainbow Hotdog Daschund", 
-    "Rainbow Lobster Thermidor", "Dairy Cow", "Jackalope", "Seedling", "Golem", "Golden Goose", "Spriggan", 
-    "Peach Wasp", "Apple Gazelle", "Lemon Lion", "Green Bean", "Elk", "Mandrake", "Griffin", "Gnome", "Rainbow Elk", 
-    "Rainbow Mandrake", "Rainbow Griffin", "Ladybug", "Pixie", "Imp", "Glimmering Sprite", "Cockatrice", "Cardinal", 
-    "Shroomie", "Phoenix", "Wisp", "Drake", "Luminous Sprite", "Rainbow Cardinal", "Rainbow Shroomie", 
-    "Rainbow Phoenix", "Robin", "Badger", "Grizzly Bear", "Barn Owl", "Swan", "GIANT Robin", "GIANT Badger", 
-    "GIANT Grizzly Bear", "GIANT Barn Owl", "GIANT Swan", "Chipmunk", "Red Squirrel", "Marmot", "Sugar Glider", 
-    "Space Squirrel", "Salmon", "Woodpecker", "Mallard", "Red Panda", "Tree Frog", "Hummingbird", "Iguana", 
-    "Chimpanzee", "Tiger", "Blue Jay", "Silver Dragonfly", "Firefly", "Mizuchi", "Rainbow Blue Jay", 
-    "GIANT Silver Dragonfly", "GIANT Firefly", "Rainbow Mizuchi", "Chubby Chipmunk", "Farmer Chipmunk", 
-    "Idol Chipmunk", "Chinchilla", "Rainbow Farmer Chipmunk", "Rainbow Idol Chipmunk", "Rainbow Chinchilla", 
-    "Hyrax", "Fortune Squirrel", "Bat", "Bone Dog", "Spider", "Black Cat", "Headless Horseman", "Ghostly Bat", 
-    "Ghostly Bone Dog", "Ghostly Spider", "Ghostly Black Cat", "Ghostly Headless Horseman", "Pumpkin Rat", 
-    "Ghost Bear", "Wolf", "Reaper", "Crow", "Goat", "Goblin", "Dark Spriggan", "Hex Serpent", 
-    "Ghostly Dark Spriggan", "Scarab", "Tomb Marmot", "Mummy", "Ghostly Scarab", "Ghostly Tomb Marmot", 
-    "Ghostly Mummy", "Lich", "Woody", "Specter", "Armadillo", "Stag Beetle", "Mantis Shrimp", "Hydra", "Oxpecker", 
-    "Zebra", "Giraffe", "Rhino", "Elephant", "GIANT Armadillo", "Rainbow Stag Beetle", "GIANT Mantis Shrimp", 
-    "Rainbow Hydra", "Rainbow Oxpecker", "Rainbow Zebra", "Rainbow Giraffe", "Rainbow Rhino", "Rainbow Elephant", 
-    "Gecko", "Hyena", "Cape Buffalo", "Hippo", "Crocodile", "Lion", "Topaz Snail", "Amethyst Beetle", 
-    "Emerald Snake", "Sapphire Macaw", "Diamond Panther", "Ruby Squid", "Termite", "Geode Turtle", "Trapdoor Spider", 
-    "Goblin Miner", "Smithing Dog", "Cheetah", "Silver Piggy", "Golden Piggy", "Clam", "Magpie", "Bearded Dragon", 
-    "Rainbow Clam", "Rainbow Magpie", "Rainbow Bearded Dragon", "Pack Mule", "Water Buffalo", "Chimera", "Sheckling", 
-    "Messenger Pigeon", "Camel", "Snowman Soldier", "Snowman Builder", "Arctic Fox", "Frost Dragon", 
-    "GIANT Snowman Soldier", "GIANT Snowman Builder", "Rainbow Arctic Fox", "Rainbow Frost Dragon", "Gift Rat", 
-    "Penguin", "Snow Bunny", "French Hen", "Christmas Gorilla", "Mistletoad", "Krampus", "Rainbow Snow Bunny", 
-    "Rainbow French Hen", "Rainbow Christmas Gorilla", "Rainbow Mistletoad", "Rainbow Krampus", "Turtle Dove", 
-    "Reindeer", "Nutcracker", "Yeti", "Ice Golem", "Festive Turtle Dove", "Festive Reindeer", "Festive Nutcracker", 
-    "Festive Yeti", "Festive Ice Golem", "Pine Beetle", "Cocoa Cat", "Eggnog Chick", "Red-Nosed Reindeer", 
-    "Partridge", "Santa Bear", "Moose", "Frost Squirrel", "Wendigo", "Festive Partridge", "Festive Santa Bear", 
-    "Festive Moose", "Festive Frost Squirrel", "Festive Wendigo", "Summer Kiwi", "Christmas Spirit", "Red Dragon", 
-    "Golden Bee", "Tsuchinoko", "Rainbow Fortune Squirrel", "Glass Dog", "Glass Cat"
-}
+local PetDatabase = {} -- Populated asynchronously
 
-local ItemDatabase = {
-    "Ackee", "Acorn", "Acorn Squash", "Aetherfruit", "Aloe Vera", "Amber Spine", "Amberfruit Shrub", "Amberheart", 
-    "Antlerbloom", "Apple", "Artichoke", "Asteris", "Auburn Pine", "Aurora Vine", "Autumn Shroom", "Avocado", 
-    "Badlands Pepper", "Bamboo", "Bamboo Tree", "Banana", "Banana Orchid", "Banesberry", "Baobab", "Beanstalk", 
-    "Bee Balm", "Beetroot", "Bell Pepper", "Bendboo", "Bitter Melon", "Black Bat Flower", "Blood Banana", 
-    "Blood Orange", "Bloodred Mushroom", "Blue Raspberry", "Blueberry", "Bone Blossom", "Boneboo", "Briar Rose", 
-    "Broccoli", "Brussels Sprout", "Buddhas Hand", "Burning Bud", "Bush Flake", "Buttercup", "Butternut Squash", 
-    "Cacao", "Cactus", "Calla Lily", "Canary Melon", "Candy Blossom", "Candy Cane", "Candy Cornflower", 
-    "Candy Sunflower", "Cantaloupe", "Carnival Pumpkin", "Carrot", "Castor Bean", "Cauliflower", "Celestiberry", 
-    "Cherry Blossom", "Chicken Feed", "Chocolate Carrot", "Christmas Cracker", "Cocomango", "Coconut", "Cocovine", 
-    "Coilvine", "Coinfruit", "Cookie Stack", "Corn", "Corpse Flower", "Cranberry", "Crimson Thorn", "Crocus", 
-    "Crown Melon", "Crown of Thorns", "Cryo Rose", "Cryoshard", "Cursed Fruit", "Cyclamen", "Daffodil", "Daisy", 
-    "Dandelion", "Delphinium", "Devilroot", "Dezen", "Dragon Fruit", "Dragon Pepper", "Durian", "Duskpuff", 
-    "Easter Egg", "Eggplant", "Elder Strawberry", "Elephant Ears", "Ember Lily", "Emerald Bud", "Enkaku", 
-    "Fall Berry", "Feijoa", "Ferntail", "Firefly Fern", "Firewell", "Firework Flower", "Fissure Berry", 
-    "Flare Daisy", "Flare Melon", "Fossilight", "Foxglove", "Frostspike", "Frostwing", "Frosty Bite", "Fruitball", 
-    "Gem Fruit", "Ghost Bush", "Ghost Pepper", "Ghoul Root", "Gift Berry", "GingerBread Blossom", "Giant Pinecone", 
-    "Glass Kiwi", "Gleamroot", "Glowpod", "Glowshroom", "Glowthorn", "Golden Egg", "Golden Peach", "Grand Tomato", 
-    "Grand Volcania", "Grape", "Great Pumpkin", "Green Apple", "Guanabana", "Gumdrop", "Hazelnut", "Hinomai", 
-    "Hive Fruit", "Hollow Bamboo", "Holly Berry", "Honeysuckle", "Horned Dinoshroom", "Horned Melon", "Horned Redrose", 
-    "Horsetail", "Inferno Quince", "Jack O Lantern", "Jalapeno", "Java Banana", "King Cabbage", "Kiwi", "Kniphofia", 
-    "Lavender", "Legacy Sunflower", "Lemon", "Liberty Lily", "Lightshoot", "Lilac", "Lily of the Valley", 
-    "Lingonberry", "Loquat", "Lotus", "Lucky Bamboo", "Lumin Bloom", "Lumira", "Luna Stem", "Mandrake", 
-    "Mandrone Berry", "Mango", "Mangosteen", "Mangrove", "Manuka Flower", "Maple Apple", "Maple Resin", 
-    "Meyer Lemon", "Mint", "Monoblooma", "Monster Flower", "Moon Blossom", "Moon Mango", "Moon Melon", 
-    "Moonflower", "Moonglow", "Multitrap", "Mummy's Hand", "Mushroom", "Naval Wort", "Nectar Thorn", "Nectarine", 
-    "Nectarshade", "Nightshade", "Octobloom", "Olive", "Onion", "Orange Delight", "Orange Tulip", "Papaya", 
-    "Paradise Petal", "Parasol Flower", "Parsley", "Passionfruit", "Peace Lily", "Peach", "Peacock Tail", 
-    "Pear", "Pecan", "Pepper", "Peppermint Pop", "Peppermint Vine", "Persimmon", "Pineapple", "Pink Lily", 
-    "Pinkside Dandelion", "Pitcher Plant", "Pixie Faern", "Poinsettia", "Poison Apple", "Pollen Cone", 
-    "Pomegranate", "Poseidon Plant", "Potato", "Pricklefruit", "Prickly Pear", "Princess Thorn", "Protea", 
-    "Pumpkin", "Purple Dahlia", "Pyracantha", "Radish", "Rafflesia", "Raspberry", "Red Lollipop", "Reindeer Root", 
-    "Rhubarb", "Romanesco", "Rose", "Rosemary", "Rosy Delight", "Sakura Bush", "Seer Vine", "Serenity", 
-    "Severed Spine", "Sherrybloom", "Snaparino Beanarini", "Snowman Sprout", "Soft Sunshine", "Soul Fruit", 
-    "Speargrass", "Spider Vine", "Spiked Mango", "Spirit Flower", "Spirit Sparkle", "Spring Onion", "Starfruit", 
-    "Stonebite", "Strawberry", "Succulent", "Sugar Apple", "Sugarglaze", "Sunbulb", "Suncoil", "Sundew", 
-    "Sunflower", "Taco Fern", "Tall Asparagus", "Taro Flower", "Thornspire", "Tomato", "Torchflare", 
-    "Tranquil Bloom", "Traveler's Fruit", "Trinity Fruit", "Turnip", "Twisted Tangle", "Untold Bell", 
-    "Urchin Plant", "Veinpetal", "Venus Fly Trap", "Viburnum Berry", "Violet Corn", "Watermelon", "Weeping Branch", 
-    "Wereplant", "Wild Carrot", "Wild Pineapple", "Willowberry", "Wisp Flower", "Wispwing", "Wyrmvine", "Yarrow", 
-    "Zebrazinkle", "Zen Rocks", "Zenflare", "Zombie Fruit", "Zucchini"
-}
-table.sort(PetDatabase); table.sort(ItemDatabase)
+local ItemDatabase = {} -- Populated asynchronously
 
 -- [3] REGISTER ICONS
 WindUI.Creator.AddIcons("xzne", {
@@ -277,9 +188,109 @@ PerfSection:Button({
     Callback = function() Window:Destroy() end
 })
 
--- [GUI SYNC v2]
+-- [GUI SYNC v2 & ASYNC DATA LOAD]
 task.spawn(function()
-    task.wait(1)
+    -- [1] ASYNC DATABASE LOADING (Optimized so UI doesn't freeze on boot)
+    PetDatabase = {
+    "Dog", "Golden Lab", "Bunny", "Black Bunny", "Cat", "Deer", "Chicken", "Orange Tabby", "Spotted Deer", "Rooster", 
+    "Monkey", "Pig", "Silver Monkey", "Turtle", "Cow", "Sea Otter", "Polar Bear", "Caterpillar", "Snail", "Giant Ant", 
+    "Praying Mantis", "Dragonfly", "Panda", "Hedgehog", "Kiwi", "Mole", "Frog", "Echo Frog", "Raccoon", "Night Owl", 
+    "Owl", "Grey Mouse", "Squirrel", "Brown Mouse", "Red Giant Ant", "Red Fox", "Chicken Zombie", "Blood Hedgehog", 
+    "Blood Kiwi", "Blood Owl", "Moon Cat", "Bee", "Honey Bee", "Petal Bee", "Bear Bee", "Queen Bee", "Wasp", 
+    "Tarantula Hawk", "Moth", "Butterfly", "Disco Bee", "Cooked Owl", "Pack Bee", "Starfish", "Crab", "Seagull", 
+    "Toucan", "Flamingo", "Sea Turtle", "Seal", "Orangutan", "Peacock", "Capybara", "Scarlet Macaw", "Ostrich", 
+    "Mimic Octopus", "Meerkat", "Sand Snake", "Axolotl", "Hyacinth Macaw", "Fennec Fox", "Hamster", "Bald Eagle", 
+    "Raptor", "Stegosaurus", "Triceratops", "Pterodactyl", "Brontosaurus", "Radioactive Stegosaurus", "T-Rex", 
+    "Parasaurolophus", "Iguanodon", "Pachycephalosaurus", "Dilophosaurus", "Ankylosaurus", "Spinosaurus", 
+    "Rainbow Parasaurolophus", "Rainbow Iguanodon", "Rainbow Pachycephalosaurus", "Rainbow Dilophosaurus", 
+    "Rainbow Ankylosaurus", "Rainbow Spinosaurus", "Shiba Inu", "Nihonzaru", "Tanuki", "Tanchozuru", "Kappa", 
+    "Kitsune", "Koi", "Football", "Maneki-neko", "Kodama", "Corrupted Kodama", "Raiju", "Corrupted Kitsune", 
+    "Rainbow Maneki-neko", "Rainbow Kodama", "Rainbow Corrupted Kitsune", "Bagel Bunny", "Pancake Mole", 
+    "Sushi Bear", "Spaghetti Sloth", "French Fry Ferret", "Mochi Mouse", "Junkbot", "Bacon Pig", "Hotdog Daschund", 
+    "Lobster Thermidor", "Sunny-Side Chicken", "Gorilla Chef", "Rainbow Bacon Pig", "Rainbow Hotdog Daschund", 
+    "Rainbow Lobster Thermidor", "Dairy Cow", "Jackalope", "Seedling", "Golem", "Golden Goose", "Spriggan", 
+    "Peach Wasp", "Apple Gazelle", "Lemon Lion", "Green Bean", "Elk", "Mandrake", "Griffin", "Gnome", "Rainbow Elk", 
+    "Rainbow Mandrake", "Rainbow Griffin", "Ladybug", "Pixie", "Imp", "Glimmering Sprite", "Cockatrice", "Cardinal", 
+    "Shroomie", "Phoenix", "Wisp", "Drake", "Luminous Sprite", "Rainbow Cardinal", "Rainbow Shroomie", 
+    "Rainbow Phoenix", "Robin", "Badger", "Grizzly Bear", "Barn Owl", "Swan", "GIANT Robin", "GIANT Badger", 
+    "GIANT Grizzly Bear", "GIANT Barn Owl", "GIANT Swan", "Chipmunk", "Red Squirrel", "Marmot", "Sugar Glider", 
+    "Space Squirrel", "Salmon", "Woodpecker", "Mallard", "Red Panda", "Tree Frog", "Hummingbird", "Iguana", 
+    "Chimpanzee", "Tiger", "Blue Jay", "Silver Dragonfly", "Firefly", "Mizuchi", "Rainbow Blue Jay", 
+    "GIANT Silver Dragonfly", "GIANT Firefly", "Rainbow Mizuchi", "Chubby Chipmunk", "Farmer Chipmunk", 
+    "Idol Chipmunk", "Chinchilla", "Rainbow Farmer Chipmunk", "Rainbow Idol Chipmunk", "Rainbow Chinchilla", 
+    "Hyrax", "Fortune Squirrel", "Bat", "Bone Dog", "Spider", "Black Cat", "Headless Horseman", "Ghostly Bat", 
+    "Ghostly Bone Dog", "Ghostly Spider", "Ghostly Black Cat", "Ghostly Headless Horseman", "Pumpkin Rat", 
+    "Ghost Bear", "Wolf", "Reaper", "Crow", "Goat", "Goblin", "Dark Spriggan", "Hex Serpent", 
+    "Ghostly Dark Spriggan", "Scarab", "Tomb Marmot", "Mummy", "Ghostly Scarab", "Ghostly Tomb Marmot", 
+    "Ghostly Mummy", "Lich", "Woody", "Specter", "Armadillo", "Stag Beetle", "Mantis Shrimp", "Hydra", "Oxpecker", 
+    "Zebra", "Giraffe", "Rhino", "Elephant", "GIANT Armadillo", "Rainbow Stag Beetle", "GIANT Mantis Shrimp", 
+    "Rainbow Hydra", "Rainbow Oxpecker", "Rainbow Zebra", "Rainbow Giraffe", "Rainbow Rhino", "Rainbow Elephant", 
+    "Gecko", "Hyena", "Cape Buffalo", "Hippo", "Crocodile", "Lion", "Topaz Snail", "Amethyst Beetle", 
+    "Emerald Snake", "Sapphire Macaw", "Diamond Panther", "Ruby Squid", "Termite", "Geode Turtle", "Trapdoor Spider", 
+    "Goblin Miner", "Smithing Dog", "Cheetah", "Silver Piggy", "Golden Piggy", "Clam", "Magpie", "Bearded Dragon", 
+    "Rainbow Clam", "Rainbow Magpie", "Rainbow Bearded Dragon", "Pack Mule", "Water Buffalo", "Chimera", "Sheckling", 
+    "Messenger Pigeon", "Camel", "Snowman Soldier", "Snowman Builder", "Arctic Fox", "Frost Dragon", 
+    "GIANT Snowman Soldier", "GIANT Snowman Builder", "Rainbow Arctic Fox", "Rainbow Frost Dragon", "Gift Rat", 
+    "Penguin", "Snow Bunny", "French Hen", "Christmas Gorilla", "Mistletoad", "Krampus", "Rainbow Snow Bunny", 
+    "Rainbow French Hen", "Rainbow Christmas Gorilla", "Rainbow Mistletoad", "Rainbow Krampus", "Turtle Dove", 
+    "Reindeer", "Nutcracker", "Yeti", "Ice Golem", "Festive Turtle Dove", "Festive Reindeer", "Festive Nutcracker", 
+    "Festive Yeti", "Festive Ice Golem", "Pine Beetle", "Cocoa Cat", "Eggnog Chick", "Red-Nosed Reindeer", 
+    "Partridge", "Santa Bear", "Moose", "Frost Squirrel", "Wendigo", "Festive Partridge", "Festive Santa Bear", 
+    "Festive Moose", "Festive Frost Squirrel", "Festive Wendigo", "Summer Kiwi", "Christmas Spirit", "Red Dragon", 
+    "Golden Bee", "Tsuchinoko", "Rainbow Fortune Squirrel", "Glass Dog", "Glass Cat"
+    }
+    
+    ItemDatabase = {
+    "Ackee", "Acorn", "Acorn Squash", "Aetherfruit", "Aloe Vera", "Amber Spine", "Amberfruit Shrub", "Amberheart", 
+    "Antlerbloom", "Apple", "Artichoke", "Asteris", "Auburn Pine", "Aurora Vine", "Autumn Shroom", "Avocado", 
+    "Badlands Pepper", "Bamboo", "Bamboo Tree", "Banana", "Banana Orchid", "Banesberry", "Baobab", "Beanstalk", 
+    "Bee Balm", "Beetroot", "Bell Pepper", "Bendboo", "Bitter Melon", "Black Bat Flower", "Blood Banana", 
+    "Blood Orange", "Bloodred Mushroom", "Blue Raspberry", "Blueberry", "Bone Blossom", "Boneboo", "Briar Rose", 
+    "Broccoli", "Brussels Sprout", "Buddhas Hand", "Burning Bud", "Bush Flake", "Buttercup", "Butternut Squash", 
+    "Cacao", "Cactus", "Calla Lily", "Canary Melon", "Candy Blossom", "Candy Cane", "Candy Cornflower", 
+    "Candy Sunflower", "Cantaloupe", "Carnival Pumpkin", "Carrot", "Castor Bean", "Cauliflower", "Celestiberry", 
+    "Cherry Blossom", "Chicken Feed", "Chocolate Carrot", "Christmas Cracker", "Cocomango", "Coconut", "Cocovine", 
+    "Coilvine", "Coinfruit", "Cookie Stack", "Corn", "Corpse Flower", "Cranberry", "Crimson Thorn", "Crocus", 
+    "Crown Melon", "Crown of Thorns", "Cryo Rose", "Cryoshard", "Cursed Fruit", "Cyclamen", "Daffodil", "Daisy", 
+    "Dandelion", "Delphinium", "Devilroot", "Dezen", "Dragon Fruit", "Dragon Pepper", "Durian", "Duskpuff", 
+    "Easter Egg", "Eggplant", "Elder Strawberry", "Elephant Ears", "Ember Lily", "Emerald Bud", "Enkaku", 
+    "Fall Berry", "Feijoa", "Ferntail", "Firefly Fern", "Firewell", "Firework Flower", "Fissure Berry", 
+    "Flare Daisy", "Flare Melon", "Fossilight", "Foxglove", "Frostspike", "Frostwing", "Frosty Bite", "Fruitball", 
+    "Gem Fruit", "Ghost Bush", "Ghost Pepper", "Ghoul Root", "Gift Berry", "GingerBread Blossom", "Giant Pinecone", 
+    "Glass Kiwi", "Gleamroot", "Glowpod", "Glowshroom", "Glowthorn", "Golden Egg", "Golden Peach", "Grand Tomato", 
+    "Grand Volcania", "Grape", "Great Pumpkin", "Green Apple", "Guanabana", "Gumdrop", "Hazelnut", "Hinomai", 
+    "Hive Fruit", "Hollow Bamboo", "Holly Berry", "Honeysuckle", "Horned Dinoshroom", "Horned Melon", "Horned Redrose", 
+    "Horsetail", "Inferno Quince", "Jack O Lantern", "Jalapeno", "Java Banana", "King Cabbage", "Kiwi", "Kniphofia", 
+    "Lavender", "Legacy Sunflower", "Lemon", "Liberty Lily", "Lightshoot", "Lilac", "Lily of the Valley", 
+    "Lingonberry", "Loquat", "Lotus", "Lucky Bamboo", "Lumin Bloom", "Lumira", "Luna Stem", "Mandrake", 
+    "Mandrone Berry", "Mango", "Mangosteen", "Mangrove", "Manuka Flower", "Maple Apple", "Maple Resin", 
+    "Meyer Lemon", "Mint", "Monoblooma", "Monster Flower", "Moon Blossom", "Moon Mango", "Moon Melon", 
+    "Moonflower", "Moonglow", "Multitrap", "Mummy's Hand", "Mushroom", "Naval Wort", "Nectar Thorn", "Nectarine", 
+    "Nectarshade", "Nightshade", "Octobloom", "Olive", "Onion", "Orange Delight", "Orange Tulip", "Papaya", 
+    "Paradise Petal", "Parasol Flower", "Parsley", "Passionfruit", "Peace Lily", "Peach", "Peacock Tail", 
+    "Pear", "Pecan", "Pepper", "Peppermint Pop", "Peppermint Vine", "Persimmon", "Pineapple", "Pink Lily", 
+    "Pinkside Dandelion", "Pitcher Plant", "Pixie Faern", "Poinsettia", "Poison Apple", "Pollen Cone", 
+    "Pomegranate", "Poseidon Plant", "Potato", "Pricklefruit", "Prickly Pear", "Princess Thorn", "Protea", 
+    "Pumpkin", "Purple Dahlia", "Pyracantha", "Radish", "Rafflesia", "Raspberry", "Red Lollipop", "Reindeer Root", 
+    "Rhubarb", "Romanesco", "Rose", "Rosemary", "Rosy Delight", "Sakura Bush", "Seer Vine", "Serenity", 
+    "Severed Spine", "Sherrybloom", "Snaparino Beanarini", "Snowman Sprout", "Soft Sunshine", "Soul Fruit", 
+    "Speargrass", "Spider Vine", "Spiked Mango", "Spirit Flower", "Spirit Sparkle", "Spring Onion", "Starfruit", 
+    "Stonebite", "Strawberry", "Succulent", "Sugar Apple", "Sugarglaze", "Sunbulb", "Suncoil", "Sundew", 
+    "Sunflower", "Taco Fern", "Tall Asparagus", "Taro Flower", "Thornspire", "Tomato", "Torchflare", 
+    "Tranquil Bloom", "Traveler's Fruit", "Trinity Fruit", "Turnip", "Twisted Tangle", "Untold Bell", 
+    "Urchin Plant", "Veinpetal", "Venus Fly Trap", "Viburnum Berry", "Violet Corn", "Watermelon", "Weeping Branch", 
+    "Wereplant", "Wild Carrot", "Wild Pineapple", "Willowberry", "Wisp Flower", "Wispwing", "Wyrmvine", "Yarrow", 
+    "Zebrazinkle", "Zen Rocks", "Zenflare", "Zombie Fruit", "Zucchini"
+    }
+
+    table.sort(PetDatabase)
+    table.sort(ItemDatabase)
+    
+    print("[XZNE] Databases Loaded & Sorted Asynchronously")
+
+    -- [2] SYNC UI (Now that data is ready)
+    task.wait(0.2)
+
     
     local function SyncToggle(element, val) if element then pcall(function() element:Set(val, false, true) end) end end
     local function SyncSlider(element, val) if element then pcall(function() element:Set(val, nil) end) end end
