@@ -25,7 +25,7 @@ end
 if not _G.XZNE_Controller then _G.XZNE_Controller = { Config = {} } end
 
 print("🎨 [XZNE] Loading Interface...")
-LoadScript("Gui.lua")
+LoadScript("Interface.lua")
 
 -- 2. Load Logic Core (Main.lua)
 print("🧠 [XZNE] Loading Logic...")
