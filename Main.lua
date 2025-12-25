@@ -61,6 +61,33 @@ local Stats = Controller.Stats
 local ListingDebounce = {}
 local CachedTargets = { Buy = "", List = "", Remove = "" }
 
+-- [CONFIG PERSISTENCE]
+local FileName = "XZNE_Config_v28.json"
+
+function Controller.SaveConfig()
+    if not HttpService then return end
+    local success, json = pcall(function() return HttpService:JSONEncode(Config) end)
+    if success then
+        pcall(function() writefile(FileName, json) end)
+    end
+end
+
+function Controller.LoadConfig()
+    if not isfile or not isfile(FileName) then return end
+    local success, content = pcall(function() return readfile(FileName) end)
+    if success and content then
+        local decodedS, decoded = pcall(function() return HttpService:JSONDecode(content) end)
+        if decodedS and decoded then
+            for k, v in pairs(decoded) do
+                if Config[k] ~= nil then Config[k] = v end
+            end
+            -- Update dependent caches
+            Controller.UpdateCache() 
+            print("✅ [XZNE] Config Loaded")
+        end
+    end
+end
+
 -- [3] REMOTES & HOOKS
 local TradeEvents = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("TradeEvents")
 local BoothsRemote = TradeEvents:WaitForChild("Booths")
