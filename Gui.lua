@@ -3,13 +3,34 @@ print("[XZNE] Loading GUI v28.0 (Patch 2)...")
 
 local function LoadWindUI()
     local repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/WindUI-1.6.62/dist/main.lua"
+    
+    -- Attempt 1: GitHub Repo
     local success, script = pcall(function() return game:HttpGet(repo) end)
-    if success and script then
+    if success and script and string.len(script) > 0 then
         local loadedFn, loadErr = loadstring(script)
-        if loadedFn then return loadedFn() end
+        if loadedFn then 
+            print("[XZNE] WindUI loaded from Repo")
+            return loadedFn() 
+        else
+            warn("[XZNE] Repo LoadString Error: " .. tostring(loadErr))
+        end
+    else
+        warn("[XZNE] Failed to fetch WindUI from Repo")
     end
-    -- Fallback
-    return loadstring(game:HttpGet("https://tree-hub.vercel.app/api/UI/WindUI"))()
+    
+    -- Attempt 2: Fallback URL
+    local success2, script2 = pcall(function() return game:HttpGet("https://tree-hub.vercel.app/api/UI/WindUI") end)
+    if success2 and script2 and string.len(script2) > 0 then
+        local loadedFn, loadErr = loadstring(script2)
+        if loadedFn then 
+             print("[XZNE] WindUI loaded from Fallback")
+             return loadedFn() 
+        end
+    end
+    
+    -- Attempt 3: Bootstrapped Minimal (Emergency)
+    warn("[XZNE] CRITICAL: Failed to load WindUI. Library missing.")
+    return nil
 end
 
 local WindUI = LoadWindUI()
