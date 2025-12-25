@@ -8,50 +8,39 @@
 local Repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/"
 print("[XZNE] Booting v0.0.01 [Beta] (Official Main)...")
 
--- [ADVANCED LOADER]
-local function SmartLoad(ScriptName)
-    local Url = Repo .. ScriptName .. "?t=" .. tostring(os.time()) .. "&r=" .. tostring(math.random(1, 100000))
-    local Content = nil
+local function LoadScript(Script)
+    -- Cache Busting: ?t=os.time() forces fresh download every execution
+    local Success, Result = pcall(function()
+        return loadstring(game:HttpGet(Repo .. Script .. "?t=" .. tostring(os.time())))()
+    end)
     
-    -- Try 1: request/http_request (Better for bypassing cache)
-    local req = (http_request or request or HttpPost)
-    if req then
-        pcall(function()
-            local response = req({Url = Url, Method = "GET"})
-            if response and response.Body then Content = response.Body end
-        end)
+    if not Success then
+        warn("[XZNE] Failed to load " .. Script .. ": " .. tostring(Result))
+        -- Fallback not needed if Repo is correct
     end
-    
-    -- Try 2: game:HttpGet (Standard Fallback)
-    if not Content then
-        pcall(function() Content = game:HttpGet(Url) end)
-    end
-    
-    if Content then
-        local func, err = loadstring(Content)
-        if func then 
-            func() 
-            return true
-        else
-            warn("[XZNE] Syntax Error in " .. ScriptName .. ": " .. tostring(err))
-        end
-    else
-        warn("[XZNE] Empty content for " .. ScriptName)
-    end
-    return false
 end
 
--- Retry Loop for Gui
+-- 1. Load GUI First (So User sees UI instantly)
+-- Pre-init controller stub so Gui doesn't error
+if not _G.XZNE_Controller then _G.XZNE_Controller = { Config = {} } end
+
+print("🎨 [XZNE] Loading Interface...")
+-- [SOLUSI ALTERNATIF CACHE]
+-- Retry Loop + Aggressive Cache Busting (Random Number)
 local GuiLoaded = false
 for i = 1, 3 do
-    if SmartLoad("Gui.lua") then 
+    local success, err = pcall(function()
+        -- Tambah math.random untuk unique URL setiap request
+        loadstring(game:HttpGet(Repo .. "Gui.lua?t=" .. tostring(os.time()) .. "&r=" .. tostring(math.random(1, 10000))))()
+    end)
+    if success then 
         GuiLoaded = true 
         break 
+    else
+        warn("[XZNE] Attempt " .. i .. " failed to load Gui.lua: " .. tostring(err))
+        task.wait(1)
     end
-    warn("[XZNE] Attempt " .. i .. " failed to load Gui.lua. Retrying...")
-    task.wait(1.5)
 end
-
 if not GuiLoaded then warn("❌ FATAL: Could not load Gui.lua after 3 attempts.") end
 
 -- 2. Load Logic Core (Main.lua)

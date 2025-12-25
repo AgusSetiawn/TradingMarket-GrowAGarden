@@ -26,25 +26,13 @@ local PetDatabase = {} -- Populated asynchronously
 local ItemDatabase = {} -- Populated asynchronously
 
 -- [3] REGISTER ICONS
--- [3] REGISTER ICONS
--- if WindUI and WindUI.Creator and WindUI.Creator.AddIcons then
---     pcall(function()
---         WindUI.Creator.AddIcons("xzne", {
---             ["home"] = "rbxassetid://10723406988", ["settings"] = "rbxassetid://10734950309", ["info"] = "rbxassetid://10709752906",
---             ["play"] = "rbxassetid://10723404337", ["stop"] = "rbxassetid://10709791437", ["trash"] = "rbxassetid://10747373176",
---             ["refresh"] = "rbxassetid://10709790666", ["check"] = "rbxassetid://10709790646", ["search"] = "rbxassetid://10709791437",
---             ["tag"] = "rbxassetid://10709791523", ["log-out"] = "rbxassetid://10734949856", ["crosshair"] = "rbxassetid://10709790537",
---             ["box"] = "rbxassetid://10709791360"
---         })
---     end)
--- else
---     warn("[XZNE] WindUI.Creator.AddIcons missing, skipping custom icons.")
--- end
-
-if not WindUI or not WindUI.CreateWindow then
-    warn("[XZNE] WindUI Critical Failure: Create Window missing!")
-    return
-end
+WindUI.Creator.AddIcons("xzne", {
+    ["home"] = "rbxassetid://10723406988", ["settings"] = "rbxassetid://10734950309", ["info"] = "rbxassetid://10709752906",
+    ["play"] = "rbxassetid://10723404337", ["stop"] = "rbxassetid://10709791437", ["trash"] = "rbxassetid://10747373176",
+    ["refresh"] = "rbxassetid://10709790666", ["check"] = "rbxassetid://10709790646", ["search"] = "rbxassetid://10709791437",
+    ["tag"] = "rbxassetid://10709791523", ["log-out"] = "rbxassetid://10734949856", ["crosshair"] = "rbxassetid://10709790537",
+    ["box"] = "rbxassetid://10709791360"
+})
 
 -- [4] CREATE WINDOW
 local Window = WindUI:CreateWindow({
