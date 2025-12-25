@@ -211,22 +211,44 @@ local UIElements = {}
 local SniperTab = Window:Tab({ Title = "Sniper", Icon = "xzne:crosshair" })
 local SniperSection = SniperTab:Section({ Title = "Auto Buy Configuration" })
 
--- [PHASE 2 OPTIMIZATION] Asynchronous dropdown refresh with micro-yield
+-- [PHASE 2 OPTIMIZATION] Debounced asynchronous dropdown refresh
+local RefreshDebounce = {}
+
 local function UpdateTargetDropdown(CategoryVal, TargetElement)
     if TargetElement then
+        -- Cancel previous refresh if pending
+        if RefreshDebounce[TargetElement] then
+            RefreshDebounce[TargetElement] = false
+        end
+        
+        local debounceId = os.clock()
+        RefreshDebounce[TargetElement] = debounceId
+        
         local newDB = (CategoryVal == "Pet") and PetDatabase or ItemDatabase
         
-        -- Update the Values property
+        -- Show loading state immediately
+        TargetElement.Desc = "Loading..."
         TargetElement.Values = newDB
         
-        -- Asynchronous refresh to prevent main-thread blocking
+        -- INCREASED yield for smoother animation
         task.spawn(function()
-            task.wait(0.05) -- Micro-yield: allows button click animation to complete
+            task.wait(0.15) -- 9 frames @ 60fps for smooth button animation
+            
+            -- Only proceed if this is the latest request
+            if RefreshDebounce[TargetElement] ~= debounceId then
+                return -- Cancelled by newer request
+            end
+            
             if TargetElement.Refresh then
                 pcall(function() 
                     TargetElement:Refresh(newDB)
                 end)
             end
+            
+            -- Reset description after refresh
+            task.wait(0.1)
+            TargetElement.Desc = "Search for item..."
+            RefreshDebounce[TargetElement] = nil
         end)
     end
 end
@@ -241,8 +263,11 @@ UIElements.BuyCategory = SniperSection:Dropdown({
 
 -- LAZY LOAD: Create with empty values for instant UI, populate later
 UIElements.BuyTarget = SniperSection:Dropdown({
-    Title = "Target Item", Desc = "Loading...", Values = {}, 
-    Default = 1, Searchable = true,
+    Title = "Target Item", 
+    Desc = "Type to search (640+ items)", -- Inform users about search
+    Values = {}, 
+    Default = 1, 
+    Searchable = true,
     Callback = function(val) Controller.Config.BuyTarget = val; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
@@ -338,26 +363,35 @@ PerfSection:Button({
     Callback = function() Window:Destroy() end
 })
 
--- [GUI POPULATION - Deferred & Asynchronous]
+-- [GUI POPULATION - Deferred & Asynchronous with Progress]
 task.spawn(function()
-    -- Wait for databases to finish sorting
-    task.wait(0.5)
+    -- INCREASED: Wait for full UI stability
+    task.wait(1.0) -- From 0.5s to 1.0s for better stability
     
     -- Helper: Populate dropdown asynchronously (non-blocking)
     local function PopulateDropdown(element, category, targetValue)
         if element then
             task.spawn(function()
                 local db = (category == "Pet") and PetDatabase or ItemDatabase
+                
+                -- Show progress indicator
+                element.Desc = "Loading " .. #db .. " items..."
                 element.Values = db
-                element.Desc = "Search for item..." -- Reset description
+                
+                -- INCREASED micro-yield for UI breathing room
+                task.wait(0.1)
                 
                 if element.Refresh then
                     pcall(function() element:Refresh(db) end)
                 end
                 
+                -- Allow refresh to complete
+                task.wait(0.15)
+                element.Desc = "Search for item..."
+                
                 -- Set saved value after population
                 if element.Select and targetValue then
-                    task.wait(0.1) -- Allow refresh to complete
+                    task.wait(0.1)
                     pcall(function() element:Select(targetValue) end)
                 end
             end)
