@@ -1,5 +1,5 @@
 --[[
-    💠 XZNE SCRIPTHUB v0.0.01 - UI LOADER (WindUI)
+    💠 XZNE SCRIPTHUB v28.0 - UI LOADER (WindUI)
     
     🎨 Style: macOS
     🔗 Connects to: Main.lua (_G.XZNE_Controller)
@@ -33,208 +33,219 @@ do
     end
 end
 
--- [2] REGISTER ICONS (Custom Set)
--- Renamed to 'xzne' to avoid conflict with internal 'lucide' namespace
+-- [2] DATABASES (v28 Content)
+local PetDatabase = {
+    "Dog", "Golden Lab", "Bunny", "Black Bunny", "Cat", "Deer", "Chicken", "Orange Tabby", "Spotted Deer", "Rooster", 
+    "Monkey", "Pig", "Silver Monkey", "Turtle", "Cow", "Sea Otter", "Polar Bear", "Caterpillar", "Snail", "Giant Ant", 
+    "Praying Mantis", "Dragonfly", "Panda", "Hedgehog", "Kiwi", "Mole", "Frog", "Echo Frog", "Raccoon", "Night Owl", 
+    "Owl", "Grey Mouse", "Squirrel", "Brown Mouse", "Red Giant Ant", "Red Fox", "Chicken Zombie", "Blood Hedgehog", 
+    "Blood Kiwi", "Blood Owl", "Moon Cat", "Bee", "Honey Bee", "Petal Bee", "Bear Bee", "Queen Bee", "Wasp", 
+    "Tarantula Hawk", "Moth", "Butterfly", "Disco Bee", "Cooked Owl", "Pack Bee", "Starfish", "Crab", "Seagull", 
+    "Toucan", "Flamingo", "Sea Turtle", "Seal", "Orangutan", "Peacock", "Capybara", "Scarlet Macaw", "Ostrich", 
+    "Mimic Octopus", "Meerkat", "Sand Snake", "Axolotl", "Hyacinth Macaw", "Fennec Fox", "Hamster", "Bald Eagle", 
+    "Raptor", "Stegosaurus", "Triceratops", "Pterodactyl", "Brontosaurus", "Radioactive Stegosaurus", "T-Rex", 
+    "Parasaurolophus", "Iguanodon", "Pachycephalosaurus", "Dilophosaurus", "Ankylosaurus", "Spinosaurus", 
+    "Rainbow Parasaurolophus", "Rainbow Iguanodon", "Rainbow Pachycephalosaurus", "Rainbow Dilophosaurus", 
+    "Rainbow Ankylosaurus", "Rainbow Spinosaurus", "Shiba Inu", "Nihonzaru", "Tanuki", "Tanchozuru", "Kappa", 
+    "Kitsune", "Koi", "Football", "Maneki-neko", "Kodama", "Corrupted Kodama", "Raiju", "Corrupted Kitsune", 
+    "Rainbow Maneki-neko", "Rainbow Kodama", "Rainbow Corrupted Kitsune", "Bagel Bunny", "Pancake Mole", 
+    "Sushi Bear", "Spaghetti Sloth", "French Fry Ferret", "Mochi Mouse", "Junkbot", "Bacon Pig", "Hotdog Daschund", 
+    "Lobster Thermidor", "Sunny-Side Chicken", "Gorilla Chef", "Rainbow Bacon Pig", "Rainbow Hotdog Daschund", 
+    "Rainbow Lobster Thermidor", "Dairy Cow", "Jackalope", "Seedling", "Golem", "Golden Goose", "Spriggan", 
+    "Peach Wasp", "Apple Gazelle", "Lemon Lion", "Green Bean", "Elk", "Mandrake", "Griffin", "Gnome", "Rainbow Elk", 
+    "Rainbow Mandrake", "Rainbow Griffin", "Ladybug", "Pixie", "Imp", "Glimmering Sprite", "Cockatrice", "Cardinal", 
+    "Shroomie", "Phoenix", "Wisp", "Drake", "Luminous Sprite", "Rainbow Cardinal", "Rainbow Shroomie", 
+    "Rainbow Phoenix", "Robin", "Badger", "Grizzly Bear", "Barn Owl", "Swan", "GIANT Robin", "GIANT Badger", 
+    "GIANT Grizzly Bear", "GIANT Barn Owl", "GIANT Swan", "Chipmunk", "Red Squirrel", "Marmot", "Sugar Glider", 
+    "Space Squirrel", "Salmon", "Woodpecker", "Mallard", "Red Panda", "Tree Frog", "Hummingbird", "Iguana", 
+    "Chimpanzee", "Tiger", "Blue Jay", "Silver Dragonfly", "Firefly", "Mizuchi", "Rainbow Blue Jay", 
+    "GIANT Silver Dragonfly", "GIANT Firefly", "Rainbow Mizuchi", "Chubby Chipmunk", "Farmer Chipmunk", 
+    "Idol Chipmunk", "Chinchilla", "Rainbow Farmer Chipmunk", "Rainbow Idol Chipmunk", "Rainbow Chinchilla", 
+    "Hyrax", "Fortune Squirrel", "Bat", "Bone Dog", "Spider", "Black Cat", "Headless Horseman", "Ghostly Bat", 
+    "Ghostly Bone Dog", "Ghostly Spider", "Ghostly Black Cat", "Ghostly Headless Horseman", "Pumpkin Rat", 
+    "Ghost Bear", "Wolf", "Reaper", "Crow", "Goat", "Goblin", "Dark Spriggan", "Hex Serpent", 
+    "Ghostly Dark Spriggan", "Scarab", "Tomb Marmot", "Mummy", "Ghostly Scarab", "Ghostly Tomb Marmot", 
+    "Ghostly Mummy", "Lich", "Woody", "Specter", "Armadillo", "Stag Beetle", "Mantis Shrimp", "Hydra", "Oxpecker", 
+    "Zebra", "Giraffe", "Rhino", "Elephant", "GIANT Armadillo", "Rainbow Stag Beetle", "GIANT Mantis Shrimp", 
+    "Rainbow Hydra", "Rainbow Oxpecker", "Rainbow Zebra", "Rainbow Giraffe", "Rainbow Rhino", "Rainbow Elephant", 
+    "Gecko", "Hyena", "Cape Buffalo", "Hippo", "Crocodile", "Lion", "Topaz Snail", "Amethyst Beetle", 
+    "Emerald Snake", "Sapphire Macaw", "Diamond Panther", "Ruby Squid", "Termite", "Geode Turtle", "Trapdoor Spider", 
+    "Goblin Miner", "Smithing Dog", "Cheetah", "Silver Piggy", "Golden Piggy", "Clam", "Magpie", "Bearded Dragon", 
+    "Rainbow Clam", "Rainbow Magpie", "Rainbow Bearded Dragon", "Pack Mule", "Water Buffalo", "Chimera", "Sheckling", 
+    "Messenger Pigeon", "Camel", "Snowman Soldier", "Snowman Builder", "Arctic Fox", "Frost Dragon", 
+    "GIANT Snowman Soldier", "GIANT Snowman Builder", "Rainbow Arctic Fox", "Rainbow Frost Dragon", "Gift Rat", 
+    "Penguin", "Snow Bunny", "French Hen", "Christmas Gorilla", "Mistletoad", "Krampus", "Rainbow Snow Bunny", 
+    "Rainbow French Hen", "Rainbow Christmas Gorilla", "Rainbow Mistletoad", "Rainbow Krampus", "Turtle Dove", 
+    "Reindeer", "Nutcracker", "Yeti", "Ice Golem", "Festive Turtle Dove", "Festive Reindeer", "Festive Nutcracker", 
+    "Festive Yeti", "Festive Ice Golem", "Pine Beetle", "Cocoa Cat", "Eggnog Chick", "Red-Nosed Reindeer", 
+    "Partridge", "Santa Bear", "Moose", "Frost Squirrel", "Wendigo", "Festive Partridge", "Festive Santa Bear", 
+    "Festive Moose", "Festive Frost Squirrel", "Festive Wendigo", "Summer Kiwi", "Christmas Spirit", "Red Dragon", 
+    "Golden Bee", "Tsuchinoko", "Rainbow Fortune Squirrel", "Glass Dog", "Glass Cat"
+}
+
+local ItemDatabase = {
+    "Ackee", "Acorn", "Acorn Squash", "Aetherfruit", "Aloe Vera", "Amber Spine", "Amberfruit Shrub", "Amberheart", 
+    "Antlerbloom", "Apple", "Artichoke", "Asteris", "Auburn Pine", "Aurora Vine", "Autumn Shroom", "Avocado", 
+    "Badlands Pepper", "Bamboo", "Bamboo Tree", "Banana", "Banana Orchid", "Banesberry", "Baobab", "Beanstalk", 
+    "Bee Balm", "Beetroot", "Bell Pepper", "Bendboo", "Bitter Melon", "Black Bat Flower", "Blood Banana", 
+    "Blood Orange", "Bloodred Mushroom", "Blue Raspberry", "Blueberry", "Bone Blossom", "Boneboo", "Briar Rose", 
+    "Broccoli", "Brussels Sprout", "Buddhas Hand", "Burning Bud", "Bush Flake", "Buttercup", "Butternut Squash", 
+    "Cacao", "Cactus", "Calla Lily", "Canary Melon", "Candy Blossom", "Candy Cane", "Candy Cornflower", 
+    "Candy Sunflower", "Cantaloupe", "Carnival Pumpkin", "Carrot", "Castor Bean", "Cauliflower", "Celestiberry", 
+    "Cherry Blossom", "Chicken Feed", "Chocolate Carrot", "Christmas Cracker", "Cocomango", "Coconut", "Cocovine", 
+    "Coilvine", "Coinfruit", "Cookie Stack", "Corn", "Corpse Flower", "Cranberry", "Crimson Thorn", "Crocus", 
+    "Crown Melon", "Crown of Thorns", "Cryo Rose", "Cryoshard", "Cursed Fruit", "Cyclamen", "Daffodil", "Daisy", 
+    "Dandelion", "Delphinium", "Devilroot", "Dezen", "Dragon Fruit", "Dragon Pepper", "Durian", "Duskpuff", 
+    "Easter Egg", "Eggplant", "Elder Strawberry", "Elephant Ears", "Ember Lily", "Emerald Bud", "Enkaku", 
+    "Fall Berry", "Feijoa", "Ferntail", "Firefly Fern", "Firewell", "Firework Flower", "Fissure Berry", 
+    "Flare Daisy", "Flare Melon", "Fossilight", "Foxglove", "Frostspike", "Frostwing", "Frosty Bite", "Fruitball", 
+    "Gem Fruit", "Ghost Bush", "Ghost Pepper", "Ghoul Root", "Gift Berry", "GingerBread Blossom", "Giant Pinecone", 
+    "Glass Kiwi", "Gleamroot", "Glowpod", "Glowshroom", "Glowthorn", "Golden Egg", "Golden Peach", "Grand Tomato", 
+    "Grand Volcania", "Grape", "Great Pumpkin", "Green Apple", "Guanabana", "Gumdrop", "Hazelnut", "Hinomai", 
+    "Hive Fruit", "Hollow Bamboo", "Holly Berry", "Honeysuckle", "Horned Dinoshroom", "Horned Melon", "Horned Redrose", 
+    "Horsetail", "Inferno Quince", "Jack O Lantern", "Jalapeno", "Java Banana", "King Cabbage", "Kiwi", "Kniphofia", 
+    "Lavender", "Legacy Sunflower", "Lemon", "Liberty Lily", "Lightshoot", "Lilac", "Lily of the Valley", 
+    "Lingonberry", "Loquat", "Lotus", "Lucky Bamboo", "Lumin Bloom", "Lumira", "Luna Stem", "Mandrake", 
+    "Mandrone Berry", "Mango", "Mangosteen", "Mangrove", "Manuka Flower", "Maple Apple", "Maple Resin", 
+    "Meyer Lemon", "Mint", "Monoblooma", "Monster Flower", "Moon Blossom", "Moon Mango", "Moon Melon", 
+    "Moonflower", "Moonglow", "Multitrap", "Mummy's Hand", "Mushroom", "Naval Wort", "Nectar Thorn", "Nectarine", 
+    "Nectarshade", "Nightshade", "Octobloom", "Olive", "Onion", "Orange Delight", "Orange Tulip", "Papaya", 
+    "Paradise Petal", "Parasol Flower", "Parsley", "Passionfruit", "Peace Lily", "Peach", "Peacock Tail", 
+    "Pear", "Pecan", "Pepper", "Peppermint Pop", "Peppermint Vine", "Persimmon", "Pineapple", "Pink Lily", 
+    "Pinkside Dandelion", "Pitcher Plant", "Pixie Faern", "Poinsettia", "Poison Apple", "Pollen Cone", 
+    "Pomegranate", "Poseidon Plant", "Potato", "Pricklefruit", "Prickly Pear", "Princess Thorn", "Protea", 
+    "Pumpkin", "Purple Dahlia", "Pyracantha", "Radish", "Rafflesia", "Raspberry", "Red Lollipop", "Reindeer Root", 
+    "Rhubarb", "Romanesco", "Rose", "Rosemary", "Rosy Delight", "Sakura Bush", "Seer Vine", "Serenity", 
+    "Severed Spine", "Sherrybloom", "Snaparino Beanarini", "Snowman Sprout", "Soft Sunshine", "Soul Fruit", 
+    "Speargrass", "Spider Vine", "Spiked Mango", "Spirit Flower", "Spirit Sparkle", "Spring Onion", "Starfruit", 
+    "Stonebite", "Strawberry", "Succulent", "Sugar Apple", "Sugarglaze", "Sunbulb", "Suncoil", "Sundew", 
+    "Sunflower", "Taco Fern", "Tall Asparagus", "Taro Flower", "Thornspire", "Tomato", "Torchflare", 
+    "Tranquil Bloom", "Traveler's Fruit", "Trinity Fruit", "Turnip", "Twisted Tangle", "Untold Bell", 
+    "Urchin Plant", "Veinpetal", "Venus Fly Trap", "Viburnum Berry", "Violet Corn", "Watermelon", "Weeping Branch", 
+    "Wereplant", "Wild Carrot", "Wild Pineapple", "Willowberry", "Wisp Flower", "Wispwing", "Wyrmvine", "Yarrow", 
+    "Zebrazinkle", "Zen Rocks", "Zenflare", "Zombie Fruit", "Zucchini"
+}
+table.sort(PetDatabase); table.sort(ItemDatabase)
+
+-- [3] REGISTER ICONS
 WindUI.Creator.AddIcons("xzne", {
-    ["home"]        = "rbxassetid://10723406988",
-    ["settings"]    = "rbxassetid://10734950309",
-    ["info"]        = "rbxassetid://10709752906",
-    ["play"]        = "rbxassetid://10723404337",
-    ["stop"]        = "rbxassetid://10709791437",
-    ["trash"]       = "rbxassetid://10747373176",
-    ["refresh"]     = "rbxassetid://10709790666",
-    ["check"]       = "rbxassetid://10709790646",
-    ["search"]      = "rbxassetid://10709791437",
-    ["tag"]         = "rbxassetid://10709791523",
-    ["log-out"]     = "rbxassetid://10734949856",
+    ["home"] = "rbxassetid://10723406988", ["settings"] = "rbxassetid://10734950309", ["info"] = "rbxassetid://10709752906",
+    ["play"] = "rbxassetid://10723404337", ["stop"] = "rbxassetid://10709791437", ["trash"] = "rbxassetid://10747373176",
+    ["refresh"] = "rbxassetid://10709790666", ["check"] = "rbxassetid://10709790646", ["search"] = "rbxassetid://10709791437",
+    ["tag"] = "rbxassetid://10709791523", ["log-out"] = "rbxassetid://10734949856", ["crosshair"] = "rbxassetid://10709790537",
+    ["box"] = "rbxassetid://10709791360"
 })
 
--- [3] CREATE WINDOW
+-- [4] CREATE WINDOW
 local Window = WindUI:CreateWindow({
-    Title = "XZNE ScriptHub",
-    SubTitle = "Trading Market Manager",
-    Icon = "rbxassetid://14633327344", 
-    Author = "By XZNE Team",
-    Folder = "XZNE-Trading",
-    Transparent = true,
-    Theme = "Dark",
-    
-    Topbar = {
-        Height = 44,
-        ButtonsType = "Mac",
-    },
-    
-    -- [FEATURE] Floating Open Button (Bubble)
-    OpenButton = {
-        Title = "Open XZNE",
-        Icon = "xzne:home", -- Updated reference
-        CornerRadius = UDim.new(1, 0),
-        StrokeThickness = 0,
-        Enabled = true,
-        Draggable = true,
-        OnlyMobile = false,
-        Color = ColorSequence.new(
-            Color3.fromHex("#30FF6A"), 
-            Color3.fromHex("#26D254")
-        )
-    }
+    Title = "XZNE ScriptHub (v28)",
+    SubTitle = "Performance Edition",
+    Icon = "rbxassetid://14633327344", Author = "By XZNE Team", Folder = "XZNE-v28", Transparent = true, Theme = "Dark",
+    Topbar = { Height = 44, ButtonsType = "Mac" },
+    OpenButton = { Title = "Open XZNE", Icon = "xzne:home", Color = ColorSequence.new(Color3.fromHex("#30FF6A"), Color3.fromHex("#26D254")) }
 })
 
--- [FEATURE] Version Tag
-Window:Tag({
-    Title = "v0.0.01",
-    Icon = "xzne:tag", 
-    Color = Color3.fromHex("#30ff6a"),
-    Radius = 4,
-})
+-- Helper: Update Target List based on Category
+local function GetTargetList(cat) return (cat == "Pet") and PetDatabase or ItemDatabase end
 
--- [4] TABS & SECTIONS
+-- == SNIPER TAB ==
+local SniperTab = Window:Tab({ Title = "Sniper", Icon = "xzne:crosshair" })
+local SniperSection = SniperTab:Section({ Title = "Auto Buy Configuration" })
 
--- == MANAGER TAB ==
-local ManagerTab = Window:Tab({
-    Title = "Manager",
-    Icon = "xzne:home",
-})
-
-local MainSection = ManagerTab:Section({ Title = "Automation" })
-
-MainSection:Toggle({
-    Title = "Auto Claim Booth",
-    Desc = "Target and claim empty booths",
-    Default = Controller.Config.AutoClaim,
+SniperSection:Dropdown({
+    Title = "Category", Desc = "Select Item type", Values = {"Item", "Pet"}, Default = Controller.Config.BuyCategory,
     Callback = function(val)
-        Controller.Config.AutoClaim = val
+        Controller.Config.BuyCategory = val; Controller.RequestUpdate()
     end
 })
 
-MainSection:Toggle({
-    Title = "Auto List Items",
-    Desc = "List items (Attr 'f' & 'c')",
-    Default = Controller.Config.AutoList,
+SniperSection:Dropdown({
+    Title = "Target Item", Desc = "Search for item...", Values = ItemDatabase, Default = Controller.Config.BuyTarget,
+    Searchable = true, -- Enable search for large lists
     Callback = function(val)
-        Controller.Config.AutoList = val
+        Controller.Config.BuyTarget = val; Controller.RequestUpdate()
     end
 })
 
-MainSection:Toggle({
-    Title = "Auto Clear Items",
-    Desc = "Remove items matching Target Name",
-    Default = Controller.Config.AutoClear,
-    Callback = function(val)
-        Controller.Config.AutoClear = val
-    end
+SniperSection:Input({
+    Title = "Max Price", Desc = "Maximum price to buy", Default = tostring(Controller.Config.MaxPrice), Numeric = true,
+    Callback = function(txt) Controller.Config.MaxPrice = tonumber(txt) or 5 end
 })
 
-MainSection:Space()
-
-MainSection:Button({
-    Title = "Unclaim Booth",
-    Desc = "Release ownership",
-    Icon = "xzne:log-out",
-    Callback = function()
-        Controller.UnclaimBooth()
-        WindUI:Notify({
-            Title = "Booth",
-            Content = "Unclaimed command executed",
-            Icon = "xzne:check",
-            Duration = 2
-        })
-    end
+SniperSection:Toggle({
+    Title = "Enable Auto Buy", Desc = "Automatically buy cheap items", Default = Controller.Config.AutoBuy,
+    Callback = function(val) Controller.Config.AutoBuy = val end
 })
 
+-- == INVENTORY TAB (Manager) ==
+local InvTab = Window:Tab({ Title = "Inventory", Icon = "xzne:box" })
 
--- == CONFIG TAB ==
-local ConfigTab = Window:Tab({
-    Title = "Settings",
-    Icon = "xzne:settings",
+-- Auto List
+local ListSection = InvTab:Section({ Title = "Auto List (Sell)" })
+ListSection:Dropdown({
+    Title = "Category", Desc = "Select Inventory Type", Values = {"Item", "Pet"}, Default = Controller.Config.ListCategory,
+    Callback = function(val) Controller.Config.ListCategory = val; Controller.RequestUpdate() end
+})
+ListSection:Dropdown({
+    Title = "Item to List", Desc = "Select item to sell", Values = ItemDatabase, Default = Controller.Config.ListTarget,
+    Searchable = true,
+    Callback = function(val) Controller.Config.ListTarget = val; Controller.RequestUpdate() end
+})
+ListSection:Input({
+    Title = "Listing Price", Desc = "Price per item", Default = tostring(Controller.Config.Price), Numeric = true,
+    Callback = function(txt) Controller.Config.Price = tonumber(txt) or 5 end
+})
+ListSection:Toggle({
+    Title = "Start Auto List", Desc = "List items automatically", Default = Controller.Config.AutoList,
+    Callback = function(val) Controller.Config.AutoList = val end
 })
 
-local ItemSection = ConfigTab:Section({ Title = "Item Configuration" })
-
-ItemSection:Input({
-    Title = "Target Item Name",
-    Desc = "Internal name (Attribute 'f')",
-    Default = Controller.Config.TargetName,
-    Icon = "xzne:tag",
-    Callback = function(text)
-        Controller.Config.TargetName = text
-    end
+-- Auto Clear
+local ClearSection = InvTab:Section({ Title = "Auto Clear (Trash)" })
+ClearSection:Dropdown({
+    Title = "Category", Values = {"Item", "Pet"}, Default = Controller.Config.RemoveCategory,
+    Callback = function(val) Controller.Config.RemoveCategory = val; Controller.RequestUpdate() end
+})
+ClearSection:Dropdown({
+    Title = "Item to Trash", Values = ItemDatabase, Default = Controller.Config.RemoveTarget, Searchable = true,
+    Callback = function(val) Controller.Config.RemoveTarget = val; Controller.RequestUpdate() end
+})
+ClearSection:Toggle({
+    Title = "Start Auto Clear", Desc = "Delete specific items", Default = Controller.Config.AutoClear,
+    Callback = function(val) Controller.Config.AutoClear = val end
 })
 
-ItemSection:Toggle({
-    Title = "Delete ALL Mode",
-    Desc = "DANGER: Remove EVERYTHING",
-    Default = Controller.Config.DeleteAll,
-    Callback = function(val)
-        Controller.Config.DeleteAll = val
-    end
+-- == BOOTH TAB ==
+local BoothTab = Window:Tab({ Title = "Booth", Icon = "xzne:home" })
+local BoothSection = BoothTab:Section({ Title = "Booth Control" })
+BoothSection:Toggle({
+    Title = "Auto Claim Booth", Desc = "Fast claim empty booths", Default = Controller.Config.AutoClaim,
+    Callback = function(val) Controller.Config.AutoClaim = val end
+})
+BoothSection:Button({
+    Title = "Unclaim Booth", Desc = "Release ownership", Icon = "xzne:log-out",
+    Callback = function() Controller.UnclaimBooth() end
 })
 
-ItemSection:Input({
-    Title = "Listing Price",
-    Desc = "Price for each item",
-    Default = tostring(Controller.Config.Price),
-    Numeric = true,
-    Icon = "xzne:tag",
-    Callback = function(text)
-        local num = tonumber(text)
-        if num then
-            Controller.Config.Price = num
-        end
-    end
-})
-
-local PerfSection = ConfigTab:Section({ Title = "Performance Tweaks" })
+-- == SETTINGS TAB ==
+local SettingsTab = Window:Tab({ Title = "Settings", Icon = "xzne:settings" })
+local PerfSection = SettingsTab:Section({ Title = "Performance & Safety" })
 
 PerfSection:Slider({
-    Title = "Listing Delay",
-    Desc = "Seconds between actions (1-10s)",
-    Value = {
-        Min = 1,
-        Max = 10,
-        Default = math.max(1, Controller.Config.ListDelay),
-    },
-    Step = 1,
-    Callback = function(val)
-        Controller.Config.ListDelay = val
-    end
+    Title = "Global Speed", Desc = "Delay between actions", 
+    Value = { Min = 0.5, Max = 5, Default = Controller.Config.Speed },
+    Step = 0.1,
+    Callback = function(val) Controller.Config.Speed = val end
 })
 
-
--- PerfSection:Button({
---     Title = "Clear Item Cache",
---     Desc = "No longer needed (Auto handled)",
---     Icon = "xzne:trash",
---     Callback = function() end
--- })
-
-
--- == INFO TAB ==
-local InfoTab = Window:Tab({
-    Title = "Info",
-    Icon = "xzne:info",
+PerfSection:Toggle({
+    Title = "Delete ALL Mode", Desc = "DANGER: Trashes EVERYTHING", Default = Controller.Config.DeleteAll,
+    Callback = function(val) Controller.Config.DeleteAll = val end
 })
 
-local InfoSection = InfoTab:Section({ Title = "About" })
-
-InfoSection:Paragraph({
-    Title = "XZNE ScriptHub v0.0.01",
-    Desc = "Trading Market Automation\n\n• Logic: Verified v2.0\n• UI: WindUI (Deep Polish)\n• Icons: Lucide (Custom hosted)"
+PerfSection:Button({
+    Title = "Destroy UI", Desc = "Close interface", Icon = "xzne:stop",
+    Callback = function() Window:Destroy() end
 })
 
-InfoSection:Button({
-    Title = "Destroy UI",
-    Desc = "Close interface completely",
-    Icon = "xzne:stop",
-    Callback = function()
-        Window:Destroy()
-    end
-})
-
--- [5] FINAL NOTIFICATION 
-WindUI:Notify({
-    Title = "XZNE Loaded",
-    Content = "Version v0.0.01 Ready.",
-    Icon = "xzne:check",
-    Duration = 4
-})
+WindUI:Notify({ Title = "XZNE v28 Loaded", Content = "Performance Edition Ready", Icon = "xzne:check", Duration = 4 })
