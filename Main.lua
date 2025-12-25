@@ -2,11 +2,11 @@
     💠 XZNE SCRIPTHUB v28.0 - LOGIC CORE
     
     🔧 FEATURES:
-    - Auto Buy (Sniper) [NEW]
-    - Pet Support (DataService) [NEW]
-    - Smart List & Clear (Item/Pet)
-    - Auto Claim (Fast)
-    - Performance Optimizations (Cached Targets)
+    - Auto Buy (Sniper)
+    - Pet Support (DataService)
+    - Smart List & Clear
+    - Auto Claim
+    - Per-Feature Speed Control
 ]]
 
 -- [1] SERVICES
@@ -24,26 +24,26 @@ _G.XZNE_Controller = {
     Config = {
         -- Global
         Running = true,
-        Speed = 1.0, -- Replaces ListDelay for global speed
         
         -- Auto Buy (Sniper)
         AutoBuy = false,
         BuyCategory = "Item", -- "Item" or "Pet"
         BuyTarget = "Bone Blossom",
         MaxPrice = 5,
+        BuySpeed = 0.5,
         
         -- Auto List
         AutoList = false,
         ListCategory = "Item", 
         ListTarget = "Bone Blossom",
-        Price = 5, -- (ListPrice)
-        ListDelay = 2.0, -- Specific delay for listing (optional overriding Speed)
+        Price = 5,
+        ListSpeed = 2.0,
         
         -- Auto Clear
         AutoClear = false,
         RemoveCategory = "Item",
         RemoveTarget = "Bone Blossom",
-        DeleteAll = false,
+        RemoveSpeed = 1.0,
         
         -- Auto Claim
         AutoClaim = false,
@@ -79,9 +79,9 @@ function Controller.LoadConfig()
         local decodedS, decoded = pcall(function() return HttpService:JSONDecode(content) end)
         if decodedS and decoded then
             for k, v in pairs(decoded) do
+                -- Only load valid keys, ignore obsolete ones like 'Speed' or 'DeleteAll'
                 if Config[k] ~= nil then Config[k] = v end
             end
-            -- Update dependent caches
             Controller.UpdateCache() 
             print("✅ [XZNE] Config Loaded")
         end
@@ -164,6 +164,7 @@ local function RunAutoBuy()
     local targetType = Config.BuyCategory == "Pet" and "Pet" or "Holdable"
     local targetLower = CachedTargets.Buy
     local maxPrice = Config.MaxPrice
+    local boughtSomething = false
     
     for playerKey, playerData in pairs(data.Players) do
         if not Config.Running then break end
@@ -184,7 +185,7 @@ local function RunAutoBuy()
                                 print("🔫 Sniping: " .. realName .. " @ " .. listingInfo.Price)
                                 pcall(function() BuyListingRemote:InvokeServer(owner, listingUUID) end)
                                 Stats.SnipeCount = Stats.SnipeCount + 1
-                                task.wait(0.5) -- Prevent multi-buy spam of same item if laggy
+                                boughtSomething = true
                             end
                         end
                     end
@@ -192,6 +193,8 @@ local function RunAutoBuy()
             end
         end
     end
+    
+    if boughtSomething then task.wait(Config.BuySpeed or 0.5) end
 end
 
 -- >> AUTO LIST (Item & Pet)
@@ -210,6 +213,7 @@ local function RunAutoList()
     local targetType = Config.ListCategory == "Pet" and "Pet" or "Holdable"
     local price = Config.Price
     local currentTime = tick()
+    local didList = false
     
     if targetType == "Pet" then
         -- Pet Listing (requires DataService)
@@ -223,7 +227,8 @@ local function RunAutoList()
                     if petName and string.find(string.lower(petName), targetLower) then
                         pcall(function() CreateListingRemote:InvokeServer("Pet", petUUID, price) end)
                         ListingDebounce[petUUID] = currentTime
-                        task.wait(Config.Speed)
+                        didList = true
+                        task.wait(Config.ListSpeed or 2)
                     end
                 end
             end
@@ -243,7 +248,8 @@ local function RunAutoList()
                          if string.find(string.lower(realName), targetLower) then
                              pcall(function() CreateListingRemote:InvokeServer("Holdable", uuid, price) end)
                              ListingDebounce[uuid] = currentTime
-                             task.wait(Config.Speed)
+                             didList = true
+                             task.wait(Config.ListSpeed or 2)
                          end
                     end
                 end
@@ -267,17 +273,17 @@ local function RunAutoClear()
         for listingUUID, listingInfo in pairs(myData.Listings) do
             if not Config.Running or not Config.AutoClear then break end
             
-            -- Filter by Category first
-            if listingInfo.ItemType == targetType or Config.DeleteAll then
+            -- Filter by Category
+            if listingInfo.ItemType == targetType then
                 local itemId = listingInfo.ItemId
                 local itemData = myData.Items[itemId]
                 
                 if itemData then
                     local realName = itemData.Name or itemData.ItemName or itemData.PetType or (itemData.ItemData and itemData.ItemData.ItemName) or ""
                     
-                    if Config.DeleteAll or string.find(string.lower(tostring(realName)), targetLower) then
+                    if string.find(string.lower(tostring(realName)), targetLower) then
                          pcall(function() RemoveListingRemote:InvokeServer(listingUUID) end)
-                         task.wait(Config.Speed)
+                         task.wait(Config.RemoveSpeed or 1)
                     end
                 end
             end
@@ -329,8 +335,8 @@ task.spawn(function()
                 if Config.AutoClear then RunAutoClear() end
             end)
             
-            -- Dynamic Speed
-            task.wait(Config.Speed or 1)
+            -- Basic Tick (Tasks have their own internal awaits if they act)
+            task.wait(0.5) 
         end
     end
 end)
