@@ -20,7 +20,6 @@ local LocalUserId = LocalPlayer.UserId
 local MyPlayerKey = "Player_" .. LocalUserId
 
 -- [2] CONTROLLER SETUP
--- [2] CONTROLLER SETUP
 -- If Controller exists (from Loader), merge logic. If not, create new.
 if not _G.XZNE_Controller then
     _G.XZNE_Controller = { Config = {} }
@@ -64,8 +63,6 @@ function Controller.Kill()
     
     -- Disconnect loops (RunService is handled by 'if _G.XZNE_Kill' checks)
 end
-local ListingDebounce = {}
-local CachedTargets = { Buy = "", List = "", Remove = "" }
 
 -- [CONFIG PERSISTENCE]
 local FolderName = "XZNE-v0.0.01"
@@ -111,42 +108,37 @@ local RemoveListingRemote = BoothsRemote:WaitForChild("RemoveListing")
 local BuyListingRemote = BoothsRemote:WaitForChild("BuyListing")
 
 local BoothsReceiver = nil
-local DataService = nil -- For Pets
-local TradeBoothsData = nil -- Fallback
+local TradeBoothsData = nil
+local DataService = nil
 
-task.spawn(function()
-    pcall(function()
-        local RepModules = ReplicatedStorage:WaitForChild("Modules", 5)
-        if RepModules then
-            -- Booths Hook
-            local ReplicationReciever = require(RepModules:WaitForChild("ReplicationReciever", 2))
-            if ReplicationReciever then
-                BoothsReceiver = ReplicationReciever.new("Booths")
-                print("✅ [XZNE] BoothsReceiver Hooked")
-            end
-            -- Pets Hook
-            DataService = require(RepModules:WaitForChild("DataService", 2))
-            if DataService then print("✅ [XZNE] DataService Hooked") end
-        end
-    end)
-    
-    if not BoothsReceiver then
-        pcall(function()
-            TradeBoothsData = require(ReplicatedStorage.Data.TradeBoothsData)
-            print("✅ [XZNE] TradeBoothsData Hooked (Fallback)")
-        end)
-    end
-end)
-
--- [4] HELPERS & OPTIMIZATION
-
--- Update Cached Strings (Call this when Config changes)
-function Controller.UpdateCache()
-    CachedTargets.Buy = string.lower(Config.BuyTarget or "")
-    CachedTargets.List = string.lower(Config.ListTarget or "")
-    CachedTargets.Remove = string.lower(Config.RemoveTarget or "")
+-- Attempt Global Injection
+if _G.SimpleSpyExecuted then
+    -- Assume we can find values via other means or they are exposed
 end
-Controller.UpdateCache() -- Init
+
+-- Hook ReplicatedStorage (Standard)
+for _, v in pairs(ReplicatedStorage:GetDescendants()) do
+    if v:IsA("ModuleScript") then
+        if v.Name == "BoothsReceiver" then
+            local s, r = pcall(require, v)
+            if s then BoothsReceiver = r; print("✅ [XZNE] BoothsReceiver Hooked") end
+        elseif v.Name == "DataService" then
+            local s, r = pcall(require, v)
+            if s then DataService = r; print("✅ [XZNE] DataService Hooked") end
+        end
+    end
+end
+
+-- [4] HELPER FUNCTIONS
+function Controller.UpdateCache()
+    CachedTargets.Buy = string.lower(Config.BuyTarget)
+    CachedTargets.List = string.lower(Config.ListTarget)
+    CachedTargets.Remove = string.lower(Config.RemoveTarget)
+    if Controller.Stats then -- update GUI stats if linked
+        -- (Gui handles direct stats reading)
+    end
+end
+Controller.UpdateCache()
 
 -- Load saved config immediately after initialization
 Controller.LoadConfig()
@@ -159,7 +151,7 @@ local PlayerLookupCache = {}
 -- [PERFORMANCE] Debounce Cleanup (runs every 30s)
 task.spawn(function()
     while true do
-        if _G.XZNE_Kill then break end
+        if _G.XZNE_Kill then break end -- Kill Check
         task.wait(30)
         local currentTime = tick()
         for uuid, timestamp in pairs(ListingDebounce) do
@@ -243,6 +235,7 @@ local function RunAutoBuy()
     local maxPrice = Config.MaxPrice
     
     for playerKey, playerData in pairs(data.Players) do
+        if _G.XZNE_Kill then break end
         if not Config.Running then break end
         if playerKey ~= MyPlayerKey and playerData.Listings then
             for listingUUID, listingInfo in pairs(playerData.Listings) do
@@ -295,6 +288,7 @@ local function RunAutoList()
         local playerData = DataService and DataService:GetData()
         if playerData and playerData.PetsData and playerData.PetsData.PetInventory then
             for petUUID, petData in pairs(playerData.PetsData.PetInventory.Data) do
+                if _G.XZNE_Kill then break end
                 if not Config.Running or not Config.AutoList then break end
                 
                 if not listedUUIDs[petUUID] and (not ListingDebounce[petUUID] or currentTime - ListingDebounce[petUUID] > 5) then
@@ -312,6 +306,7 @@ local function RunAutoList()
         local backpack = LocalPlayer:FindFirstChild("Backpack")
         if backpack then
             for _, item in pairs(backpack:GetChildren()) do
+                if _G.XZNE_Kill then break end
                 if not Config.Running or not Config.AutoList then break end
                 
                 if item:IsA("Tool") then
@@ -346,6 +341,7 @@ local function RunAutoClear()
     
     if myData and myData.Listings then
         for listingUUID, listingInfo in pairs(myData.Listings) do
+            if _G.XZNE_Kill then break end
             if not Config.Running or not Config.AutoClear then break end
             
             -- Filter by Category first
@@ -375,6 +371,7 @@ local function RunAutoClaim()
     if not folder then return end
     
     for _, booth in pairs(folder:GetChildren()) do
+         if _G.XZNE_Kill then break end
          local oid = booth:GetAttribute("OwnerId")
          if not oid then local v = booth:FindFirstChild("OwnerId"); if v then oid = v.Value end end
          
@@ -402,7 +399,7 @@ end
 task.spawn(function()
     print("[XZNE] Logic Core v0.0.01 [Beta] Started")
     while true do
-        if _G.XZNE_Kill then break end
+        if _G.XZNE_Kill then break end -- KILL CHECK
         if not Config.Running then task.wait(1) else
             pcall(function()
                 if Config.AutoClaim then RunAutoClaim() end
@@ -411,8 +408,15 @@ task.spawn(function()
                 if Config.AutoClear then RunAutoClear() end
             end)
             
-            -- Dynamic Speed
-            task.wait(Config.Speed or 1)
+            -- Dynamic delay
+            local delay = Config.Speed or 1.0
+            if Config.AutoList and Config.AutoList == true then 
+               -- If listing is active, we might want to respect ListDelay or Speed
+               delay = Config.ListDelay or delay
+            end
+            
+            task.wait(delay)
         end
     end
+    print("🛑 [XZNE] Logic Core Stopped (Kill Switch)")
 end)
