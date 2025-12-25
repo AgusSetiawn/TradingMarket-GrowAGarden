@@ -170,11 +170,11 @@ local PerfSection = ConfigTab:Section({ Title = "Performance Tweaks" })
 
 PerfSection:Slider({
     Title = "Listing Delay",
-    Desc = "Seconds between actions (Min 0.5s)",
-    Min = 0.5,
+    Desc = "Seconds between actions (1-10s)",
+    Min = 1,
     Max = 10,
-    Default = Controller.Config.ListDelay,
-    Step = 0.5,
+    Default = math.max(1, Controller.Config.ListDelay), -- Ensure default is at least 1
+    Step = 1,
     Callback = function(val)
         Controller.Config.ListDelay = val
     end
