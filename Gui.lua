@@ -165,45 +165,33 @@ local UIElements = {}
 local SniperTab = Window:Tab({ Title = "Sniper", Icon = "xzne:crosshair" })
 local SniperSection = SniperTab:Section({ Title = "Auto Buy Configuration" })
 
--- [ULTIMATE OPTIMIZATION] Category switch without re-render
-local function UpdateTargetDropdown(CategoryVal, TargetElement)
-    if TargetElement then
-        local newDB = (CategoryVal == "Pet") and PetDatabase or ItemDatabase
-        
-        -- Update Values
-        TargetElement.Values = newDB
-        TargetElement.Desc = "🔍 Search " .. #newDB .. " items (A-Z sorted)..."
-        
-        -- CRITICAL: Call Refresh to update UI (but it's instant since already rendered!)
-        if TargetElement.Refresh then
-            pcall(function() 
-                TargetElement:Refresh(newDB)
-            end)
-        end
-    end
-end
-
--- Pre-computed callback for better performance
-local function OnCategoryChange_Buy(val)
-    Controller.Config.BuyCategory = val
-    Controller.RequestUpdate()
-    Controller.SaveConfig()
-    UpdateTargetDropdown(val, UIElements.BuyTarget)
-end
-
-UIElements.BuyCategory = SniperSection:Dropdown({
-    Title = "Category", Desc = "Select Item type", Values = {"Item", "Pet"}, Default = Controller.Config.BuyCategory, Searchable = true,
-    Callback = OnCategoryChange_Buy
-})
-
--- LAZY LOAD: Create with empty values for instant UI, populate later
-UIElements.BuyTarget = SniperSection:Dropdown({
-    Title = "Target Item", 
-    Desc = "🔍 Type to search all items (A-Z sorted)...",
+-- ZERO-LAG: Separate dropdowns for Pet and Item (no category switching!)
+UIElements.BuyTargetPet = SniperSection:Dropdown({
+    Title = "Target Pet", 
+    Desc = "🔍 Search pets (A-Z sorted)...",
     Values = {}, 
     Default = 1, 
     Searchable = true,
-    Callback = function(val) Controller.Config.BuyTarget = val; Controller.RequestUpdate(); Controller.SaveConfig() end
+    Callback = function(val) 
+        Controller.Config.BuyTarget = val
+        Controller.Config.BuyCategory = "Pet"
+        Controller.RequestUpdate()
+        Controller.SaveConfig()
+    end
+})
+
+UIElements.BuyTargetItem = SniperSection:Dropdown({
+    Title = "Target Item", 
+    Desc = "🔍 Search items (A-Z sorted)...",
+    Values = {}, 
+    Default = 1, 
+    Searchable = true,
+    Callback = function(val) 
+        Controller.Config.BuyTarget = val
+        Controller.Config.BuyCategory = "Item"
+        Controller.RequestUpdate()
+        Controller.SaveConfig()
+    end
 })
 
 UIElements.MaxPrice = SniperSection:Input({
@@ -220,24 +208,33 @@ UIElements.AutoBuy = SniperSection:Toggle({
 local InvTab = Window:Tab({ Title = "Inventory", Icon = "xzne:box" })
 local ListSection = InvTab:Section({ Title = "Auto List (Sell)" })
 
--- Pre-computed callback for better performance
-local function OnCategoryChange_List(val)
-    Controller.Config.ListCategory = val
-    Controller.RequestUpdate()
-    Controller.SaveConfig()
-    UpdateTargetDropdown(val, UIElements.ListTarget)
-end
-
-UIElements.ListCategory = ListSection:Dropdown({
-    Title = "Category", Desc = "Select Inventory Type", Values = {"Item", "Pet"}, Default = Controller.Config.ListCategory, Searchable = true,
-    Callback = OnCategoryChange_List
+-- ZERO-LAG: Separate dropdowns for Pet and Item
+UIElements.ListTargetPet = ListSection:Dropdown({
+    Title = "Pet to List",
+    Desc = "🔍 Search pets...",
+    Values = {},
+    Default = 1,
+    Searchable = true,
+    Callback = function(val) 
+        Controller.Config.ListTarget = val
+        Controller.Config.ListCategory = "Pet"
+        Controller.RequestUpdate()
+        Controller.SaveConfig()
+    end
 })
 
--- LAZY LOAD: Create with empty values for instant UI, populate later
-UIElements.ListTarget = ListSection:Dropdown({
-    Title = "Item to List", Desc = "Loading...", Values = {},
-    Default = 1, Searchable = true,
-    Callback = function(val) Controller.Config.ListTarget = val; Controller.RequestUpdate(); Controller.SaveConfig() end
+UIElements.ListTargetItem = ListSection:Dropdown({
+    Title = "Item to List",
+    Desc = "🔍 Search items...",
+    Values = {},
+    Default = 1,
+    Searchable = true,
+    Callback = function(val) 
+        Controller.Config.ListTarget = val
+        Controller.Config.ListCategory = "Item"
+        Controller.RequestUpdate()
+        Controller.SaveConfig()
+    end
 })
 
 UIElements.Price = ListSection:Input({
@@ -321,40 +318,67 @@ task.spawn(function()
     
     print("🔄 [XZNE] Pre-rendering all dropdowns...")
     
-    -- Pre-render BuyTarget with initial category data
-    local buyDB = (Controller.Config.BuyCategory == "Pet") and PetDatabase or ItemDatabase
-    UIElements.BuyTarget.Values = buyDB
-    UIElements.BuyTarget.Desc = "🔍 Search " .. #buyDB .. " items (A-Z sorted)..."
-    if UIElements.BuyTarget.Refresh then
-        pcall(function() UIElements.BuyTarget:Refresh(buyDB) end)
-    end
-    if UIElements.BuyTarget.Select and Controller.Config.BuyTarget then
-        task.wait(0.1)
-        pcall(function() UIElements.BuyTarget:Select(Controller.Config.BuyTarget) end)
+    -- Pre-render all Pet dropdowns
+    UIElements.BuyTargetPet.Values = PetDatabase
+    UIElements.BuyTargetPet.Desc = "🔍 Search " .. #PetDatabase .. " pets (A-Z sorted)..."
+    if UIElements.BuyTargetPet.Refresh then
+        pcall(function() UIElements.BuyTargetPet:Refresh(PetDatabase) end)
     end
     
-    -- Pre-render ListTarget
-    local listDB = (Controller.Config.ListCategory == "Pet") and PetDatabase or ItemDatabase
-    UIElements.ListTarget.Values = listDB
-    UIElements.ListTarget.Desc = "🔍 Search " .. #listDB .. " items (A-Z sorted)..."
-    if UIElements.ListTarget.Refresh then
-        pcall(function() UIElements.ListTarget:Refresh(listDB) end)
-    end
-    if UIElements.ListTarget.Select and Controller.Config.ListTarget then
-        task.wait(0.1)
-        pcall(function() UIElements.ListTarget:Select(Controller.Config.ListTarget) end)
+    UIElements.ListTargetPet.Values = PetDatabase
+    UIElements.ListTargetPet.Desc = "🔍 Search " .. #PetDatabase .. " pets (A-Z sorted)..."
+    if UIElements.ListTargetPet.Refresh then
+        pcall(function() UIElements.ListTargetPet:Refresh(PetDatabase) end)
     end
     
-    -- Pre-render RemoveTarget
-    local removeDB = (Controller.Config.RemoveCategory == "Pet") and PetDatabase or ItemDatabase
-    UIElements.RemoveTarget.Values = removeDB
-    UIElements.RemoveTarget.Desc = "🔍 Search " .. #removeDB .. " items (A-Z sorted)..."
-    if UIElements.RemoveTarget.Refresh then
-        pcall(function() UIElements.RemoveTarget:Refresh(removeDB) end)
+    UIElements.RemoveTargetPet.Values = PetDatabase
+    UIElements.RemoveTargetPet.Desc = "🔍 Search " .. #PetDatabase .. " pets (A-Z sorted)..."
+    if UIElements.RemoveTargetPet.Refresh then
+        pcall(function() UIElements.RemoveTargetPet:Refresh(PetDatabase) end)
     end
-    if UIElements.RemoveTarget.Select and Controller.Config.RemoveTarget then
-        task.wait(0.1)
-        pcall(function() UIElements.RemoveTarget:Select(Controller.Config.RemoveTarget) end)
+    
+    -- Pre-render all Item dropdowns
+    UIElements.BuyTargetItem.Values = ItemDatabase
+    UIElements.BuyTargetItem.Desc = "🔍 Search " .. #ItemDatabase .. " items (A-Z sorted)..."
+    if UIElements.BuyTargetItem.Refresh then
+        pcall(function() UIElements.BuyTargetItem:Refresh(ItemDatabase) end)
+    end
+    
+    UIElements.ListTargetItem.Values = ItemDatabase
+    UIElements.ListTargetItem.Desc = "🔍 Search " .. #ItemDatabase .. " items (A-Z sorted)..."
+    if UIElements.ListTargetItem.Refresh then
+        pcall(function() UIElements.ListTargetItem:Refresh(ItemDatabase) end)
+    end
+    
+    UIElements.RemoveTargetItem.Values = ItemDatabase
+    UIElements.RemoveTargetItem.Desc = "🔍 Search " .. #ItemDatabase .. " items (A-Z sorted)..."
+    if UIElements.RemoveTargetItem.Refresh then
+        pcall(function() UIElements.RemoveTargetItem:Refresh(ItemDatabase) end)
+    end
+    
+    -- Set saved values if exist
+    if Controller.Config.BuyTarget then
+        local buyDropdown = (Controller.Config.BuyCategory == "Pet") and UIElements.BuyTargetPet or UIElements.BuyTargetItem
+        if buyDropdown.Select then
+            task.wait(0.1)
+            pcall(function() buyDropdown:Select(Controller.Config.BuyTarget) end)
+        end
+    end
+    
+    if Controller.Config.ListTarget then
+        local listDropdown = (Controller.Config.ListCategory == "Pet") and UIElements.ListTargetPet or UIElements.ListTargetItem
+        if listDropdown.Select then
+            task.wait(0.1)
+            pcall(function() listDropdown:Select(Controller.Config.ListTarget) end)
+        end
+    end
+    
+    if Controller.Config.RemoveTarget then
+        local removeDropdown = (Controller.Config.RemoveCategory == "Pet") and UIElements.RemoveTargetPet or UIElements.RemoveTargetItem
+        if removeDropdown.Select then
+            task.wait(0.1)
+            pcall(function() removeDropdown:Select(Controller.Config.RemoveTarget) end)
+        end
     end
     
     print("✅ [XZNE] All dropdowns pre-rendered!")
