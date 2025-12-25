@@ -143,11 +143,14 @@ local Window = WindUI:CreateWindow({
     Icon = "rbxassetid://14633327344", Author = "By XZNE Team", Folder = "XZNE-Beta", Transparent = true, Theme = "Dark",
     Topbar = { Height = 44, ButtonsType = "Mac" },
     OpenButton = { 
-        Title = "XZNE", 
-        Icon = "xzne:home", 
-        CornerRadius = UDim.new(1, 0),
         Enabled = true,
+        Title = "XZNE", 
+        Icon = "xzne:home",
+        Position = UDim2.new(0, 15, 0.5, -25),
+        Size = UDim2.new(0, 50, 0, 50),
+        CornerRadius = UDim.new(1, 0),
         Draggable = true,
+        Visible = true,
         Color = ColorSequence.new(Color3.fromHex("#30FF6A"), Color3.fromHex("#26D254")) 
     }
 })
