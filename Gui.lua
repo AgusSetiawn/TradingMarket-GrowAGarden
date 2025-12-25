@@ -151,12 +151,24 @@ local SniperTab = Window:Tab({ Title = "Sniper", Icon = "xzne:crosshair" })
 local SniperSection = SniperTab:Section({ Title = "Auto Buy Configuration" })
 
 -- Helper for dynamic updates
+-- Helper for dynamic updates
 local function UpdateTargetDropdown(CategoryVal, TargetElement)
     if TargetElement then
         local newDB = (CategoryVal == "Pet") and PetDatabase or ItemDatabase
+        
+        -- Update the Values property
         TargetElement.Values = newDB
+        
+        -- Force Refresh with pcall
         if TargetElement.Refresh then
-            pcall(function() TargetElement:Refresh() end)
+            pcall(function() 
+                TargetElement:Refresh(newDB) -- Pass newDB explicitly just in case
+            end)
+        end
+        
+        -- Optional: Reset selection to avoid "ghost" values from previous category
+        if TargetElement.Select then
+            -- pcall(function() TargetElement:Select(nil) end)
         end
     end
 end
