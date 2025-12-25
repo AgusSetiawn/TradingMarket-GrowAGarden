@@ -292,76 +292,91 @@ PerfSection:Button({
     Callback = function() Window:Destroy() end
 })
 
--- [REFRESH] Sync UI with loaded config - COMPREHENSIVE APPROACH
+-- [REFRESH] Sync UI with loaded config - WINDUI API CORRECT USAGE
 task.spawn(function()
-    task.wait(0.5) -- Give UI time to fully initialize
+    task.wait(0.5) -- Wait for UI initialization
     
-    print("[XZNE] === GUI SYNC DEBUG START ===")
-    print("[XZNE] Config values:")
+    print("[XZNE] Syncing GUI with loaded config...")
+    print("[XZNE] Loaded values:")
     print("  AutoBuy:", Controller.Config.AutoBuy)
     print("  AutoList:", Controller.Config.AutoList)
-    print("  AutoClear:", Controller.Config.AutoClear)
+    print("  BuyCategory:", Controller.Config.BuyCategory)
     print("  Speed:", Controller.Config.Speed)
     
-    -- Debug: Check what methods are available
-    local function DebugElement(name, element)
-        if element then
-            print("[XZNE] " .. name .. " methods:")
-            for k, v in pairs(element) do
-                if type(v) == "function" then
-                    print("  -", k)
-                end
-            end
-        end
+    -- Update toggles using WindUI Toggle:Set(value, isCallback, isAnim)
+    -- isCallback = false prevents triggering callback during sync
+    if UIElements.AutoBuy then
+        pcall(function() UIElements.AutoBuy:Set(Controller.Config.AutoBuy, false, true) end)
+        print("[XZNE] ✅ AutoBuy synced")
+    end
+    if UIElements.AutoList then
+        pcall(function() UIElements.AutoList:Set(Controller.Config.AutoList, false, true) end)
+        print("[XZNE] ✅ AutoList synced")
+    end
+    if UIElements.AutoClear then
+        pcall(function() UIElements.AutoClear:Set(Controller.Config.AutoClear, false, true) end)
+        print("[XZNE] ✅ AutoClear synced")
+    end
+    if UIElements.AutoClaim then
+        pcall(function() UIElements.AutoClaim:Set(Controller.Config.AutoClaim, false, true) end)
+        print("[XZNE] ✅ AutoClaim synced")
+    end
+    if UIElements.DeleteAll then
+        pcall(function() UIElements.DeleteAll:Set(Controller.Config.DeleteAll, false, true) end)
+        print("[XZNE] ✅ DeleteAll synced")
     end
     
-    DebugElement("AutoBuy Toggle", UIElements.AutoBuy)
-    DebugElement("Speed Slider", UIElements.Speed)
-    
-    -- Try multiple update approaches
-    local function ForceUpdate(element, value, elementType)
-        if not element then return false end
-        
-        local methods = {"Set", "SetValue", "Update", "Refresh"}
-        for _, method in ipairs(methods) do
-            if element[method] and type(element[method]) == "function" then
-                local success = pcall(function()
-                    element[method](element, value)
-                end)
-                if success then
-                    print("[XZNE] ✅ Updated using", method)
-                    return true
-                end
-            end
-        end
-        
-        print("[XZNE] ❌ No working update method found for", elementType)
-        return false
+    -- Update slider using WindUI Slider:Set(value, input)
+    -- input = nil prevents input handling during sync
+    if UIElements.Speed then
+        pcall(function() UIElements.Speed:Set(Controller.Config.Speed, nil) end)
+        print("[XZNE] ✅ Speed synced")
     end
     
-    -- Update all elements
-    ForceUpdate(UIElements.AutoBuy, Controller.Config.AutoBuy, "AutoBuy")
-    ForceUpdate(UIElements.AutoList, Controller.Config.AutoList, "AutoList")
-    ForceUpdate(UIElements.AutoClear, Controller.Config.AutoClear, "AutoClear")
-    ForceUpdate(UIElements.AutoClaim, Controller.Config.AutoClaim, "AutoClaim")
-    ForceUpdate(UIElements.DeleteAll, Controller.Config.DeleteAll, "DeleteAll")
-    ForceUpdate(UIElements.Speed, Controller.Config.Speed, "Speed")
+    -- Update dropdowns using WindUI Dropdown.Select(value)
+    if UIElements.BuyCategory and UIElements.BuyCategory.Select then
+        pcall(function() UIElements.BuyCategory:Select(Controller.Config.BuyCategory) end)
+        print("[XZNE] ✅ BuyCategory synced")
+    end
+    if UIElements.BuyTarget and UIElements.BuyTarget.Select then
+        pcall(function() UIElements.BuyTarget:Select(Controller.Config.BuyTarget) end)
+        print("[XZNE] ✅ BuyTarget synced")
+    end
+    if UIElements.ListCategory and UIElements.ListCategory.Select then
+        pcall(function() UIElements.ListCategory:Select(Controller.Config.ListCategory) end)
+        print("[XZNE] ✅ ListCategory synced")
+    end
+    if UIElements.ListTarget and UIElements.ListTarget.Select then
+        pcall(function() UIElements.ListTarget:Select(Controller.Config.ListTarget) end)
+        print("[XZNE] ✅ ListTarget synced")
+    end
+    if UIElements.RemoveCategory and UIElements.RemoveCategory.Select then
+        pcall(function() UIElements.RemoveCategory:Select(Controller.Config.RemoveCategory) end)
+        print("[XZNE] ✅ RemoveCategory synced")
+    end
+    if UIElements.RemoveTarget and UIElements.RemoveTarget.Select then
+        pcall(function() UIElements.RemoveTarget:Select(Controller.Config.RemoveTarget) end)
+        print("[XZNE] ✅ RemoveTarget synced")
+    end
     
-    -- Update dropdowns
-    if UIElements.BuyTarget and UIElements.BuyTarget.SetValues then
+    -- Update dropdown databases dynamically
+    if UIElements.BuyTarget and UIElements.BuyTarget.Refresh then
         local db = (Controller.Config.BuyCategory == "Pet") and PetDatabase or ItemDatabase
-        pcall(function() UIElements.BuyTarget:SetValues(db) end)
+        UIElements.BuyTarget.Values = db
+        pcall(function() UIElements.BuyTarget:Refresh() end)
     end
-    if UIElements.ListTarget and UIElements.ListTarget.SetValues then
+    if UIElements.ListTarget and UIElements.ListTarget.Refresh then
         local db = (Controller.Config.ListCategory == "Pet") and PetDatabase or ItemDatabase
-        pcall(function() UIElements.ListTarget:SetValues(db) end)
+        UIElements.ListTarget.Values = db
+        pcall(function() UIElements.ListTarget:Refresh() end)
     end
-    if UIElements.RemoveTarget and UIElements.RemoveTarget.SetValues then
+    if UIElements.RemoveTarget and UIElements.RemoveTarget.Refresh then
         local db = (Controller.Config.RemoveCategory == "Pet") and PetDatabase or ItemDatabase
-        pcall(function() UIElements.RemoveTarget:SetValues(db) end)
+        UIElements.RemoveTarget.Values = db
+        pcall(function() UIElements.RemoveTarget:Refresh() end)
     end
     
-    print("[XZNE] === GUI SYNC DEBUG END ===")
+    print("[XZNE] ✅ GUI Sync Complete!")
 end)
 
 WindUI:Notify({ Title = "XZNE v0.0.01 [Beta]", Content = "All systems ready", Icon = "xzne:check", Duration = 4 })
