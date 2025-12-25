@@ -1,7 +1,7 @@
 --[[
-    💠 XZNE SCRIPTHUB v28.0 - ENTERPRISE LOADER
+    💠 XZNE SCRIPTHUB v28.0 - MASTER LOADER
     
-    🚀 Usage: loadstring(game:HttpGet("https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/main.lua"))()
+    🚀 Usage: loadstring(game:HttpGet("https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/Loader.lua"))()
 ]]
 
 local Repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/"
@@ -17,8 +17,8 @@ local function LoadScript(Script)
     end
 end
 
--- 1. Load Logic (Core.lua)
-LoadScript("Core.lua")
+-- 1. Load Logic
+LoadScript("Main.lua")
 
 -- 2. Wait for Controller (Safety Check)
 local Timeout = 0
