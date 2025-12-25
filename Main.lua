@@ -68,10 +68,17 @@ local ListingDebounce = {}
 local CachedTargets = { Buy = "", List = "", Remove = "" }
 
 -- [CONFIG PERSISTENCE]
-local FileName = "XZNE_Config.json"
+local FolderName = "XZNE-v0.0.01"
+local FileName = FolderName .. "/XZNE_Config.json"
 
 function Controller.SaveConfig()
     if not HttpService then return end
+    
+    -- Ensure folder exists
+    if makefolder and not isfolder(FolderName) then
+        makefolder(FolderName)
+    end
+    
     local success, json = pcall(function() return HttpService:JSONEncode(Config) end)
     if success then
         pcall(function() writefile(FileName, json) end)
