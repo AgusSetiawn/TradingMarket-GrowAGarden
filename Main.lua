@@ -36,7 +36,7 @@ _G.XZNE_Controller = {
 local Controller = _G.XZNE_Controller
 local Config = Controller.Config
 local Stats = Controller.Stats
-local ListedCache = {}
+local ListingDebounce = {} -- [OPTIMIZATION] Temporary debounce instead of permanent cache
 
 -- [3] REMOTES & DATA
 local TradeEvents = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("TradeEvents")
@@ -141,6 +141,7 @@ local function FindTargetUUID()
     }
     
     local alreadyListed = GetActiveListings()
+    local currentTime = tick()
     
     for _, loc in pairs(locations) do
         if loc then
@@ -150,9 +151,12 @@ local function FindTargetUUID()
                     if realName and string.find(string.lower(realName), string.lower(Config.TargetName)) then
                         local uuid = item:GetAttribute("c")
                         
-                        -- Check internal cache AND game state
-                        if uuid and not ListedCache[uuid] and not alreadyListed[uuid] then
-                            return uuid, item.Name
+                        -- Check internal data hook AND debounce
+                        if uuid and not alreadyListed[uuid] then
+                            -- Only skip if recently attempted (5s debounce)
+                            if not ListingDebounce[uuid] or (currentTime - ListingDebounce[uuid] > 5) then
+                                return uuid, item.Name
+                            end
                         end
                     end
                 end
@@ -246,7 +250,7 @@ local function RunAutoList()
         end)
         
         if success then
-            ListedCache[uuid] = true
+            ListingDebounce[uuid] = tick() -- Reset debounce
             Stats.LastListTime = tick()
             Stats.ListedCount = Stats.ListedCount + 1
         end
@@ -259,7 +263,8 @@ function Controller.UnclaimBooth()
 end
 
 function Controller.ClearCache()
-    ListedCache = {}
+    -- Deprecated: Cache is now self-healing (debounce)
+    ListingDebounce = {}
     Stats.ListedCount = 0
 end
 

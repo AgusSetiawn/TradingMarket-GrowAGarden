@@ -200,20 +200,13 @@ PerfSection:Slider({
     end
 })
 
-PerfSection:Button({
-    Title = "Clear Item Cache",
-    Desc = "Reset internal memory",
-    Icon = "xzne:trash",
-    Callback = function()
-        Controller.ClearCache()
-        WindUI:Notify({
-            Title = "System",
-            Content = "Cache cleared successfully",
-            Icon = "xzne:check",
-            Duration = 2
-        })
-    end
-})
+
+-- PerfSection:Button({
+--     Title = "Clear Item Cache",
+--     Desc = "No longer needed (Auto handled)",
+--     Icon = "xzne:trash",
+--     Callback = function() end
+-- })
 
 
 -- == INFO TAB ==
