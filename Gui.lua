@@ -156,14 +156,14 @@ local SniperTab = Window:Tab({ Title = "Sniper", Icon = "xzne:crosshair" })
 local SniperSection = SniperTab:Section({ Title = "Auto Buy Configuration" })
 
 SniperSection:Dropdown({
-    Title = "Category", Desc = "Select Item type", Values = {"Item", "Pet"}, Default = Controller.Config.BuyCategory,
+    Title = "Category", Desc = "Select Item type", Values = {"Item", "Pet"}, Value = Controller.Config.BuyCategory,
     Callback = function(val)
         Controller.Config.BuyCategory = val; Controller.RequestUpdate(); Controller.SaveConfig()
     end
 })
 
 SniperSection:Dropdown({
-    Title = "Target Item", Desc = "Search for item...", Values = ItemDatabase, Default = Controller.Config.BuyTarget,
+    Title = "Target Item", Desc = "Search for item...", Values = ItemDatabase, Value = Controller.Config.BuyTarget,
     Searchable = true, -- Enable search for large lists
     Callback = function(val)
         Controller.Config.BuyTarget = val; Controller.RequestUpdate(); Controller.SaveConfig()
@@ -171,12 +171,12 @@ SniperSection:Dropdown({
 })
 
 SniperSection:Input({
-    Title = "Max Price", Desc = "Maximum price to buy", Default = tostring(Controller.Config.MaxPrice), Numeric = true,
+    Title = "Max Price", Desc = "Maximum price to buy", Value = tostring(Controller.Config.MaxPrice), Numeric = true,
     Callback = function(txt) Controller.Config.MaxPrice = tonumber(txt) or 5; Controller.SaveConfig() end
 })
 
 SniperSection:Toggle({
-    Title = "Enable Auto Buy", Desc = "Automatically buy cheap items", Default = Controller.Config.AutoBuy,
+    Title = "Enable Auto Buy", Desc = "Automatically buy cheap items", Value = Controller.Config.AutoBuy,
     Callback = function(val) Controller.Config.AutoBuy = val; Controller.SaveConfig() end
 })
 
@@ -186,35 +186,35 @@ local InvTab = Window:Tab({ Title = "Inventory", Icon = "xzne:box" })
 -- Auto List
 local ListSection = InvTab:Section({ Title = "Auto List (Sell)" })
 ListSection:Dropdown({
-    Title = "Category", Desc = "Select Inventory Type", Values = {"Item", "Pet"}, Default = Controller.Config.ListCategory,
+    Title = "Category", Desc = "Select Inventory Type", Values = {"Item", "Pet"}, Value = Controller.Config.ListCategory,
     Callback = function(val) Controller.Config.ListCategory = val; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 ListSection:Dropdown({
-    Title = "Item to List", Desc = "Select item to sell", Values = ItemDatabase, Default = Controller.Config.ListTarget,
+    Title = "Item to List", Desc = "Select item to sell", Values = ItemDatabase, Value = Controller.Config.ListTarget,
     Searchable = true,
     Callback = function(val) Controller.Config.ListTarget = val; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 ListSection:Input({
-    Title = "Listing Price", Desc = "Price per item", Default = tostring(Controller.Config.Price), Numeric = true,
+    Title = "Listing Price", Desc = "Price per item", Value = tostring(Controller.Config.Price), Numeric = true,
     Callback = function(txt) Controller.Config.Price = tonumber(txt) or 5; Controller.SaveConfig() end
 })
 ListSection:Toggle({
-    Title = "Start Auto List", Desc = "List items automatically", Default = Controller.Config.AutoList,
+    Title = "Start Auto List", Desc = "List items automatically", Value = Controller.Config.AutoList,
     Callback = function(val) Controller.Config.AutoList = val; Controller.SaveConfig() end
 })
 
 -- Auto Clear
 local ClearSection = InvTab:Section({ Title = "Auto Clear (Trash)" })
 ClearSection:Dropdown({
-    Title = "Category", Values = {"Item", "Pet"}, Default = Controller.Config.RemoveCategory,
+    Title = "Category", Values = {"Item", "Pet"}, Value = Controller.Config.RemoveCategory,
     Callback = function(val) Controller.Config.RemoveCategory = val; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 ClearSection:Dropdown({
-    Title = "Item to Trash", Values = ItemDatabase, Default = Controller.Config.RemoveTarget, Searchable = true,
+    Title = "Item to Trash", Values = ItemDatabase, Value = Controller.Config.RemoveTarget, Searchable = true,
     Callback = function(val) Controller.Config.RemoveTarget = val; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 ClearSection:Toggle({
-    Title = "Start Auto Clear", Desc = "Delete specific items", Default = Controller.Config.AutoClear,
+    Title = "Start Auto Clear", Desc = "Delete specific items", Value = Controller.Config.AutoClear,
     Callback = function(val) Controller.Config.AutoClear = val; Controller.SaveConfig() end
 })
 
@@ -222,7 +222,7 @@ ClearSection:Toggle({
 local BoothTab = Window:Tab({ Title = "Booth", Icon = "xzne:home" })
 local BoothSection = BoothTab:Section({ Title = "Booth Control" })
 BoothSection:Toggle({
-    Title = "Auto Claim Booth", Desc = "Fast claim empty booths", Default = Controller.Config.AutoClaim,
+    Title = "Auto Claim Booth", Desc = "Fast claim empty booths", Value = Controller.Config.AutoClaim,
     Callback = function(val) Controller.Config.AutoClaim = val; Controller.SaveConfig() end
 })
 BoothSection:Button({
@@ -242,7 +242,7 @@ PerfSection:Slider({
 })
 
 PerfSection:Toggle({
-    Title = "Delete ALL Mode", Desc = "DANGER: Trashes EVERYTHING", Default = Controller.Config.DeleteAll,
+    Title = "Delete ALL Mode", Desc = "DANGER: Trashes EVERYTHING", Value = Controller.Config.DeleteAll,
     Callback = function(val) Controller.Config.DeleteAll = val; Controller.SaveConfig() end
 })
 
