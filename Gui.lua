@@ -165,45 +165,16 @@ local UIElements = {}
 local SniperTab = Window:Tab({ Title = "Sniper", Icon = "xzne:crosshair" })
 local SniperSection = SniperTab:Section({ Title = "Auto Buy Configuration" })
 
--- [PHASE 2 OPTIMIZATION] Debounced asynchronous dropdown refresh
-local RefreshDebounce = {}
-
+-- [ULTIMATE OPTIMIZATION] Category switch without re-render
 local function UpdateTargetDropdown(CategoryVal, TargetElement)
     if TargetElement then
-        -- Cancel previous refresh if pending
-        if RefreshDebounce[TargetElement] then
-            RefreshDebounce[TargetElement] = false
-        end
+        local newDB = (CategoryVal == "Pet") and PetDatabase or ItemDatabase
         
-        local debounceId = os.clock()
-        RefreshDebounce[TargetElement] = debounceId
+        -- INSTANT: Only update Values, NO Refresh() call!
+        TargetElement.Values = newDB
+        TargetElement.Desc = "🔍 Search " .. #newDB .. " items (A-Z sorted)..."
         
-        local fullDB = (CategoryVal == "Pet") and PetDatabase or ItemDatabase
-        
-        -- Update with FULL database for complete search
-        TargetElement.Values = fullDB
-        TargetElement.Desc = "🔍 Type to search " .. #fullDB .. " items..."
-        
-        -- Optimized refresh with debouncing
-        task.spawn(function()
-            task.wait(0.05) -- Minimal yield
-            
-            -- Only proceed if this is the latest request
-            if RefreshDebounce[TargetElement] ~= debounceId then
-                return -- Cancelled by newer request
-            end
-            
-            if TargetElement.Refresh then
-                pcall(function() 
-                    TargetElement:Refresh(fullDB) -- All items!
-                end)
-            end
-            
-            -- Reset description after refresh
-            task.wait(0.05)
-            TargetElement.Desc = "🔍 Type to search " .. #fullDB .. " items (A-Z sorted)..."
-            RefreshDebounce[TargetElement] = nil
-        end)
+        -- NO task.spawn, NO Refresh, INSTANT switch!
     end
 end
 
@@ -333,58 +304,57 @@ PerfSection:Button({
     Callback = function() Window:Destroy() end
 })
 
--- [GUI POPULATION - Deferred & Asynchronous with Progress]
+-- [GUI POPULATION - Pre-render ALL dropdowns at startup for instant category switching]
 task.spawn(function()
     -- OPTIMIZED: 0.7s is sufficient (0.2s parallel sort + 0.5s settle)
-    task.wait(0.7) -- Reduced from 1.0s
+    task.wait(0.7)
     
-    -- Helper: Populate dropdown asynchronously (non-blocking)
-    local function PopulateDropdown(element, category, targetValue)
-        if element then
-            task.spawn(function()
-                -- CRITICAL: Wait for database to be loaded from external module
-                while not DatabaseReady do 
-                    task.wait(0.1) 
-                end
-                
-                local fullDB = (category == "Pet") and PetDatabase or ItemDatabase
-                
-                -- Show progress indicator
-                element.Desc = "Loading " .. #fullDB .. " items..."
-                element.Values = fullDB -- Full database!
-                
-                -- Minimal yield
-                task.wait(0.05)
-                
-                if element.Refresh then
-                    pcall(function() element:Refresh(fullDB) end) -- All items!
-                end
-                
-                -- Allow refresh to complete
-                task.wait(0.05)
-                element.Desc = "🔍 Type to search " .. #fullDB .. " items (A-Z sorted)..."
-                
-                -- Set saved value after population
-                if element.Select and targetValue then
-                    task.wait(0.05)
-                    pcall(function() element:Select(targetValue) end)
-                end
-            end)
-        end
+    -- Wait for database to be ready
+    while not DatabaseReady do 
+        task.wait(0.1) 
     end
     
-    -- Sync helpers
-    local function SyncToggle(element, val) 
-        if element then pcall(function() element:Set(val, false, true) end) end 
+    print("🔄 [XZNE] Pre-rendering all dropdowns...")
+    
+    -- Pre-render BuyTarget with initial category data
+    local buyDB = (Controller.Config.BuyCategory == "Pet") and PetDatabase or ItemDatabase
+    UIElements.BuyTarget.Values = buyDB
+    UIElements.BuyTarget.Desc = "🔍 Search " .. #buyDB .. " items (A-Z sorted)..."
+    if UIElements.BuyTarget.Refresh then
+        pcall(function() UIElements.BuyTarget:Refresh(buyDB) end)
     end
-    local function SyncSlider(element, val) 
-        if element then pcall(function() element:Set(val, nil) end) end 
+    if UIElements.BuyTarget.Select and Controller.Config.BuyTarget then
+        task.wait(0.1)
+        pcall(function() UIElements.BuyTarget:Select(Controller.Config.BuyTarget) end)
     end
-    local function SyncDropdown(element, val) 
-        if element and element.Select then 
-            pcall(function() element:Select(val) end) 
-        end 
+    
+    -- Pre-render ListTarget
+    local listDB = (Controller.Config.ListCategory == "Pet") and PetDatabase or ItemDatabase
+    UIElements.ListTarget.Values = listDB
+    UIElements.ListTarget.Desc = "🔍 Search " .. #listDB .. " items (A-Z sorted)..."
+    if UIElements.ListTarget.Refresh then
+        pcall(function() UIElements.ListTarget:Refresh(listDB) end)
     end
+    if UIElements.ListTarget.Select and Controller.Config.ListTarget then
+        task.wait(0.1)
+        pcall(function() UIElements.ListTarget:Select(Controller.Config.ListTarget) end)
+    end
+    
+    -- Pre-render RemoveTarget
+    local removeDB = (Controller.Config.RemoveCategory == "Pet") and PetDatabase or ItemDatabase
+    UIElements.RemoveTarget.Values = removeDB
+    UIElements.RemoveTarget.Desc = "🔍 Search " .. #removeDB .. " items (A-Z sorted)..."
+    if UIElements.RemoveTarget.Refresh then
+        pcall(function() UIElements.RemoveTarget:Refresh(removeDB) end)
+    end
+    if UIElements.RemoveTarget.Select and Controller.Config.RemoveTarget then
+        task.wait(0.1)
+        pcall(function() UIElements.RemoveTarget:Select(Controller.Config.RemoveTarget) end)
+    end
+    
+    print("✅ [XZNE] All dropdowns pre-rendered!")
+    
+    -- Sync simple elements (instant, no dropdown render)
     
     -- Batch sync toggles for better performance
     local toggleConfigs = {
