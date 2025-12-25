@@ -286,94 +286,91 @@ PerfSection:Button({
     Callback = function() Window:Destroy() end
 })
 
--- [REFRESH] Sync UI with loaded config - WINDUI API CORRECT USAGE
+-- [REFRESH] Sync UI with loaded config - DEBUG VERSION
 task.spawn(function()
-    task.wait(0.5) -- Wait for UI initialization
+    task.wait(1) -- Wait longer for full initialization
     
-    print("[XZNE] Syncing GUI with loaded config...")
-    print("[XZNE] Loaded values:")
-    print("  AutoBuy:", Controller.Config.AutoBuy)
-    print("  AutoList:", Controller.Config.AutoList)
-    print("  BuyCategory:", Controller.Config.BuyCategory)
-    print("  Speed:", Controller.Config.Speed)
+    print("[XZNE] ========== GUI SYNC DEBUG ==========")
+    print("[XZNE] Config values loaded:")
+    print("  AutoBuy:", Controller.Config.AutoBuy, type(Controller.Config.AutoBuy))
+    print("  AutoList:", Controller.Config.AutoList, type(Controller.Config.AutoList))
+    print("  Speed:", Controller.Config.Speed, type(Controller.Config.Speed))
     
-    -- Update toggles using WindUI Toggle:Set(value, isCallback, isAnim)
-    -- isCallback = false prevents triggering callback during sync
+    -- Debug: Check element structure
+    print("[XZNE] Checking AutoBuy element:")
     if UIElements.AutoBuy then
-        pcall(function() UIElements.AutoBuy:Set(Controller.Config.AutoBuy, false, true) end)
-        print("[XZNE] ✅ AutoBuy synced")
+        print("  Element exists: YES")
+        print("  Element type:", type(UIElements.AutoBuy))
+        print("  Current Value:", UIElements.AutoBuy.Value)
+        
+        -- Check available methods
+        print("  Available methods:")
+        for k, v in pairs(UIElements.AutoBuy) do
+            if type(v) == "function" then
+                print("    -", k)
+            end
+        end
+        
+        -- Try to call Set
+        print("  Attempting to call Set()...")
+        local success, err = pcall(function()
+            UIElements.AutoBuy:Set(Controller.Config.AutoBuy, false, true)
+        end)
+        if success then
+            print("  ✅ Set() called successfully")
+            print("  New Value:", UIElements.AutoBuy.Value)
+        else
+            print("  ❌ Set() failed:", err)
+        end
+    else
+        print("  ❌ AutoBuy element is NIL!")
     end
+    
+    -- Try alternative approach: directly modify value and trigger callback manually
+    print("[XZNE] Trying alternative sync approach...")
+    if UIElements.AutoBuy then
+        -- Method 1: Direct value assignment
+        UIElements.AutoBuy.Value = Controller.Config.AutoBuy
+        print("  Direct assignment done")
+        
+        -- Method 2: Check if there's a ToggleFrame
+        if UIElements.AutoBuy.ToggleFrame then
+            print("  ToggleFrame exists, trying Lock/Unlock")
+            UIElements.AutoBuy:Unlock()
+            UIElements.AutoBuy:Set(Controller.Config.AutoBuy, false, false)
+        end
+    end
+    
+    -- Update other toggles
     if UIElements.AutoList then
-        pcall(function() UIElements.AutoList:Set(Controller.Config.AutoList, false, true) end)
-        print("[XZNE] ✅ AutoList synced")
-    end
-    if UIElements.AutoClear then
-        pcall(function() UIElements.AutoClear:Set(Controller.Config.AutoClear, false, true) end)
-        print("[XZNE] ✅ AutoClear synced")
-    end
-    if UIElements.AutoClaim then
-        pcall(function() UIElements.AutoClaim:Set(Controller.Config.AutoClaim, false, true) end)
-        print("[XZNE] ✅ AutoClaim synced")
-    end
-    if UIElements.DeleteAll then
-        pcall(function() UIElements.DeleteAll:Set(Controller.Config.DeleteAll, false, true) end)
-        print("[XZNE] ✅ DeleteAll synced")
+        pcall(function() 
+            print("[XZNE] Setting AutoList to:", Controller.Config.AutoList)
+            UIElements.AutoList:Set(Controller.Config.AutoList, false, true)
+            print("  AutoList.Value after Set:", UIElements.AutoList.Value)
+        end)
     end
     
-    -- Update slider using WindUI Slider:Set(value, input)
-    -- input = nil prevents input handling during sync
+    -- Update slider
     if UIElements.Speed then
-        pcall(function() UIElements.Speed:Set(Controller.Config.Speed, nil) end)
-        print("[XZNE] ✅ Speed synced")
+        pcall(function() 
+            print("[XZNE] Setting Speed to:", Controller.Config.Speed)
+            UIElements.Speed:Set(Controller.Config.Speed, nil) 
+        end)
     end
     
-    -- Update dropdowns using WindUI Dropdown.Select(value)
+    -- Update dropdowns
     if UIElements.BuyCategory and UIElements.BuyCategory.Select then
         pcall(function() UIElements.BuyCategory:Select(Controller.Config.BuyCategory) end)
-        print("[XZNE] ✅ BuyCategory synced")
     end
     if UIElements.BuyTarget and UIElements.BuyTarget.Select then
         pcall(function() UIElements.BuyTarget:Select(Controller.Config.BuyTarget) end)
-        print("[XZNE] ✅ BuyTarget synced")
-    end
-    if UIElements.ListCategory and UIElements.ListCategory.Select then
-        pcall(function() UIElements.ListCategory:Select(Controller.Config.ListCategory) end)
-        print("[XZNE] ✅ ListCategory synced")
-    end
-    if UIElements.ListTarget and UIElements.ListTarget.Select then
-        pcall(function() UIElements.ListTarget:Select(Controller.Config.ListTarget) end)
-        print("[XZNE] ✅ ListTarget synced")
-    end
-    if UIElements.RemoveCategory and UIElements.RemoveCategory.Select then
-        pcall(function() UIElements.RemoveCategory:Select(Controller.Config.RemoveCategory) end)
-        print("[XZNE] ✅ RemoveCategory synced")
-    end
-    if UIElements.RemoveTarget and UIElements.RemoveTarget.Select then
-        pcall(function() UIElements.RemoveTarget:Select(Controller.Config.RemoveTarget) end)
-        print("[XZNE] ✅ RemoveTarget synced")
     end
     
-    -- Update dropdown databases dynamically
-    if UIElements.BuyTarget and UIElements.BuyTarget.Refresh then
-        local db = (Controller.Config.BuyCategory == "Pet") and PetDatabase or ItemDatabase
-        UIElements.BuyTarget.Values = db
-        pcall(function() UIElements.BuyTarget:Refresh() end)
-    end
-    if UIElements.ListTarget and UIElements.ListTarget.Refresh then
-        local db = (Controller.Config.ListCategory == "Pet") and PetDatabase or ItemDatabase
-        UIElements.ListTarget.Values = db
-        pcall(function() UIElements.ListTarget:Refresh() end)
-    end
-    if UIElements.RemoveTarget and UIElements.RemoveTarget.Refresh then
-        local db = (Controller.Config.RemoveCategory == "Pet") and PetDatabase or ItemDatabase
-        UIElements.RemoveTarget.Values = db
-        pcall(function() UIElements.RemoveTarget:Refresh() end)
-    end
-    
-    print("[XZNE] ✅ GUI Sync Complete!")
+    print("[XZNE] ========== GUI SYNC END ==========")
+    print("[XZNE] Please check if toggles are now visually correct!")
 end)
 
-WindUI:Notify({ Title = "XZNE v0.0.01 [Beta]", Content = "All systems ready", Icon = "xzne:check", Duration = 4 })
+WindUI:Notify({ Title = "XZNE v0.0.01 [Beta]", Content = "Check console (F9) for sync debug info", Icon = "xzne:check", Duration = 5 })
     
     🎨 Style: macOS
     🔗 Connects to: Main.lua (_G.XZNE_Controller)
