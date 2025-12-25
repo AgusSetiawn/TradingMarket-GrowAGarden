@@ -1,7 +1,7 @@
 --[[
-    💠 XZNE SCRIPTHUB v0.0.01 [Beta] - UI LOADER (WindUI)
+    💠 XZNE SCRIPTHUB v0.0.01 Beta - UI LOADER
     
-    🎨 Style: macOS
+    🎨 WindUI Interface
     🔗 Connects to: Main.lua (_G.XZNE_Controller)
 ]]
 
@@ -286,91 +286,69 @@ PerfSection:Button({
     Callback = function() Window:Destroy() end
 })
 
--- [REFRESH] Sync UI with loaded config - DEBUG VERSION
+-- [GUI SYNC] Attempt to sync visual elements with loaded config
+-- Note: Online WindUI version may have limitations with visual sync
 task.spawn(function()
-    task.wait(1) -- Wait longer for full initialization
+    task.wait(0.5)
     
-    print("[XZNE] ========== GUI SYNC DEBUG ==========")
-    print("[XZNE] Config values loaded:")
-    print("  AutoBuy:", Controller.Config.AutoBuy, type(Controller.Config.AutoBuy))
-    print("  AutoList:", Controller.Config.AutoList, type(Controller.Config.AutoList))
-    print("  Speed:", Controller.Config.Speed, type(Controller.Config.Speed))
-    
-    -- Debug: Check element structure
-    print("[XZNE] Checking AutoBuy element:")
+    -- Sync toggles
     if UIElements.AutoBuy then
-        print("  Element exists: YES")
-        print("  Element type:", type(UIElements.AutoBuy))
-        print("  Current Value:", UIElements.AutoBuy.Value)
-        
-        -- Check available methods
-        print("  Available methods:")
-        for k, v in pairs(UIElements.AutoBuy) do
-            if type(v) == "function" then
-                print("    -", k)
-            end
-        end
-        
-        -- Try to call Set
-        print("  Attempting to call Set()...")
-        local success, err = pcall(function()
-            UIElements.AutoBuy:Set(Controller.Config.AutoBuy, false, true)
-        end)
-        if success then
-            print("  ✅ Set() called successfully")
-            print("  New Value:", UIElements.AutoBuy.Value)
-        else
-            print("  ❌ Set() failed:", err)
-        end
-    else
-        print("  ❌ AutoBuy element is NIL!")
+        pcall(function() UIElements.AutoBuy:Set(Controller.Config.AutoBuy, false, true) end)
     end
-    
-    -- Try alternative approach: directly modify value and trigger callback manually
-    print("[XZNE] Trying alternative sync approach...")
-    if UIElements.AutoBuy then
-        -- Method 1: Direct value assignment
-        UIElements.AutoBuy.Value = Controller.Config.AutoBuy
-        print("  Direct assignment done")
-        
-        -- Method 2: Check if there's a ToggleFrame
-        if UIElements.AutoBuy.ToggleFrame then
-            print("  ToggleFrame exists, trying Lock/Unlock")
-            UIElements.AutoBuy:Unlock()
-            UIElements.AutoBuy:Set(Controller.Config.AutoBuy, false, false)
-        end
-    end
-    
-    -- Update other toggles
     if UIElements.AutoList then
-        pcall(function() 
-            print("[XZNE] Setting AutoList to:", Controller.Config.AutoList)
-            UIElements.AutoList:Set(Controller.Config.AutoList, false, true)
-            print("  AutoList.Value after Set:", UIElements.AutoList.Value)
-        end)
+        pcall(function() UIElements.AutoList:Set(Controller.Config.AutoList, false, true) end)
+    end
+    if UIElements.AutoClear then
+        pcall(function() UIElements.AutoClear:Set(Controller.Config.AutoClear, false, true) end)
+    end
+    if UIElements.AutoClaim then
+        pcall(function() UIElements.AutoClaim:Set(Controller.Config.AutoClaim, false, true) end)
+    end
+    if UIElements.DeleteAll then
+        pcall(function() UIElements.DeleteAll:Set(Controller.Config.DeleteAll, false, true) end)
     end
     
-    -- Update slider
+    -- Sync slider
     if UIElements.Speed then
-        pcall(function() 
-            print("[XZNE] Setting Speed to:", Controller.Config.Speed)
-            UIElements.Speed:Set(Controller.Config.Speed, nil) 
-        end)
+        pcall(function() UIElements.Speed:Set(Controller.Config.Speed, nil) end)
     end
     
-    -- Update dropdowns
+    -- Sync dropdowns
     if UIElements.BuyCategory and UIElements.BuyCategory.Select then
         pcall(function() UIElements.BuyCategory:Select(Controller.Config.BuyCategory) end)
     end
     if UIElements.BuyTarget and UIElements.BuyTarget.Select then
         pcall(function() UIElements.BuyTarget:Select(Controller.Config.BuyTarget) end)
     end
+    if UIElements.ListCategory and UIElements.ListCategory.Select then
+        pcall(function() UIElements.ListCategory:Select(Controller.Config.ListCategory) end)
+    end
+    if UIElements.ListTarget and UIElements.ListTarget.Select then
+        pcall(function() UIElements.ListTarget:Select(Controller.Config.ListTarget) end)
+    end
+    if UIElements.RemoveCategory and UIElements.RemoveCategory.Select then
+        pcall(function() UIElements.RemoveCategory:Select(Controller.Config.RemoveCategory) end)
+    end
+    if UIElements.RemoveTarget and UIElements.RemoveTarget.Select then
+        pcall(function() UIElements.RemoveTarget:Select(Controller.Config.RemoveTarget) end)
+    end
     
-    print("[XZNE] ========== GUI SYNC END ==========")
-    print("[XZNE] Please check if toggles are now visually correct!")
+    -- Update dropdown databases
+    if UIElements.BuyTarget and UIElements.BuyTarget.Refresh then
+        UIElements.BuyTarget.Values = (Controller.Config.BuyCategory == "Pet") and PetDatabase or ItemDatabase
+        pcall(function() UIElements.BuyTarget:Refresh() end)
+    end
+    if UIElements.ListTarget and UIElements.ListTarget.Refresh then
+        UIElements.ListTarget.Values = (Controller.Config.ListCategory == "Pet") and PetDatabase or ItemDatabase
+        pcall(function() UIElements.ListTarget:Refresh() end)
+    end
+    if UIElements.RemoveTarget and UIElements.RemoveTarget.Refresh then
+        UIElements.RemoveTarget.Values = (Controller.Config.RemoveCategory == "Pet") and PetDatabase or ItemDatabase
+        pcall(function() UIElements.RemoveTarget:Refresh() end)
+    end
 end)
 
-WindUI:Notify({ Title = "XZNE v0.0.01 [Beta]", Content = "Check console (F9) for sync debug info", Icon = "xzne:check", Duration = 5 })
+WindUI:Notify({ Title = "XZNE v0.0.01 Beta", Content = "Script ready! Press RightCtrl to hide/show", Icon = "xzne:check", Duration = 4 })
     
     🎨 Style: macOS
     🔗 Connects to: Main.lua (_G.XZNE_Controller)
