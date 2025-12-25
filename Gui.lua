@@ -13,7 +13,20 @@ if not Controller then
     return
 end
 
--- [1] LOAD WINDUI (Force Online to prevent nil value errors)
+-- [1] EARLY LOADING NOTIFICATION (User feedback during WindUI download)
+local function ShowEarlyNotification()
+    local StarterGui = game:GetService("StarterGui")
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "XZNE ScriptHub";
+            Text = "Loading UI library...";
+            Duration = 3;
+        })
+    end)
+end
+ShowEarlyNotification()
+
+-- [2] LOAD WINDUI (Force Online to prevent nil value errors)
 do
     local success, result = pcall(function()
         return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
@@ -21,6 +34,7 @@ do
     
     if success and result then
         WindUI = result
+        print("✅ [XZNE] WindUI loaded")
     else
         warn("[XZNE] Failed to load WindUI lib!")
         return
@@ -184,9 +198,10 @@ UIElements.BuyCategory = SniperSection:Dropdown({
     end
 })
 
+-- LAZY LOAD: Create with empty values for instant UI, populate later
 UIElements.BuyTarget = SniperSection:Dropdown({
-    Title = "Target Item", Desc = "Search for item...", Values = (Controller.Config.BuyCategory == "Pet") and PetDatabase or ItemDatabase, 
-    Default = Controller.Config.BuyTarget, Searchable = true,
+    Title = "Target Item", Desc = "Loading...", Values = {}, 
+    Default = 1, Searchable = true,
     Callback = function(val) Controller.Config.BuyTarget = val; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
@@ -212,9 +227,10 @@ UIElements.ListCategory = ListSection:Dropdown({
     end
 })
 
+-- LAZY LOAD: Create with empty values for instant UI, populate later
 UIElements.ListTarget = ListSection:Dropdown({
-    Title = "Item to List", Desc = "Select item to sell", Values = (Controller.Config.ListCategory == "Pet") and PetDatabase or ItemDatabase,
-    Default = Controller.Config.ListTarget, Searchable = true,
+    Title = "Item to List", Desc = "Loading...", Values = {},
+    Default = 1, Searchable = true,
     Callback = function(val) Controller.Config.ListTarget = val; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
@@ -237,9 +253,10 @@ UIElements.RemoveCategory = ClearSection:Dropdown({
     end
 })
 
+-- LAZY LOAD: Create with empty values for instant UI, populate later
 UIElements.RemoveTarget = ClearSection:Dropdown({
-    Title = "Item to Trash", Values = (Controller.Config.RemoveCategory == "Pet") and PetDatabase or ItemDatabase,
-    Default = Controller.Config.RemoveTarget, Searchable = true,
+    Title = "Item to Trash", Desc = "Loading...", Values = {},
+    Default = 1, Searchable = true,
     Callback = function(val) Controller.Config.RemoveTarget = val; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
@@ -280,39 +297,69 @@ PerfSection:Button({
     Callback = function() Window:Destroy() end
 })
 
--- [GUI SYNC v2]
+-- [GUI POPULATION - Deferred & Asynchronous]
 task.spawn(function()
-    task.wait(1)
+    -- Wait for databases to finish sorting
+    task.wait(0.5)
     
-    local function SyncToggle(element, val) if element then pcall(function() element:Set(val, false, true) end) end end
-    local function SyncSlider(element, val) if element then pcall(function() element:Set(val, nil) end) end end
-    local function SyncDropdown(element, val) if element and element.Select then pcall(function() element:Select(val) end) end end
-    local function RefreshDB(element, cat) 
-        if element then 
-            element.Values = (cat == "Pet") and PetDatabase or ItemDatabase
-            pcall(function() element:Refresh() end) 
+    -- Helper: Populate dropdown asynchronously (non-blocking)
+    local function PopulateDropdown(element, category, targetValue)
+        if element then
+            task.spawn(function()
+                local db = (category == "Pet") and PetDatabase or ItemDatabase
+                element.Values = db
+                element.Desc = "Search for item..." -- Reset description
+                
+                if element.Refresh then
+                    pcall(function() element:Refresh(db) end)
+                end
+                
+                -- Set saved value after population
+                if element.Select and targetValue then
+                    task.wait(0.1) -- Allow refresh to complete
+                    pcall(function() element:Select(targetValue) end)
+                end
+            end)
+        end
+    end
+    
+    -- Sync helpers
+    local function SyncToggle(element, val) 
+        if element then pcall(function() element:Set(val, false, true) end) end 
+    end
+    local function SyncSlider(element, val) 
+        if element then pcall(function() element:Set(val, nil) end) end 
+    end
+    local function SyncDropdown(element, val) 
+        if element and element.Select then 
+            pcall(function() element:Select(val) end) 
         end 
     end
-
+    
+    -- Sync simple elements first (instant, no freeze)
     SyncToggle(UIElements.AutoBuy, Controller.Config.AutoBuy)
     SyncToggle(UIElements.AutoList, Controller.Config.AutoList)
     SyncToggle(UIElements.AutoClear, Controller.Config.AutoClear)
     SyncToggle(UIElements.AutoClaim, Controller.Config.AutoClaim)
     SyncToggle(UIElements.DeleteAll, Controller.Config.DeleteAll)
-    
     SyncSlider(UIElements.Speed, Controller.Config.Speed)
     
-    RefreshDB(UIElements.BuyTarget, Controller.Config.BuyCategory)
-    RefreshDB(UIElements.ListTarget, Controller.Config.ListCategory)
-    RefreshDB(UIElements.RemoveTarget, Controller.Config.RemoveCategory)
-    
-    SyncDropdown(UIElements.BuyTarget, Controller.Config.BuyTarget)
-    SyncDropdown(UIElements.ListTarget, Controller.Config.ListTarget)
-    SyncDropdown(UIElements.RemoveTarget, Controller.Config.RemoveTarget)
-    
+    -- Sync category dropdowns (small values, fast)
     SyncDropdown(UIElements.BuyCategory, Controller.Config.BuyCategory)
     SyncDropdown(UIElements.ListCategory, Controller.Config.ListCategory)
     SyncDropdown(UIElements.RemoveCategory, Controller.Config.RemoveCategory)
     
-    WindUI:Notify({ Title = "XZNE v0.0.01 Beta", Content = "Loaded! Press RightCtrl to toggle.", Icon = "xzne:check", Duration = 5 })
+    -- Populate heavy dropdowns asynchronously (background, no freeze)
+    PopulateDropdown(UIElements.BuyTarget, Controller.Config.BuyCategory, Controller.Config.BuyTarget)
+    PopulateDropdown(UIElements.ListTarget, Controller.Config.ListCategory, Controller.Config.ListTarget)
+    PopulateDropdown(UIElements.RemoveTarget, Controller.Config.RemoveCategory, Controller.Config.RemoveTarget)
+    
+    -- Show ready notification after population starts
+    task.wait(0.5)
+    WindUI:Notify({ 
+        Title = "XZNE v0.0.01 Beta", 
+        Content = "Loaded! Press RightCtrl to toggle.", 
+        Icon = "xzne:check", 
+        Duration = 5 
+    })
 end)
