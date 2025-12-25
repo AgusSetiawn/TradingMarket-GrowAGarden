@@ -116,6 +116,15 @@ MainSection:Toggle({
     end
 })
 
+MainSection:Toggle({
+    Title = "Auto Clear Items",
+    Desc = "Remove items matching Target Name",
+    Default = Controller.Config.AutoClear,
+    Callback = function(val)
+        Controller.Config.AutoClear = val
+    end
+})
+
 MainSection:Space()
 
 MainSection:Button({
@@ -149,6 +158,15 @@ ItemSection:Input({
     Icon = "xzne:tag",
     Callback = function(text)
         Controller.Config.TargetName = text
+    end
+})
+
+ItemSection:Toggle({
+    Title = "Delete ALL Mode",
+    Desc = "DANGER: Remove EVERYTHING",
+    Default = Controller.Config.DeleteAll,
+    Callback = function(val)
+        Controller.Config.DeleteAll = val
     end
 })
 

@@ -1,10 +1,10 @@
 --[[ 
-    💠 XZNE SCRIPTHUB v18.0 - LOGIC CORE
+    💠 XZNE SCRIPTHUB v21.0 - LOGIC CORE
     
-    🔧 REFACTOR NOTES:
-    - UI completely removed (moved to Loader.lua)
-    - "Auto Clear" removed due to bugs
-    - "Clear Mode" & "Clear Delay" removed
+    🔧 FEATURES:
+    - Smart List (Prevent Duplicates via Data Hook)
+    - Smart Clear (Auto remove items)
+    - Auto Claim (Fast & Reliable)
     - Exposes API via _G.XZNE_Controller
 ]]
 
@@ -20,8 +20,10 @@ _G.XZNE_Controller = {
     Config = {
         AutoList = false,
         AutoClaim = false,
-        TargetName = "Bone Blossom",  -- Attribute 'f'
+        AutoClear = false, -- [NEW]
+        TargetName = "Bone Blossom",
         Price = 5,
+        DeleteAll = false, -- [NEW]
         ListDelay = 2.0,
         Running = true
     },
@@ -38,18 +40,43 @@ local ListedCache = {}
 
 -- [3] REMOTES & DATA
 local TradeEvents = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("TradeEvents")
-local Booths = TradeEvents:WaitForChild("Booths")
-local CreateListingRemote = Booths:WaitForChild("CreateListing")
-local ClaimBoothRemote = Booths:WaitForChild("ClaimBooth")
-local RemoveBoothRemote = Booths:WaitForChild("RemoveBooth")
+local BoothsRemote = TradeEvents:WaitForChild("Booths")
+local CreateListingRemote = BoothsRemote:WaitForChild("CreateListing")
+local ClaimBoothRemote = BoothsRemote:WaitForChild("ClaimBooth")
+local RemoveBoothRemote = BoothsRemote:WaitForChild("RemoveBooth")
+local RemoveListingRemote = BoothsRemote:WaitForChild("RemoveListing")
 
--- Attempt to load TradeBoothsData for optimization
+-- [DATA HOOK] Attempt to load BoothsReceiver (Primary) or TradeBoothsData (Fallback)
+local BoothsReceiver = nil
 local TradeBoothsData = nil
-pcall(function()
-    TradeBoothsData = require(ReplicatedStorage.Data.TradeBoothsData)
+
+task.spawn(function()
+    -- Try ReplicationReciever (Snippet Method)
+    pcall(function()
+        local RepModules = ReplicatedStorage:WaitForChild("Modules", 2)
+        if RepModules then
+            local ReplicationReciever = require(RepModules:WaitForChild("ReplicationReciever", 2))
+            if ReplicationReciever then
+                BoothsReceiver = ReplicationReciever.new("Booths")
+                print("✅ [XZNE] BoothsReceiver Hooked")
+            end
+        end
+    end)
+
+    -- Try TradeBoothsData (Fallback)
+    if not BoothsReceiver then
+        pcall(function()
+            TradeBoothsData = require(ReplicatedStorage.Data.TradeBoothsData)
+            print("✅ [XZNE] TradeBoothsData Hooked")
+        end)
+    end
 end)
 
 -- [4] HELPER FUNCTIONS
+
+local function GetPlayerKey()
+    return "Player_" .. LocalPlayer.UserId
+end
 
 local function GetMyBooth()
     local folder = Workspace:FindFirstChild("TradeWorld")
@@ -69,29 +96,35 @@ local function GetMyBooth()
     return nil
 end
 
+local function GetBoothsData()
+    if BoothsReceiver then
+        return BoothsReceiver:GetData()
+    elseif TradeBoothsData then
+        return TradeBoothsData:GetData()
+    end
+    return nil
+end
+
 local function GetActiveListings()
     local activeUUIDs = {}
+    local data = GetBoothsData()
     
-    -- Method 1: Check TradeBoothsData (Best/Internal)
-    if TradeBoothsData then
-        local success, data = pcall(function() return TradeBoothsData:GetData() end)
-        if success and data and data.Players then
-            local myData = data.Players[tostring(LocalPlayer.UserId)] or data.Players[LocalPlayer.UserId]
-            if myData and myData.Listings then
-                for uuid, _ in pairs(myData.Listings) do
-                    activeUUIDs[uuid] = true
-                end
+    if data and data.Players then
+        -- Handle both "Player_ID" and "ID" keys
+        local myData = data.Players[GetPlayerKey()] or data.Players[tostring(LocalPlayer.UserId)] or data.Players[LocalPlayer.UserId]
+        
+        if myData and myData.Listings then
+            for uuid, _ in pairs(myData.Listings) do
+                activeUUIDs[uuid] = true
             end
         end
     end
 
-    -- Method 2: Check Workspace Booth (Fallback)
-    local myBooth = GetMyBooth()
-    if myBooth and myBooth:FindFirstChild("DynamicInstances") then
-        for _, item in pairs(myBooth.DynamicInstances:GetChildren()) do
-            -- Usually the item name in DynamicInstances is the UUID or contains it
-            -- Based on game code, items in DynamicInstances are named by ItemId (UUID)
-            if item then
+    -- Fallback: Check Workspace if no data
+    if next(activeUUIDs) == nil then
+        local myBooth = GetMyBooth()
+        if myBooth and myBooth:FindFirstChild("DynamicInstances") then
+            for _, item in pairs(myBooth.DynamicInstances:GetChildren()) do
                 activeUUIDs[item.Name] = true
             end
         end
@@ -131,6 +164,42 @@ end
 
 -- [5] CORE LOGIC TASKS
 
+local function RunAutoClear()
+    if not Config.AutoClear or not Config.Running then return end
+
+    local data = GetBoothsData()
+    if not data then return end
+    
+    local myData = data.Players[GetPlayerKey()] or data.Players[tostring(LocalPlayer.UserId)]
+    
+    if myData and myData.Listings then
+        for listingUUID, listingInfo in pairs(myData.Listings) do
+            if not Config.Running then break end
+            
+            local itemId = listingInfo.ItemId
+            local itemData = myData.Items[itemId]
+            
+            if itemData then
+                -- Determine Real Name from various possible fields
+                local realName = itemData.Name or itemData.ItemName or itemData.PetType or (itemData.ItemData and itemData.ItemData.ItemName) or ""
+                
+                local shouldRemove = false
+                if Config.DeleteAll then
+                    shouldRemove = true
+                elseif realName ~= "" and string.find(string.lower(tostring(realName)), string.lower(Config.TargetName)) then
+                    shouldRemove = true
+                end
+                
+                if shouldRemove then
+                    -- print("🗑️ Removing: " .. realName)
+                    pcall(function() RemoveListingRemote:InvokeServer(listingUUID) end)
+                    task.wait(Config.ListDelay) -- Use same delay as listing
+                end
+            end
+        end
+    end
+end
+
 local function RunAutoClaim()
     if GetMyBooth() then return end
     
@@ -148,7 +217,8 @@ local function RunAutoClaim()
             if ownerValue then ownerId = ownerValue.Value end
         end
         
-        if not ownerId or ownerId == 0 or ownerId == "" then
+        -- Smart check: nil, 0, or empty string
+        if ownerId == nil or ownerId == 0 or ownerId == "" then
             local success = pcall(function()
                 ClaimBoothRemote:FireServer(booth)
             end)
@@ -179,11 +249,6 @@ local function RunAutoList()
             ListedCache[uuid] = true
             Stats.LastListTime = tick()
             Stats.ListedCount = Stats.ListedCount + 1
-        else
-            -- If failed, maybe it IS listed but we missed it, or some other error.
-            -- We don't mark as cached so we retry (unless it was a permanent error?)
-            -- For safety, we can briefly cache it to prevent spamming the same error
-            -- But getting active listings next time should catch it if it succeeded.
         end
     end
 end
@@ -200,18 +265,29 @@ end
 
 -- [7] MAIN LOOP
 task.spawn(function()
-    print("[XZNE] Logic Core Started")
+    print("[XZNE] Logic Core v21 Started")
     while Config.Running do
         if Config.AutoClaim then
             RunAutoClaim()
             task.wait(0.5)
         end
         
+        if Config.AutoClear then
+            RunAutoClear()
+             -- Delay handled inside loop but add small wait to prevent crash if loop empty
+             task.wait(0.1)
+        end
+        
         if Config.AutoList then
             RunAutoList()
             task.wait(Config.ListDelay)
         else
-            task.wait(1)
+            -- If AutoList OFF but others ON, we still need a loop delay
+            if not Config.AutoClaim and not Config.AutoClear then
+                 task.wait(1)
+            else
+                 task.wait(0.5)
+            end
         end
     end
     print("[XZNE] Logic Core Stopped")
