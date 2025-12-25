@@ -148,31 +148,34 @@ local Window = WindUI:CreateWindow({
 -- Helper: Update Target List based on Category
 local function GetTargetList(cat) return (cat == "Pet") and PetDatabase or ItemDatabase end
 
+-- Store UI Element References for refresh
+local UIElements = {}
+
 -- == SNIPER TAB ==
 local SniperTab = Window:Tab({ Title = "Sniper", Icon = "xzne:crosshair" })
 local SniperSection = SniperTab:Section({ Title = "Auto Buy Configuration" })
 
-SniperSection:Dropdown({
+UIElements.BuyCategory = SniperSection:Dropdown({
     Title = "Category", Desc = "Select Item type", Values = {"Item", "Pet"}, Default = Controller.Config.BuyCategory,
     Callback = function(val)
         Controller.Config.BuyCategory = val; Controller.RequestUpdate(); Controller.SaveConfig()
     end
 })
 
-SniperSection:Dropdown({
+UIElements.BuyTarget = SniperSection:Dropdown({
     Title = "Target Item", Desc = "Search for item...", Values = ItemDatabase, Default = Controller.Config.BuyTarget,
-    Searchable = true, -- Enable search for large lists
+    Searchable = true,
     Callback = function(val)
         Controller.Config.BuyTarget = val; Controller.RequestUpdate(); Controller.SaveConfig()
     end
 })
 
-SniperSection:Input({
+UIElements.MaxPrice = SniperSection:Input({
     Title = "Max Price", Desc = "Maximum price to buy", Default = tostring(Controller.Config.MaxPrice), Numeric = true,
     Callback = function(txt) Controller.Config.MaxPrice = tonumber(txt) or 5; Controller.SaveConfig() end
 })
 
-SniperSection:Toggle({
+UIElements.AutoBuy = SniperSection:Toggle({
     Title = "Enable Auto Buy", Desc = "Automatically buy cheap items", Default = Controller.Config.AutoBuy,
     Callback = function(val) Controller.Config.AutoBuy = val; Controller.SaveConfig() end
 })
@@ -182,35 +185,35 @@ local InvTab = Window:Tab({ Title = "Inventory", Icon = "xzne:box" })
 
 -- Auto List
 local ListSection = InvTab:Section({ Title = "Auto List (Sell)" })
-ListSection:Dropdown({
+UIElements.ListCategory = ListSection:Dropdown({
     Title = "Category", Desc = "Select Inventory Type", Values = {"Item", "Pet"}, Default = Controller.Config.ListCategory,
     Callback = function(val) Controller.Config.ListCategory = val; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
-ListSection:Dropdown({
+UIElements.ListTarget = ListSection:Dropdown({
     Title = "Item to List", Desc = "Select item to sell", Values = ItemDatabase, Default = Controller.Config.ListTarget,
     Searchable = true,
     Callback = function(val) Controller.Config.ListTarget = val; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
-ListSection:Input({
+UIElements.Price = ListSection:Input({
     Title = "Listing Price", Desc = "Price per item", Default = tostring(Controller.Config.Price), Numeric = true,
     Callback = function(txt) Controller.Config.Price = tonumber(txt) or 5; Controller.SaveConfig() end
 })
-ListSection:Toggle({
+UIElements.AutoList = ListSection:Toggle({
     Title = "Start Auto List", Desc = "List items automatically", Default = Controller.Config.AutoList,
     Callback = function(val) Controller.Config.AutoList = val; Controller.SaveConfig() end
 })
 
 -- Auto Clear
 local ClearSection = InvTab:Section({ Title = "Auto Clear (Trash)" })
-ClearSection:Dropdown({
+UIElements.RemoveCategory = ClearSection:Dropdown({
     Title = "Category", Values = {"Item", "Pet"}, Default = Controller.Config.RemoveCategory,
     Callback = function(val) Controller.Config.RemoveCategory = val; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
-ClearSection:Dropdown({
+UIElements.RemoveTarget = ClearSection:Dropdown({
     Title = "Item to Trash", Values = ItemDatabase, Default = Controller.Config.RemoveTarget, Searchable = true,
     Callback = function(val) Controller.Config.RemoveTarget = val; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
-ClearSection:Toggle({
+UIElements.AutoClear = ClearSection:Toggle({
     Title = "Start Auto Clear", Desc = "Delete specific items", Default = Controller.Config.AutoClear,
     Callback = function(val) Controller.Config.AutoClear = val; Controller.SaveConfig() end
 })
@@ -218,7 +221,7 @@ ClearSection:Toggle({
 -- == BOOTH TAB ==
 local BoothTab = Window:Tab({ Title = "Booth", Icon = "xzne:home" })
 local BoothSection = BoothTab:Section({ Title = "Booth Control" })
-BoothSection:Toggle({
+UIElements.AutoClaim = BoothSection:Toggle({
     Title = "Auto Claim Booth", Desc = "Fast claim empty booths", Default = Controller.Config.AutoClaim,
     Callback = function(val) Controller.Config.AutoClaim = val; Controller.SaveConfig() end
 })
@@ -231,14 +234,14 @@ BoothSection:Button({
 local SettingsTab = Window:Tab({ Title = "Settings", Icon = "xzne:settings" })
 local PerfSection = SettingsTab:Section({ Title = "Performance & Safety" })
 
-PerfSection:Slider({
+UIElements.Speed = PerfSection:Slider({
     Title = "Global Speed", Desc = "Delay between actions", 
     Value = { Min = 0.5, Max = 5, Default = Controller.Config.Speed },
     Step = 0.1,
     Callback = function(val) Controller.Config.Speed = val; Controller.SaveConfig() end
 })
 
-PerfSection:Toggle({
+UIElements.DeleteAll = PerfSection:Toggle({
     Title = "Delete ALL Mode", Desc = "DANGER: Trashes EVERYTHING", Default = Controller.Config.DeleteAll,
     Callback = function(val) Controller.Config.DeleteAll = val; Controller.SaveConfig() end
 })
@@ -247,5 +250,26 @@ PerfSection:Button({
     Title = "Destroy UI", Desc = "Close interface", Icon = "xzne:stop",
     Callback = function() Window:Destroy() end
 })
+
+-- [REFRESH] Update UI elements after config load
+task.spawn(function()
+    task.wait(0.5) -- Wait for UI to fully initialize
+    if UIElements.AutoBuy and UIElements.AutoBuy.Set then UIElements.AutoBuy:Set(Controller.Config.AutoBuy) end
+    if UIElements.AutoList and UIElements.AutoList.Set then UIElements.AutoList:Set(Controller.Config.AutoList) end
+    if UIElements.AutoClear and UIElements.AutoClear.Set then UIElements.AutoClear:Set(Controller.Config.AutoClear) end
+    if UIElements.AutoClaim and UIElements.AutoClaim.Set then UIElements.AutoClaim:Set(Controller.Config.AutoClaim) end
+    if UIElements.DeleteAll and UIElements.DeleteAll.Set then UIElements.DeleteAll:Set(Controller.Config.DeleteAll) end
+    if UIElements.Speed and UIElements.Speed.Set then UIElements.Speed:Set(Controller.Config.Speed) end
+    
+    -- Dropdowns & Inputs (if they have Set method)
+    if UIElements.BuyCategory and UIElements.BuyCategory.Set then UIElements.BuyCategory:Set(Controller.Config.BuyCategory) end
+    if UIElements.BuyTarget and UIElements.BuyTarget.Set then UIElements.BuyTarget:Set(Controller.Config.BuyTarget) end
+    if UIElements.ListCategory and UIElements.ListCategory.Set then UIElements.ListCategory:Set(Controller.Config.ListCategory) end
+    if UIElements.ListTarget and UIElements.ListTarget.Set then UIElements.ListTarget:Set(Controller.Config.ListTarget) end
+    if UIElements.RemoveCategory and UIElements.RemoveCategory.Set then UIElements.RemoveCategory:Set(Controller.Config.RemoveCategory) end
+    if UIElements.RemoveTarget and UIElements.RemoveTarget.Set then UIElements.RemoveTarget:Set(Controller.Config.RemoveTarget) end
+    
+    print("✅ [XZNE] GUI Synced with Config")
+end)
 
 WindUI:Notify({ Title = "XZNE v28 Loaded", Content = "Performance Edition Ready", Icon = "xzne:check", Duration = 4 })
