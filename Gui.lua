@@ -33,7 +33,7 @@ do
     end
 end
 
--- [2] DATABASES (v28 Content)
+-- [2] DATABASES 
 local PetDatabase = {
     "Dog", "Golden Lab", "Bunny", "Black Bunny", "Cat", "Deer", "Chicken", "Orange Tabby", "Spotted Deer", "Rooster", 
     "Monkey", "Pig", "Silver Monkey", "Turtle", "Cow", "Sea Otter", "Polar Bear", "Caterpillar", "Snail", "Giant Ant", 
@@ -289,41 +289,76 @@ PerfSection:Button({
     Callback = function() Window:Destroy() end
 })
 
--- [REFRESH] Update UI after full initialization
-task.defer(function()
-    task.wait(1) -- Wait for full GUI render
+-- [REFRESH] Sync UI with loaded config - COMPREHENSIVE APPROACH
+task.spawn(function()
+    task.wait(0.5) -- Give UI time to fully initialize
     
-    -- Update toggles
-    pcall(function() if UIElements.AutoBuy.Set then UIElements.AutoBuy:Set(Controller.Config.AutoBuy) end end)
-    pcall(function() if UIElements.AutoList.Set then UIElements.AutoList:Set(Controller.Config.AutoList) end end)
-    pcall(function() if UIElements.AutoClear.Set then UIElements.AutoClear:Set(Controller.Config.AutoClear) end end)
-    pcall(function() if UIElements.AutoClaim.Set then UIElements.AutoClaim:Set(Controller.Config.AutoClaim) end end)
-    pcall(function() if UIElements.DeleteAll.Set then UIElements.DeleteAll:Set(Controller.Config.DeleteAll) end end)
+    print("[XZNE] === GUI SYNC DEBUG START ===")
+    print("[XZNE] Config values:")
+    print("  AutoBuy:", Controller.Config.AutoBuy)
+    print("  AutoList:", Controller.Config.AutoList)
+    print("  AutoClear:", Controller.Config.AutoClear)
+    print("  Speed:", Controller.Config.Speed)
     
-    -- Update slider
-    pcall(function() if UIElements.Speed.Set then UIElements.Speed:Set(Controller.Config.Speed) end end)
-    
-    -- Update dropdowns with correct databases
-    pcall(function()
-        if UIElements.BuyTarget.SetValues then
-            local db = (Controller.Config.BuyCategory == "Pet") and PetDatabase or ItemDatabase
-            UIElements.BuyTarget:SetValues(db)
+    -- Debug: Check what methods are available
+    local function DebugElement(name, element)
+        if element then
+            print("[XZNE] " .. name .. " methods:")
+            for k, v in pairs(element) do
+                if type(v) == "function" then
+                    print("  -", k)
+                end
+            end
         end
-    end)
-    pcall(function()
-        if UIElements.ListTarget.SetValues then
-            local db = (Controller.Config.ListCategory == "Pet") and PetDatabase or ItemDatabase
-            UIElements.ListTarget:SetValues(db)
-        end
-    end)
-    pcall(function()
-        if UIElements.RemoveTarget.SetValues then
-            local db = (Controller.Config.RemoveCategory == "Pet") and PetDatabase or ItemDatabase
-            UIElements.RemoveTarget:SetValues(db)
-        end
-    end)
+    end
     
-    print("✅ [XZNE] GUI Synced with Config")
+    DebugElement("AutoBuy Toggle", UIElements.AutoBuy)
+    DebugElement("Speed Slider", UIElements.Speed)
+    
+    -- Try multiple update approaches
+    local function ForceUpdate(element, value, elementType)
+        if not element then return false end
+        
+        local methods = {"Set", "SetValue", "Update", "Refresh"}
+        for _, method in ipairs(methods) do
+            if element[method] and type(element[method]) == "function" then
+                local success = pcall(function()
+                    element[method](element, value)
+                end)
+                if success then
+                    print("[XZNE] ✅ Updated using", method)
+                    return true
+                end
+            end
+        end
+        
+        print("[XZNE] ❌ No working update method found for", elementType)
+        return false
+    end
+    
+    -- Update all elements
+    ForceUpdate(UIElements.AutoBuy, Controller.Config.AutoBuy, "AutoBuy")
+    ForceUpdate(UIElements.AutoList, Controller.Config.AutoList, "AutoList")
+    ForceUpdate(UIElements.AutoClear, Controller.Config.AutoClear, "AutoClear")
+    ForceUpdate(UIElements.AutoClaim, Controller.Config.AutoClaim, "AutoClaim")
+    ForceUpdate(UIElements.DeleteAll, Controller.Config.DeleteAll, "DeleteAll")
+    ForceUpdate(UIElements.Speed, Controller.Config.Speed, "Speed")
+    
+    -- Update dropdowns
+    if UIElements.BuyTarget and UIElements.BuyTarget.SetValues then
+        local db = (Controller.Config.BuyCategory == "Pet") and PetDatabase or ItemDatabase
+        pcall(function() UIElements.BuyTarget:SetValues(db) end)
+    end
+    if UIElements.ListTarget and UIElements.ListTarget.SetValues then
+        local db = (Controller.Config.ListCategory == "Pet") and PetDatabase or ItemDatabase
+        pcall(function() UIElements.ListTarget:SetValues(db) end)
+    end
+    if UIElements.RemoveTarget and UIElements.RemoveTarget.SetValues then
+        local db = (Controller.Config.RemoveCategory == "Pet") and PetDatabase or ItemDatabase
+        pcall(function() UIElements.RemoveTarget:SetValues(db) end)
+    end
+    
+    print("[XZNE] === GUI SYNC DEBUG END ===")
 end)
 
 WindUI:Notify({ Title = "XZNE v0.0.01 [Beta]", Content = "All systems ready", Icon = "xzne:check", Duration = 4 })
@@ -360,7 +395,7 @@ do
     end
 end
 
--- [2] DATABASES (v28 Content)
+-- [2] DATABASES 
 local PetDatabase = {
     "Dog", "Golden Lab", "Bunny", "Black Bunny", "Cat", "Deer", "Chicken", "Orange Tabby", "Spotted Deer", "Rooster", 
     "Monkey", "Pig", "Silver Monkey", "Turtle", "Cow", "Sea Otter", "Polar Bear", "Caterpillar", "Snail", "Giant Ant", 
@@ -465,7 +500,7 @@ WindUI.Creator.AddIcons("xzne", {
 
 -- [4] CREATE WINDOW
 local Window = WindUI:CreateWindow({
-    Title = "XZNE ScriptHub (v28)",
+    Title = "XZNE ScriptHub",
     SubTitle = "Performance Edition",
     Icon = "rbxassetid://14633327344", Author = "By XZNE Team", Folder = "XZNE-v28", Transparent = true, Theme = "Dark",
     Topbar = { Height = 44, ButtonsType = "Mac" },
@@ -599,4 +634,4 @@ task.spawn(function()
     print("✅ [XZNE] GUI Synced with Config")
 end)
 
-WindUI:Notify({ Title = "XZNE v28 Loaded", Content = "Performance Edition Ready", Icon = "xzne:check", Duration = 4 })
+WindUI:Notify({ Title = "XZNE ScriptHub Loaded", Content = "Performance Edition Ready", Icon = "xzne:check", Duration = 4 })

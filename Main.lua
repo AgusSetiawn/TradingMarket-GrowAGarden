@@ -62,7 +62,7 @@ local ListingDebounce = {}
 local CachedTargets = { Buy = "", List = "", Remove = "" }
 
 -- [CONFIG PERSISTENCE]
-local FileName = "XZNE_Config_v28.json"
+local FileName = "XZNE_Config.json"
 
 function Controller.SaveConfig()
     if not HttpService then return end
