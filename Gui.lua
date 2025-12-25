@@ -1,4 +1,16 @@
 local Controller = _G.XZNE_Controller
+
+local function LoadWindUI()
+    local repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/WindUI-1.6.62/dist/main.lua"
+    local success, script = pcall(function() return game:HttpGet(repo) end)
+    if success and script then
+        local loadedFn, loadErr = loadstring(script)
+        if loadedFn then return loadedFn() end
+    end
+    -- Fallback
+    return loadstring(game:HttpGet("https://tree-hub.vercel.app/api/UI/WindUI"))()
+end
+
 local WindUI = LoadWindUI()
 
 -- [ Database Helpers ]
