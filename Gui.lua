@@ -161,9 +161,6 @@ Controller.Window = Window
 
 local UIElements = {}
 
--- [INSTANT SWITCH OPTIMIZATION] Limit dropdown display for zero-lag category switching
-local MAX_DISPLAY_ITEMS = 50 -- Show first 50 items, force search for rest
-
 -- == SNIPER TAB ==
 local SniperTab = Window:Tab({ Title = "Sniper", Icon = "xzne:crosshair" })
 local SniperSection = SniperTab:Section({ Title = "Auto Buy Configuration" })
@@ -183,19 +180,13 @@ local function UpdateTargetDropdown(CategoryVal, TargetElement)
         
         local fullDB = (CategoryVal == "Pet") and PetDatabase or ItemDatabase
         
-        -- INSTANT SWITCH: Limit to first 50 items (sorted A-Z in Database.lua)
-        local limitedDB = {}
-        for i = 1, math.min(MAX_DISPLAY_ITEMS, #fullDB) do
-            limitedDB[i] = fullDB[i]
-        end
-        
-        -- Update with limited set for instant rendering
-        TargetElement.Values = limitedDB
+        -- Update with FULL database for complete search
+        TargetElement.Values = fullDB
         TargetElement.Desc = "🔍 Type to search " .. #fullDB .. " items..."
         
-        -- INSTANT refresh (50 items = ~30ms, was 640 items = 500ms!)
+        -- Optimized refresh with debouncing
         task.spawn(function()
-            task.wait(0.05) -- Minimal yield, just release thread
+            task.wait(0.05) -- Minimal yield
             
             -- Only proceed if this is the latest request
             if RefreshDebounce[TargetElement] ~= debounceId then
@@ -204,7 +195,7 @@ local function UpdateTargetDropdown(CategoryVal, TargetElement)
             
             if TargetElement.Refresh then
                 pcall(function() 
-                    TargetElement:Refresh(limitedDB) -- 50 items only!
+                    TargetElement:Refresh(fullDB) -- All items!
                 end)
             end
             
@@ -232,7 +223,7 @@ UIElements.BuyCategory = SniperSection:Dropdown({
 -- LAZY LOAD: Create with empty values for instant UI, populate later
 UIElements.BuyTarget = SniperSection:Dropdown({
     Title = "Target Item", 
-    Desc = "🔍 Type to search (A-Z sorted, showing first 50)...",
+    Desc = "🔍 Type to search all items (A-Z sorted)...",
     Values = {}, 
     Default = 1, 
     Searchable = true,
@@ -358,21 +349,15 @@ task.spawn(function()
                 
                 local fullDB = (category == "Pet") and PetDatabase or ItemDatabase
                 
-                -- INSTANT SWITCH: Limit to first 50 items for fast rendering
-                local limitedDB = {}
-                for i = 1, math.min(MAX_DISPLAY_ITEMS, #fullDB) do
-                    limitedDB[i] = fullDB[i]
-                end
-                
                 -- Show progress indicator
-                element.Desc = "Loading " .. #limitedDB .. " of " .. #fullDB .. " items..."
-                element.Values = limitedDB
+                element.Desc = "Loading " .. #fullDB .. " items..."
+                element.Values = fullDB -- Full database!
                 
                 -- Minimal yield
                 task.wait(0.05)
                 
                 if element.Refresh then
-                    pcall(function() element:Refresh(limitedDB) end) -- 50 items only!
+                    pcall(function() element:Refresh(fullDB) end) -- All items!
                 end
                 
                 -- Allow refresh to complete
