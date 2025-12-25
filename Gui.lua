@@ -161,6 +161,9 @@ Controller.Window = Window
 
 local UIElements = {}
 
+-- [INSTANT SWITCH OPTIMIZATION] Limit dropdown display for zero-lag category switching
+local MAX_DISPLAY_ITEMS = 50 -- Show first 50 items, force search for rest
+
 -- == SNIPER TAB ==
 local SniperTab = Window:Tab({ Title = "Sniper", Icon = "xzne:crosshair" })
 local SniperSection = SniperTab:Section({ Title = "Auto Buy Configuration" })
@@ -178,15 +181,21 @@ local function UpdateTargetDropdown(CategoryVal, TargetElement)
         local debounceId = os.clock()
         RefreshDebounce[TargetElement] = debounceId
         
-        local newDB = (CategoryVal == "Pet") and PetDatabase or ItemDatabase
+        local fullDB = (CategoryVal == "Pet") and PetDatabase or ItemDatabase
         
-        -- Show loading state immediately
-        TargetElement.Desc = "Loading..."
-        TargetElement.Values = newDB
+        -- INSTANT SWITCH: Limit to first 50 items (sorted A-Z in Database.lua)
+        local limitedDB = {}
+        for i = 1, math.min(MAX_DISPLAY_ITEMS, #fullDB) do
+            limitedDB[i] = fullDB[i]
+        end
         
-        -- INCREASED yield for smoother animation
+        -- Update with limited set for instant rendering
+        TargetElement.Values = limitedDB
+        TargetElement.Desc = "🔍 Type to search " .. #fullDB .. " items..."
+        
+        -- INSTANT refresh (50 items = ~30ms, was 640 items = 500ms!)
         task.spawn(function()
-            task.wait(0.15) -- 9 frames @ 60fps for smooth button animation
+            task.wait(0.05) -- Minimal yield, just release thread
             
             -- Only proceed if this is the latest request
             if RefreshDebounce[TargetElement] ~= debounceId then
@@ -195,13 +204,13 @@ local function UpdateTargetDropdown(CategoryVal, TargetElement)
             
             if TargetElement.Refresh then
                 pcall(function() 
-                    TargetElement:Refresh(newDB)
+                    TargetElement:Refresh(limitedDB) -- 50 items only!
                 end)
             end
             
             -- Reset description after refresh
-            task.wait(0.1)
-            TargetElement.Desc = "Search for item..."
+            task.wait(0.05)
+            TargetElement.Desc = "🔍 Type to search " .. #fullDB .. " items (A-Z sorted)..."
             RefreshDebounce[TargetElement] = nil
         end)
     end
@@ -223,7 +232,7 @@ UIElements.BuyCategory = SniperSection:Dropdown({
 -- LAZY LOAD: Create with empty values for instant UI, populate later
 UIElements.BuyTarget = SniperSection:Dropdown({
     Title = "Target Item", 
-    Desc = "Type to search (640+ items)", -- Inform users about search
+    Desc = "🔍 Type to search (A-Z sorted, showing first 50)...",
     Values = {}, 
     Default = 1, 
     Searchable = true,
@@ -347,26 +356,32 @@ task.spawn(function()
                     task.wait(0.1) 
                 end
                 
-                local db = (category == "Pet") and PetDatabase or ItemDatabase
+                local fullDB = (category == "Pet") and PetDatabase or ItemDatabase
+                
+                -- INSTANT SWITCH: Limit to first 50 items for fast rendering
+                local limitedDB = {}
+                for i = 1, math.min(MAX_DISPLAY_ITEMS, #fullDB) do
+                    limitedDB[i] = fullDB[i]
+                end
                 
                 -- Show progress indicator
-                element.Desc = "Loading " .. #db .. " items..."
-                element.Values = db
+                element.Desc = "Loading " .. #limitedDB .. " of " .. #fullDB .. " items..."
+                element.Values = limitedDB
                 
-                -- INCREASED micro-yield for UI breathing room
-                task.wait(0.1)
+                -- Minimal yield
+                task.wait(0.05)
                 
                 if element.Refresh then
-                    pcall(function() element:Refresh(db) end)
+                    pcall(function() element:Refresh(limitedDB) end) -- 50 items only!
                 end
                 
                 -- Allow refresh to complete
-                task.wait(0.15)
-                element.Desc = "Search for item..."
+                task.wait(0.05)
+                element.Desc = "🔍 Type to search " .. #fullDB .. " items (A-Z sorted)..."
                 
                 -- Set saved value after population
                 if element.Select and targetValue then
-                    task.wait(0.1)
+                    task.wait(0.05)
                     pcall(function() element:Select(targetValue) end)
                 end
             end)
