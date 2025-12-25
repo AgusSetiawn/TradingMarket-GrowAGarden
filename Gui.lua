@@ -1,17 +1,10 @@
---[[
-    💠 XZNE SCRIPTHUB v0.0.01 Beta - UI LOADER
-    
-    🎨 WindUI Interface
-    🔗 Connects to: Main.lua (_G.XZNE_Controller)
-]]
-
 local WindUI
 local Controller = _G.XZNE_Controller
-
 if not Controller then
-    warn("[XZNE] Controller not found! Please run Main.lua first.")
+    warn("[XZNE] Controller not found (Gui.lua)!")
     return
 end
+print("[XZNE] Controller Found. Loading WindUI...")
 
 -- [1] LOAD WINDUI (Force Online to prevent nil value errors)
 do
