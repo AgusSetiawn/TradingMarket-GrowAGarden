@@ -486,18 +486,223 @@ WindUI.Creator.AddIcons("xzne", {
 })
 
 -- [4] CREATE WINDOW
+-- [4] CREATE WINDOW
 local Window = WindUI:CreateWindow({
-    Title = "XZNE ScriptHub",
-    SubTitle = "Performance Edition",
-    Icon = "rbxassetid://14633327344", Author = "By XZNE Team", Folder = "XZNE-v28", Transparent = true, Theme = "Dark",
+    Title = "XZNE ScriptHub v0.0.01",
+    SubTitle = "Beta Release",
+    Icon = "rbxassetid://14633327344", 
+    Author = "By XZNE Team", 
+    Folder = "XZNE-v0.0.01", 
+    Transparent = true, 
+    Theme = "Dark",
     Topbar = { Height = 44, ButtonsType = "Mac" },
-    OpenButton = { Title = "Open XZNE", Icon = "xzne:home", Color = ColorSequence.new(Color3.fromHex("#30FF6A"), Color3.fromHex("#26D254")) }
+    -- Note: OpenButton config is simplified for online compatibility.
+    -- ToggleKey is the primary reliable method.
+    ToggleKey = Enum.KeyCode.RightControl,
+    OpenButton = { 
+        Title = "XZNE", 
+        Icon = "xzne:home",
+        Color = ColorSequence.new(Color3.fromHex("#30FF6A"), Color3.fromHex("#26D254")) 
+    }
 })
 
--- Helper: Update Target List based on Category
-local function GetTargetList(cat) return (cat == "Pet") and PetDatabase or ItemDatabase end
+-- Store UI Element References
+local UIElements = {}
 
--- Store UI Element References for refresh
+-- == SNIPER TAB ==
+local SniperTab = Window:Tab({ Title = "Sniper", Icon = "xzne:crosshair" })
+local SniperSection = SniperTab:Section({ Title = "Auto Buy Configuration" })
+
+-- Sniper Category with dynamic target update
+UIElements.BuyCategory = SniperSection:Dropdown({
+    Title = "Category", Desc = "Select Item type", Values = {"Item", "Pet"}, Default = Controller.Config.BuyCategory,
+    Searchable = true,
+    Callback = function(val)
+        Controller.Config.BuyCategory = val
+        Controller.RequestUpdate()
+        Controller.SaveConfig()
+        
+        -- Update target dropdown values dynamically
+        if UIElements.BuyTarget then
+            local newDB = (val == "Pet") and PetDatabase or ItemDatabase
+            UIElements.BuyTarget.Values = newDB
+            if UIElements.BuyTarget.Refresh then
+                pcall(function() UIElements.BuyTarget:Refresh() end)
+            end
+            -- Optional: Clear selection or keep reasonable default
+            -- UIElements.BuyTarget:Select(nil) 
+        end
+    end
+})
+
+UIElements.BuyTarget = SniperSection:Dropdown({
+    Title = "Target Item", Desc = "Search for item...", 
+    Values = (Controller.Config.BuyCategory == "Pet") and PetDatabase or ItemDatabase, 
+    Default = Controller.Config.BuyTarget,
+    Searchable = true,
+    Callback = function(val)
+        Controller.Config.BuyTarget = val; Controller.RequestUpdate(); Controller.SaveConfig()
+    end
+})
+
+UIElements.MaxPrice = SniperSection:Input({
+    Title = "Max Price", Desc = "Maximum price to buy", Default = tostring(Controller.Config.MaxPrice), Numeric = true,
+    Callback = function(txt) Controller.Config.MaxPrice = tonumber(txt) or 5; Controller.SaveConfig() end
+})
+
+UIElements.AutoBuy = SniperSection:Toggle({
+    Title = "Enable Auto Buy", Desc = "Automatically buy cheap items", Default = Controller.Config.AutoBuy,
+    Callback = function(val) Controller.Config.AutoBuy = val; Controller.SaveConfig() end
+})
+
+-- == INVENTORY TAB ==
+local InvTab = Window:Tab({ Title = "Inventory", Icon = "xzne:box" })
+
+-- Auto List
+local ListSection = InvTab:Section({ Title = "Auto List (Sell)" })
+UIElements.ListCategory = ListSection:Dropdown({
+    Title = "Category", Desc = "Select Inventory Type", Values = {"Item", "Pet"}, Default = Controller.Config.ListCategory,
+    Searchable = true,
+    Callback = function(val) 
+        Controller.Config.ListCategory = val
+        Controller.RequestUpdate()
+        Controller.SaveConfig()
+        if UIElements.ListTarget then
+            local newDB = (val == "Pet") and PetDatabase or ItemDatabase
+            UIElements.ListTarget.Values = newDB
+            if UIElements.ListTarget.Refresh then
+                pcall(function() UIElements.ListTarget:Refresh() end)
+            end
+        end
+    end
+})
+UIElements.ListTarget = ListSection:Dropdown({
+    Title = "Item to List", Desc = "Select item to sell", 
+    Values = (Controller.Config.ListCategory == "Pet") and PetDatabase or ItemDatabase,
+    Default = Controller.Config.ListTarget,
+    Searchable = true,
+    Callback = function(val) Controller.Config.ListTarget = val; Controller.RequestUpdate(); Controller.SaveConfig() end
+})
+UIElements.Price = ListSection:Input({
+    Title = "Listing Price", Desc = "Price per item", Default = tostring(Controller.Config.Price), Numeric = true,
+    Callback = function(txt) Controller.Config.Price = tonumber(txt) or 5; Controller.SaveConfig() end
+})
+UIElements.AutoList = ListSection:Toggle({
+    Title = "Start Auto List", Desc = "List items automatically", Default = Controller.Config.AutoList,
+    Callback = function(val) Controller.Config.AutoList = val; Controller.SaveConfig() end
+})
+
+-- Auto Clear
+local ClearSection = InvTab:Section({ Title = "Auto Clear (Trash)" })
+UIElements.RemoveCategory = ClearSection:Dropdown({
+    Title = "Category", Values = {"Item", "Pet"}, Default = Controller.Config.RemoveCategory,
+    Searchable = true,
+    Callback = function(val) 
+        Controller.Config.RemoveCategory = val
+        Controller.RequestUpdate()
+        Controller.SaveConfig()
+        if UIElements.RemoveTarget then
+            local newDB = (val == "Pet") and PetDatabase or ItemDatabase
+            UIElements.RemoveTarget.Values = newDB
+            if UIElements.RemoveTarget.Refresh then
+                pcall(function() UIElements.RemoveTarget:Refresh() end)
+            end
+        end
+    end
+})
+UIElements.RemoveTarget = ClearSection:Dropdown({
+    Title = "Item to Trash", 
+    Values = (Controller.Config.RemoveCategory == "Pet") and PetDatabase or ItemDatabase,
+    Default = Controller.Config.RemoveTarget, 
+    Searchable = true,
+    Callback = function(val) Controller.Config.RemoveTarget = val; Controller.RequestUpdate(); Controller.SaveConfig() end
+})
+UIElements.AutoClear = ClearSection:Toggle({
+    Title = "Start Auto Clear", Desc = "Delete specific items", Default = Controller.Config.AutoClear,
+    Callback = function(val) Controller.Config.AutoClear = val; Controller.SaveConfig() end
+})
+
+-- == BOOTH TAB ==
+local BoothTab = Window:Tab({ Title = "Booth", Icon = "xzne:home" })
+local BoothSection = BoothTab:Section({ Title = "Booth Control" })
+UIElements.AutoClaim = BoothSection:Toggle({
+    Title = "Auto Claim Booth", Desc = "Fast claim empty booths", Default = Controller.Config.AutoClaim,
+    Callback = function(val) Controller.Config.AutoClaim = val; Controller.SaveConfig() end
+})
+BoothSection:Button({
+    Title = "Unclaim Booth", Desc = "Release ownership", Icon = "xzne:log-out",
+    Callback = function() Controller.UnclaimBooth() end
+})
+
+-- == SETTINGS TAB ==
+local SettingsTab = Window:Tab({ Title = "Settings", Icon = "xzne:settings" })
+local PerfSection = SettingsTab:Section({ Title = "Performance & Safety" })
+
+UIElements.Speed = PerfSection:Slider({
+    Title = "Global Speed", Desc = "Delay between actions", 
+    Value = { Min = 0.5, Max = 5, Default = Controller.Config.Speed },
+    Step = 0.1,
+    Callback = function(val) Controller.Config.Speed = val; Controller.SaveConfig() end
+})
+
+UIElements.DeleteAll = PerfSection:Toggle({
+    Title = "Delete ALL Mode", Desc = "DANGER: Trashes EVERYTHING", Default = Controller.Config.DeleteAll,
+    Callback = function(val) Controller.Config.DeleteAll = val; Controller.SaveConfig() end
+})
+
+PerfSection:Button({
+    Title = "Destroy UI", Desc = "Close interface", Icon = "xzne:stop",
+    Callback = function() Window:Destroy() end
+})
+
+-- [REFRESH] Sync UI with loaded config - PROPER WINDUI SYNC
+task.spawn(function()
+    task.wait(1) -- Allow UI framework to fully initialize
+
+    -- Sync Toggles: Set(value, callback=false, animate=true)
+    if UIElements.AutoBuy then pcall(function() UIElements.AutoBuy:Set(Controller.Config.AutoBuy, false, true) end) end
+    if UIElements.AutoList then pcall(function() UIElements.AutoList:Set(Controller.Config.AutoList, false, true) end) end
+    if UIElements.AutoClear then pcall(function() UIElements.AutoClear:Set(Controller.Config.AutoClear, false, true) end) end
+    if UIElements.AutoClaim then pcall(function() UIElements.AutoClaim:Set(Controller.Config.AutoClaim, false, true) end) end
+    if UIElements.DeleteAll then pcall(function() UIElements.DeleteAll:Set(Controller.Config.DeleteAll, false, true) end) end
+
+    -- Sync Sliders: Set(value, input=nil)
+    if UIElements.Speed then pcall(function() UIElements.Speed:Set(Controller.Config.Speed, nil) end) end
+
+    -- Sync Dropdowns & Refresh Target Database
+    -- Important: We update the database FIRST, then select the value
+    if UIElements.BuyTarget then
+        local db = (Controller.Config.BuyCategory == "Pet") and PetDatabase or ItemDatabase
+        UIElements.BuyTarget.Values = db
+        pcall(function() UIElements.BuyTarget:Refresh() end)
+        if UIElements.BuyTarget.Select then pcall(function() UIElements.BuyTarget:Select(Controller.Config.BuyTarget) end) end
+    end
+    if UIElements.ListTarget then
+        local db = (Controller.Config.ListCategory == "Pet") and PetDatabase or ItemDatabase
+        UIElements.ListTarget.Values = db
+        pcall(function() UIElements.ListTarget:Refresh() end)
+        if UIElements.ListTarget.Select then pcall(function() UIElements.ListTarget:Select(Controller.Config.ListTarget) end) end
+    end
+    if UIElements.RemoveTarget then
+        local db = (Controller.Config.RemoveCategory == "Pet") and PetDatabase or ItemDatabase
+        UIElements.RemoveTarget.Values = db
+        pcall(function() UIElements.RemoveTarget:Refresh() end)
+        if UIElements.RemoveTarget.Select then pcall(function() UIElements.RemoveTarget:Select(Controller.Config.RemoveTarget) end) end
+    end
+
+    -- Sync Category Selections Last
+    if UIElements.BuyCategory and UIElements.BuyCategory.Select then 
+        pcall(function() UIElements.BuyCategory:Select(Controller.Config.BuyCategory) end) 
+    end
+    if UIElements.ListCategory and UIElements.ListCategory.Select then 
+        pcall(function() UIElements.ListCategory:Select(Controller.Config.ListCategory) end) 
+    end
+    if UIElements.RemoveCategory and UIElements.RemoveCategory.Select then 
+        pcall(function() UIElements.RemoveCategory:Select(Controller.Config.RemoveCategory) end) 
+    end
+end)
+
+WindUI:Notify({ Title = "XZNE v0.0.01 Beta", Content = "Loaded! Press RightCtrl to toggle UI", Icon = "xzne:check", Duration = 5 })
 local UIElements = {}
 
 -- == SNIPER TAB ==
