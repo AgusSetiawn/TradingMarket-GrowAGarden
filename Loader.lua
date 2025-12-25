@@ -1,5 +1,5 @@
 --[[
-    💠 XZNE SCRIPTHUB v18.0 - MASTER LOADER
+    💠 XZNE SCRIPTHUB v28.0 - MASTER LOADER
     
     🚀 Usage: loadstring(game:HttpGet(".../Loader.lua"))()
     
