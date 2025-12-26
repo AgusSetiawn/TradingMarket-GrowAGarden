@@ -378,112 +378,80 @@ local function RunAutoClear()
     end
 end
 
--- >> AUTO CLAIM (V2: Proper Multi-Booth Search + Verification)
+-- >> AUTO CLAIM (Received: Smart Empty Booth Search + Shuffle + TP First)
 local function RunAutoClaim()
     if not Config.AutoClaim then return end
     
-    print("🔄 [XZNE] Auto Claim: Scanning for booths...")
-    
     -- Find Booth Folder
     local folder = Workspace:FindFirstChild("TradeWorld") and Workspace.TradeWorld:FindFirstChild("Booths")
-    if not folder then 
-        warn("⚠️ [XZNE] Auto Claim: Booth folder not found!")
-        return 
-    end
-    
-    -- Helper: Get Booth Owner ID
-    local function GetBoothOwner(boothInstance)
-        local ownerId = boothInstance:GetAttribute("OwnerId") or boothInstance:GetAttribute("UserId")
-        if ownerId and ownerId ~= 0 and ownerId ~= "" then
-            return tonumber(ownerId)
-        end
-        
-        local ownerValue = boothInstance:FindFirstChild("OwnerId") or boothInstance:FindFirstChild("UserId")
-        if ownerValue and ownerValue.Value and ownerValue.Value ~= 0 and ownerValue.Value ~= "" then
-            return tonumber(ownerValue.Value)
-        end
-        
-        return nil -- Booth is empty
-    end
-    
-    -- Count booths
-    local boothCount = 0
-    for _ in pairs(folder:GetChildren()) do boothCount = boothCount + 1 end
-    print("📊 [XZNE] Auto Claim: Found " .. boothCount .. " booths")
+    if not folder then return end
     
     -- 1. Check if we ALREADY own a booth (Stop claiming to avoid spam/switching)
     for _, booth in pairs(folder:GetChildren()) do
-        local owner = GetBoothOwner(booth)
-        if owner == LocalUserId then
-            print("✅ [XZNE] Auto Claim: Already own a booth!")
-            return
+        local ownerId = booth:GetAttribute("OwnerId") or booth:GetAttribute("UserId")
+        if not ownerId then
+            local ownerValue = booth:FindFirstChild("OwnerId") or booth:FindFirstChild("UserId")
+            if ownerValue then ownerId = ownerValue.Value end
+        end
+        
+        -- If we own this booth, stop and optionally teleport to it
+        if ownerId and tonumber(ownerId) == LocalUserId then
+            return -- Already have booth
         end
     end
     
-    print("🔍 [XZNE] Auto Claim: Don't have booth, searching for empty ones...")
+    -- 2. Get all booths and SHUFFLE them (Prevents getting stuck on one bugged booth)
+    local booths = folder:GetChildren()
+    for i = #booths, 2, -1 do
+        local j = math.random(i)
+        booths[i], booths[j] = booths[j], booths[i]
+    end
     
-    -- 2. Search for Empty Booth and Claim (Try multiple booths if needed)
-    local emptyFound = 0
-    for _, booth in pairs(folder:GetChildren()) do
+    -- 3. Search for Empty Booth and Claim
+    for _, booth in ipairs(booths) do
         if not Config.Running or not Config.AutoClaim then break end
         
-        local owner = GetBoothOwner(booth)
+        -- Get owner ID
+        local ownerId = booth:GetAttribute("OwnerId") or booth:GetAttribute("UserId")
+        if not ownerId then
+            local ownerValue = booth:FindFirstChild("OwnerId") or booth:FindFirstChild("UserId")
+            if ownerValue then ownerId = ownerValue.Value end
+        end
         
-        -- If booth is empty
-        if owner == nil then
-            emptyFound = emptyFound + 1
-            print("🆓 [XZNE] Found empty booth #" .. emptyFound .. ", attempting claim...")
+        -- If booth is empty (nil, 0, or empty string)
+        if ownerId == nil or ownerId == 0 or ownerId == "" then
+            print("trying to claim booth detected")
+            -- A. Teleport FIRST (Fixes proximity checks)
+            local char = LocalPlayer.Character
+            if char and char.PrimaryPart and booth.PrimaryPart then
+                -- TP to booth (Y+3 above, Z+2 forward for natural look)
+                char:SetPrimaryPartCFrame(booth.PrimaryPart.CFrame * CFrame.new(0, 3, 2))
+                
+                -- Reset velocity to prevent character being thrown
+                if char.PrimaryPart.AssemblyLinearVelocity then
+                    char.PrimaryPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                end
+            end
             
-            -- Try to claim
+            -- Wait for TP to register
+            task.wait(0.5)
+            
+            -- B. Try to claim
             pcall(function()
                 ClaimBoothRemote:FireServer(booth)
             end)
             
-            -- Wait for server to process
-            task.wait(1.5)
+            -- C. Verify Result (Wait and check if we got it)
+            task.wait(1.0)
             
-            -- Verify if claim was successful
-            local newOwner = GetBoothOwner(booth)
-            if newOwner == LocalUserId then
+            if GetMyBooth() then
                 print("✅ [XZNE] Booth Claimed Successfully!")
-                
-                -- Teleport using game's official method (more reliable)
-                local TeleportEvent = ReplicatedStorage:FindFirstChild("GameEvents")
-                if TeleportEvent then
-                    TeleportEvent = TeleportEvent:FindFirstChild("PlayerTeleportTriggered")
-                end
-                
-                if TeleportEvent and booth.PrimaryPart then
-                    -- Use game's teleport system
-                    print("📍 [XZNE] Using PlayerTeleportTriggered event...")
-                    pcall(function()
-                        TeleportEvent:FireServer(booth.PrimaryPart.CFrame * CFrame.new(0, 3, 0))
-                    end)
-                else
-                    -- Fallback: Manual teleport
-                    print("📍 [XZNE] Using manual teleport (fallback)...")
-                    local char = LocalPlayer.Character
-                    if char and char.PrimaryPart and booth.PrimaryPart then
-                        char:SetPrimaryPartCFrame(booth.PrimaryPart.CFrame * CFrame.new(0, 3, 2))
-                        
-                        -- Reset velocity
-                        if char.PrimaryPart.AssemblyLinearVelocity then
-                            char.PrimaryPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                        end
-                    end
-                end
-                
-                -- Mission complete
-                return
-            else
-                -- Claim failed (someone else got it), continue to next booth
-                print("❌ [XZNE] Claim failed (owner: " .. tostring(newOwner) .. "), trying next booth...")
+                return -- Exit loop and function
             end
+            
+            -- If we are here, claim failed. Loop continues to next random booth.
+             print("⚠️ [XZNE] Claim failed, trying next booth...")
         end
-    end
-    
-    if emptyFound == 0 then
-        print("⏸️ [XZNE] Auto Claim: No empty booths found, will retry next cycle")
     end
 end
 
