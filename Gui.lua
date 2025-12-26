@@ -165,15 +165,18 @@ local UIElements = {}
 local SniperTab = Window:Tab({ Title = "Sniper", Icon = "xzne:crosshair" })
 local SniperSection = SniperTab:Section({ Title = "Auto Buy Configuration" })
 
--- ZERO-LAG: Separate dropdowns for Pet and Item (no category switching!)
+-- Help paragraph
 SniperSection:Paragraph({
-    Title = "💡 How It Works",
-    Desc = "Monitor trading market for cheap items. Automatically purchase when price below maximum."
+    Title = "💡 Quick Guide",
+    Desc = "Select target from Pet or Item dropdown. Set max price. Enable Auto Buy to snipe deals."
 })
 
+SniperSection:Divider()
+
+-- ZERO-LAG: Separate dropdowns for Pet and Item (no category switching!)
 UIElements.BuyTargetPet = SniperSection:Dropdown({
-    Title = "🐾 Target Pet to Buy", 
-    Desc = "Search from 277 pets (A-Z sorted) - Type to filter",
+    Title = "Target Pet", 
+    Desc = "🔍 Search pets (A-Z sorted)...",
     Values = {}, 
     Default = 1, 
     Searchable = true,
@@ -186,8 +189,8 @@ UIElements.BuyTargetPet = SniperSection:Dropdown({
 })
 
 UIElements.BuyTargetItem = SniperSection:Dropdown({
-    Title = "🌿 Target Item to Buy", 
-    Desc = "Search from 363 items (A-Z sorted) - Type to filter",
+    Title = "Target Item", 
+    Desc = "🔍 Search items (A-Z sorted)...",
     Values = {}, 
     Default = 1, 
     Searchable = true,
@@ -202,33 +205,31 @@ UIElements.BuyTargetItem = SniperSection:Dropdown({
 SniperSection:Divider()
 
 UIElements.MaxPrice = SniperSection:Input({
-    Title = "💰 Maximum Price (Robux)",
-    Desc = "Only buy items priced at or below this amount",
-    Default = tostring(Controller.Config.MaxPrice),
-    Numeric = true,
+    Title = "Max Price", Desc = "Maximum price to buy", Default = tostring(Controller.Config.MaxPrice), Numeric = true,
     Callback = function(txt) Controller.Config.MaxPrice = tonumber(txt) or 5; Controller.SaveConfig() end
 })
 
 UIElements.AutoBuy = SniperSection:Toggle({
-    Title = "🚀 Enable Auto Buy",
-    Desc = "Start automatic purchasing when enabled",
-    Default = Controller.Config.AutoBuy,
+    Title = "Enable Auto Buy", Desc = "Automatically buy cheap items", Default = Controller.Config.AutoBuy,
     Callback = function(val) Controller.Config.AutoBuy = val; Controller.SaveConfig() end
 })
 
 -- == INVENTORY TAB ==
 local InvTab = Window:Tab({ Title = "Inventory", Icon = "xzne:box" })
-local ListSection = InvTab:Section({ Title = "Auto List (Sell Items)" })
+local ListSection = InvTab:Section({ Title = "Auto List (Sell)" })
 
+-- Help paragraph
 ListSection:Paragraph({
-    Title = "💡 How It Works",
-    Desc = "Automatically list your inventory items on trading market at specified price."
+    Title = "💡 How to List",
+    Desc = "Choose items to list for sale. Set price per item. Enable Auto List."
 })
+
+ListSection:Divider()
 
 -- ZERO-LAG: Separate dropdowns for Pet and Item
 UIElements.ListTargetPet = ListSection:Dropdown({
-    Title = "🐾 Pet to List",
-    Desc = "Search from 277 pets (A-Z sorted) - Type to filter",
+    Title = "Pet to List",
+    Desc = "🔍 Search pets...",
     Values = {},
     Default = 1,
     Searchable = true,
@@ -241,8 +242,8 @@ UIElements.ListTargetPet = ListSection:Dropdown({
 })
 
 UIElements.ListTargetItem = ListSection:Dropdown({
-    Title = "🌿 Item to List",
-    Desc = "Search from 363 items (A-Z sorted) - Type to filter",
+    Title = "Item to List",
+    Desc = "🔍 Search items...",
     Values = {},
     Default = 1,
     Searchable = true,
@@ -254,67 +255,34 @@ UIElements.ListTargetItem = ListSection:Dropdown({
     end
 })
 
-ListSection:Divider()
-
 UIElements.Price = ListSection:Input({
-    Title = "💰 Listing Price (Robux)",
-    Desc = "Price per item for market listing",
-    Default = tostring(Controller.Config.Price),
-    Numeric = true,
+    Title = "Listing Price", Desc = "Price per item", Default = tostring(Controller.Config.Price), Numeric = true,
     Callback = function(txt) Controller.Config.Price = tonumber(txt) or 5; Controller.SaveConfig() end
 })
 
 UIElements.AutoList = ListSection:Toggle({
-    Title = "🚀 Enable Auto List",
-    Desc = "Start automatic listing when enabled",
-    Default = Controller.Config.AutoList,
+    Title = "Start Auto List", Desc = "List items automatically", Default = Controller.Config.AutoList,
     Callback = function(val) Controller.Config.AutoList = val; Controller.SaveConfig() end
 })
 
-local ClearSection = InvTab:Section({ Title = "Auto Remove Listing" })
 
+local ClearSection = InvTab:Section({ Title = "Auto Clear" })
+
+-- Help paragraph
 ClearSection:Paragraph({
-    Title = "💡 How It Works",
-    Desc = "Automatically remove (delist) your items from trading market."
+    Title = "💡 How to Use",
+    Desc = "Select pet or item to automatically remove from inventory"
 })
 
--- ZERO-LAG: Separate dropdowns for Pet and Item
-UIElements.RemoveTargetPet = ClearSection:Dropdown({
-    Title = "🐾 Pet to Remove",
-    Desc = "Search from 277 pets (A-Z sorted) - Type to filter",
-    Values = {},
-    Default = 1,
-    Searchable = true,
-    Callback = function(val) 
-        Controller.Config.RemoveTarget = val
-        Controller.Config.RemoveCategory = "Pet"
-        Controller.RequestUpdate()
-        Controller.SaveConfig()
-    end
-})
+-- ZERO-LAG: Separate dropdowns for Pet and Item (already defined earlier in multi_replace)
+-- Note: RemoveTargetPet and RemoveTargetItem are created in the earlier code update
 
-UIElements.RemoveTargetItem = ClearSection:Dropdown({
-    Title = "🌿 Item to Remove",
-    Desc = "Search from 363 items (A-Z sorted) - Type to filter",
-    Values = {},
-    Default = 1,
-    Searchable = true,
-    Callback = function(val) 
-        Controller.Config.RemoveTarget = val
-        Controller.Config.RemoveCategory = "Item"
-        Controller.RequestUpdate()
-        Controller.SaveConfig()
-    end
+UIElements.AutoClear = ClearSection:Toggle({
+    Title = "Start Auto Clear", Desc = "Delete specific items", Default = Controller.Config.AutoClear,
+    Callback = function(val) Controller.Config.AutoClear = val; Controller.SaveConfig() end
 })
 
 ClearSection:Divider()
-
-UIElements.AutoClear = ClearSection:Toggle({
-    Title = "🚀 Enable Auto Remove",
-    Desc = "Start automatic delisting when enabled",
-    Default = Controller.Config.AutoClear,
-    Callback = function(val) Controller.Config.AutoClear = val; Controller.SaveConfig() end
-})
 
 -- == BOOTH TAB ==
 local BoothTab = Window:Tab({ Title = "Booth", Icon = "xzne:home" })
@@ -427,12 +395,13 @@ task.spawn(function()
     
     -- Sync simple elements (instant, no dropdown render)
     
-    -- Batch sync toggles for better performance (removed DeleteAll)
+    -- Batch sync toggles for better performance
     local toggleConfigs = {
         {UIElements.AutoBuy, Controller.Config.AutoBuy},
         {UIElements.AutoList, Controller.Config.AutoList},
         {UIElements.AutoClear, Controller.Config.AutoClear},
-        {UIElements.AutoClaim, Controller.Config.AutoClaim}
+        {UIElements.AutoClaim, Controller.Config.AutoClaim},
+        {UIElements.DeleteAll, Controller.Config.DeleteAll}
     }
     
     for _, cfg in ipairs(toggleConfigs) do
