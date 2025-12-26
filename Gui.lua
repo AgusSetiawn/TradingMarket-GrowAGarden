@@ -76,8 +76,8 @@ task.defer(function()
     print("✅ [XZNE] Icons registered")
 end)
 
--- [3] LOAD DATABASES FROM GAME SERVER (Instant, Always Updated)
-print("🔍 [XZNE DEBUG] 5. Loading Databases from Game Server")
+-- [3] LOAD DATABASES (Hybrid: Game Server → HTTP Fallback)
+print("🔍 [XZNE DEBUG] 5. Loading Databases (Hybrid Mode)")
 
 -- Declare at module level (accessible throughout Gui.lua)
 local PetDatabase = {}
@@ -89,7 +89,7 @@ local function LoadDatabasesFromGame()
     local items = {}
     local loadTime = tick()
     
-    -- Load Pets from PetRegistry.PetList
+    -- Try load Pets from PetRegistry.PetList
     local success1, PetRegistry = pcall(function()
         return require(game.ReplicatedStorage.Data.PetRegistry)
     end)
@@ -98,52 +98,69 @@ local function LoadDatabasesFromGame()
         for petName, petData in pairs(PetRegistry.PetList) do
             table.insert(pets, petName)
         end
-        table.sort(pets)  -- Alphabetical
-        print("✅ [XZNE] Loaded", #pets, "pets from PetRegistry")
+        table.sort(pets)
+        print("✅ [XZNE] Loaded", #pets, "pets from game server")
     else
-        warn("❌ [XZNE] Failed to load PetRegistry")
+        print("⚠️ [XZNE] Game server pet loading not available (executor limitation)")
     end
     
-    -- Load Items from SeedData (crops/fruits that can be traded)
+    -- Try load Items from SeedData
     local success2, SeedData = pcall(function()
         return require(game.ReplicatedStorage.Data.SeedData)
     end)
     
     if success2 and SeedData then
         for cropName, itemData in pairs(SeedData) do
-            -- ✅ CRITICAL FIX: Use CROP NAME (what gets traded), NOT SeedName
-            -- Example: cropName = "Carrot" (tradeable fruit)
-            --          itemData.SeedName = "Carrot Seed" (not tradeable)
-            -- Booths list "Carrot", so we need "Carrot" in dropdown!
             table.insert(items, cropName)
         end
-        table.sort(items)  -- Alphabetical
-        print("✅ [XZNE] Loaded", #items, "items from SeedData (crop names)")
+        table.sort(items)
+        print("✅ [XZNE] Loaded", #items, "items from game server")
     else
-        warn("❌ [XZNE] Failed to load SeedData")
+        print("⚠️ [XZNE] Game server item loading not available (executor limitation)")
     end
     
-    local elapsed = (tick() - loadTime) * 1000  -- Convert to ms
-    print(string.format("⚡ [XZNE] Database loaded in %.2fms (instant!)", elapsed))
+    local elapsed = (tick() - loadTime) * 1000
+    print(string.format("⚡ [XZNE] Game server attempt: %.2fms", elapsed))
     
     return pets, items
 end
 
--- Load databases (synchronous, instant)
+local function LoadDatabasesFromHTTP()
+    local pets = {}
+    local items = {}
+    local loadTime = tick()
+    
+    print("🌐 [XZNE] Falling back to HTTP Database.lua...")
+    local Repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/"
+    
+    local success, result = pcall(function()
+        return loadstring(game:HttpGet(Repo .. "Database.lua"))()
+    end)
+    
+    if success and result then
+        pets = result.Pets or {}
+        items = result.Items or {}
+        local elapsed = (tick() - loadTime) * 1000
+        print(string.format("✅ [XZNE] HTTP Database loaded: %d pets, %d items (%.0fms)", #pets, #items, elapsed))
+    else
+        warn("❌ [XZNE] HTTP Database ALSO failed:", result)
+    end
+    
+    return pets, items
+end
+
+-- HYBRID LOADING: Try game first, fallback to HTTP
+print("🔄 [XZNE] Attempting game server loading...")
 PetDatabase, ItemDatabase = LoadDatabasesFromGame()
+
+-- If game loading failed or returned empty, fallback to HTTP
+if #PetDatabase == 0 or #ItemDatabase == 0 then
+    print("⚠️ [XZNE] Game server loading failed/incomplete - using HTTP fallback")
+    PetDatabase, ItemDatabase = LoadDatabasesFromHTTP()
+end
+
 DatabaseReady = true
-
 print("🔍 [XZNE DEBUG] 6. Database Ready: " .. #PetDatabase .. " Pets, " .. #ItemDatabase .. " Items")
-
--- DIAGNOSTIC: Verify data is accessible
-print("🔍 [DIAGNOSTIC] PetDatabase type:", type(PetDatabase))
-print("🔍 [DIAGNOSTIC] ItemDatabase type:", type(ItemDatabase))
-if #PetDatabase > 0 then
-    print("🔍 [DIAGNOSTIC] First 3 pets:", PetDatabase[1], PetDatabase[2], PetDatabase[3])
-end
-if #ItemDatabase > 0 then
-    print("🔍 [DIAGNOSTIC] First 3 items:", ItemDatabase[1], ItemDatabase[2], ItemDatabase[3])
-end
 
 -- [5] CREATE WINDOW (Premium Glassmorphism Style)
 print("🔍 [XZNE DEBUG] 7. Creating Window")
