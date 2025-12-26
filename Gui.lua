@@ -366,28 +366,67 @@ task.spawn(function()
         pcall(function() UIElements.RemoveTargetItem:Refresh(ItemDatabase) end)
     end
     
-    -- Set saved values if exist
-    if Controller.Config.BuyTarget then
+    -- Set saved values if exist, otherwise select first item
+    if Controller.Config.BuyTarget and Controller.Config.BuyTarget ~= "" then
         local buyDropdown = (Controller.Config.BuyCategory == "Pet") and UIElements.BuyTargetPet or UIElements.BuyTargetItem
         if buyDropdown.Select then
             task.wait(0.1)
             pcall(function() buyDropdown:Select(Controller.Config.BuyTarget) end)
+            print("[GUI] Restored BuyTarget:", Controller.Config.BuyTarget, "(", Controller.Config.BuyCategory, ")")
+        end
+    else
+        -- Default: Select first item from Item dropdown
+        if UIElements.BuyTargetItem.Select and #ItemDatabase > 0 then
+            task.wait(0.1)
+            pcall(function() 
+                UIElements.BuyTargetItem:Select(ItemDatabase[1]) 
+                Controller.Config.BuyTarget = ItemDatabase[1]
+                Controller.Config.BuyCategory = "Item"
+                Controller.SaveConfig()
+            end)
+            print("[GUI] Default BuyTarget set to:", ItemDatabase[1])
         end
     end
     
-    if Controller.Config.ListTarget then
+    if Controller.Config.ListTarget and Controller.Config.ListTarget ~= "" then
         local listDropdown = (Controller.Config.ListCategory == "Pet") and UIElements.ListTargetPet or UIElements.ListTargetItem
         if listDropdown.Select then
             task.wait(0.1)
             pcall(function() listDropdown:Select(Controller.Config.ListTarget) end)
+            print("[GUI] Restored ListTarget:", Controller.Config.ListTarget, "(", Controller.Config.ListCategory, ")")
+        end
+    else
+        -- Default: Select first item from Item dropdown
+        if UIElements.ListTargetItem.Select and #ItemDatabase > 0 then
+            task.wait(0.1)
+            pcall(function() 
+                UIElements.ListTargetItem:Select(ItemDatabase[1])
+                Controller.Config.ListTarget = ItemDatabase[1]
+                Controller.Config.ListCategory = "Item"
+                Controller.SaveConfig()
+            end)
+            print("[GUI] Default ListTarget set to:", ItemDatabase[1])
         end
     end
     
-    if Controller.Config.RemoveTarget then
+    if Controller.Config.RemoveTarget and Controller.Config.RemoveTarget ~= "" then
         local removeDropdown = (Controller.Config.RemoveCategory == "Pet") and UIElements.RemoveTargetPet or UIElements.RemoveTargetItem
         if removeDropdown.Select then
             task.wait(0.1)
             pcall(function() removeDropdown:Select(Controller.Config.RemoveTarget) end)
+            print("[GUI] Restored RemoveTarget:", Controller.Config.RemoveTarget, "(", Controller.Config.RemoveCategory, ")")
+        end
+    else
+        -- Default: Select first item from Item dropdown
+        if UIElements.RemoveTargetItem.Select and #ItemDatabase > 0 then
+            task.wait(0.1)
+            pcall(function() 
+                UIElements.RemoveTargetItem:Select(ItemDatabase[1])
+                Controller.Config.RemoveTarget = ItemDatabase[1]
+                Controller.Config.RemoveCategory = "Item"
+                Controller.SaveConfig()
+            end)
+            print("[GUI] Default RemoveTarget set to:", ItemDatabase[1])
         end
     end
     
