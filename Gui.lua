@@ -268,7 +268,7 @@ print("🔍 [XZNE DEBUG] 15. Pre-rendering Dropdowns")
 task.defer(function()
     -- ✅ OPTIMIZATION: Removed arbitrary 0.7s delay (saves 700ms)
     while not DatabaseReady do task.wait(0.1) end
-    print("🔄 [XZNE] Updating Dropdowns...")
+    print("🔄 [XZNE] Updating Dropdowns (batched to prevent freeze)...")
 
     local function SafeUpdate(element, db)
         if element then
@@ -278,12 +278,24 @@ task.defer(function()
         end
     end
     
+    -- ✅ BATCHED RENDERING: 100ms delay between each to prevent freeze
     SafeUpdate(UIElements.BuyTargetPet, PetDatabase)
+    task.wait(0.1)  -- Batch 1: Let UI render before next
+    
     SafeUpdate(UIElements.BuyTargetItem, ItemDatabase)
+    task.wait(0.1)  -- Batch 2
+    
     SafeUpdate(UIElements.ListTargetPet, PetDatabase)
+    task.wait(0.1)  -- Batch 3
+    
     SafeUpdate(UIElements.ListTargetItem, ItemDatabase)
+    task.wait(0.1)  -- Batch 4
+    
     SafeUpdate(UIElements.RemoveTargetPet, PetDatabase)
+    task.wait(0.1)  -- Batch 5
+    
     SafeUpdate(UIElements.RemoveTargetItem, ItemDatabase)
+    task.wait(0.1)  -- Batch 6: Final dropdown
     
     -- Default Selections (Fix empty targets)
     if not Controller.Config.BuyTarget or Controller.Config.BuyTarget == "" then
