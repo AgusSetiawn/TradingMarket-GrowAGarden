@@ -269,36 +269,34 @@ task.defer(function()
     -- ✅ OPTIMIZATION: Removed arbitrary 0.7s delay (saves 700ms)
     while not DatabaseReady do task.wait(0.1) end
     
-    -- ✅ LAZY LOADING: Wait 2s after GUI ready, then populate slowly
-    task.wait(2)
-    print("🔄 [XZNE] Populating dropdowns in background...")
+    -- ✅ VIRTUALIZATION: Show only top 50 items for instant load
+    print("🔄 [XZNE] Populating dropdowns (virtualized - top 50 items)...")
+    
+    -- Helper: Get top N items from database
+    local function GetTopItems(db, count)
+        local result = {}
+        for i = 1, math.min(count or 50, #db) do
+            result[i] = db[i]
+        end
+        return result
+    end
 
-    local function SafeUpdate(element, db)
+    local function SafeUpdate(element, db, limit)
         if element then
-            element.Values = db
-            element.Desc = "🔍 Search "..#db.." items..."
-            if element.Refresh then pcall(function() element:Refresh(db) end) end
+            local virtualizedDB = GetTopItems(db, limit or 50)
+            element.Values = virtualizedDB
+            element.Desc = "🔍 Search "..#virtualizedDB.." items (top from "..#db..")"
+            if element.Refresh then pcall(function() element:Refresh(virtualizedDB) end) end
         end
     end
     
-    -- ✅ PROGRESSIVE LOADING: Populate in background, 1s between each
-    SafeUpdate(UIElements.BuyTargetPet, PetDatabase)
-    task.wait(1)  -- Progressive: 1s delay (user can interact with GUI)
-    
-    SafeUpdate(UIElements.BuyTargetItem, ItemDatabase)
-    task.wait(1)
-    
-    SafeUpdate(UIElements.ListTargetPet, PetDatabase)
-    task.wait(1)
-    
-    SafeUpdate(UIElements.ListTargetItem, ItemDatabase)
-    task.wait(1)
-    
-    SafeUpdate(UIElements.RemoveTargetPet, PetDatabase)
-    task.wait(1)
-    
-    SafeUpdate(UIElements.RemoveTargetItem, ItemDatabase)
-    task.wait(0.5)  -- Final dropdown
+    -- ✅ INSTANT LOAD: Only 50 items per dropdown = 300 total UI objects (was 3840!)
+    SafeUpdate(UIElements.BuyTargetPet, PetDatabase, 50)
+    SafeUpdate(UIElements.BuyTargetItem, ItemDatabase, 50)
+    SafeUpdate(UIElements.ListTargetPet, PetDatabase, 50)
+    SafeUpdate(UIElements.ListTargetItem, ItemDatabase, 50)
+    SafeUpdate(UIElements.RemoveTargetPet, PetDatabase, 50)
+    SafeUpdate(UIElements.RemoveTargetItem, ItemDatabase, 50)
     
     -- Default Selections (Fix empty targets)
     if not Controller.Config.BuyTarget or Controller.Config.BuyTarget == "" then
@@ -314,7 +312,7 @@ task.defer(function()
          if db and db.Select then pcall(function() db:Select(Controller.Config.BuyTarget) end) end
     end
     
-    print("✅ [XZNE] All dropdowns populated!")
+    print("✅ [XZNE] Dropdowns populated instantly (virtualized)!")
 end)
 
 -- Notify User
