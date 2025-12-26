@@ -76,9 +76,13 @@ task.defer(function()
     print("✅ [XZNE] Icons registered")
 end)
 
--- [4] LOAD DATABASES (DEFERRED for faster GUI appearance)
 -- [3] LOAD DATABASES FROM GAME SERVER (Instant, Always Updated)
 print("🔍 [XZNE DEBUG] 5. Loading Databases from Game Server")
+
+-- Declare at module level (accessible throughout Gui.lua)
+local PetDatabase = {}
+local ItemDatabase = {}
+local DatabaseReady = false
 
 local function LoadDatabasesFromGame()
     local pets = {}
@@ -124,8 +128,8 @@ local function LoadDatabasesFromGame()
 end
 
 -- Load databases (synchronous, instant)
-local PetDatabase, ItemDatabase = LoadDatabasesFromGame()
-local DatabaseReady = true
+PetDatabase, ItemDatabase = LoadDatabasesFromGame()
+DatabaseReady = true
 
 print("🔍 [XZNE DEBUG] 6. Database Ready: " .. #PetDatabase .. " Pets, " .. #ItemDatabase .. " Items")
 
