@@ -133,6 +133,16 @@ DatabaseReady = true
 
 print("🔍 [XZNE DEBUG] 6. Database Ready: " .. #PetDatabase .. " Pets, " .. #ItemDatabase .. " Items")
 
+-- DIAGNOSTIC: Verify data is accessible
+print("🔍 [DIAGNOSTIC] PetDatabase type:", type(PetDatabase))
+print("🔍 [DIAGNOSTIC] ItemDatabase type:", type(ItemDatabase))
+if #PetDatabase > 0 then
+    print("🔍 [DIAGNOSTIC] First 3 pets:", PetDatabase[1], PetDatabase[2], PetDatabase[3])
+end
+if #ItemDatabase > 0 then
+    print("🔍 [DIAGNOSTIC] First 3 items:", ItemDatabase[1], ItemDatabase[2], ItemDatabase[3])
+end
+
 -- [5] CREATE WINDOW (Premium Glassmorphism Style)
 print("🔍 [XZNE DEBUG] 7. Creating Window")
 local Window = WindUI:CreateWindow({
