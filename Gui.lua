@@ -30,6 +30,12 @@ local function ShowEarlyNotification()
 end
 ShowEarlyNotification()
 
+-- [CRITICAL] Load saved config BEFORE creating UI
+print("🔍 [XZNE DEBUG] 3a. Loading Saved Config")
+Controller.LoadConfig()
+Controller.RequestUpdate()  -- Update cache from loaded config
+print("🔍 [XZNE DEBUG] 3b. Config Loaded and Cache Updated")
+
 -- [2] LOAD WINDUI
 print("🔍 [XZNE DEBUG] 4. Loading WindUI")
 do
