@@ -108,11 +108,12 @@ local Window = WindUI:CreateWindow({
     Title = "XZNE ScriptHub",
     Icon = "xzne:target",
     Author = "By. Xzero One",
-    -- Folder = "XZNE_Config",  -- ❌ REMOVED: Caused dual state system (WindUI state vs our JSON)
+    -- Folder removed to prevent dual state (committed fix)
     Transparency = 0.45,       -- 0.45 = Ideal Glass Effect
     Acrylic = true,           -- Enable Glassmorphism Blur
     Theme = "Dark",           -- Dark Mode for contrast
     NewElements = true,       -- Enable modern UI elements
+    KeyCode = Enum.KeyCode.RightShift,  -- ✅ Toggle with RightShift
     
     -- Window Controls on RIGHT (Default/Windows Style)
     -- ButtonsType = "Mac",   <-- DISABLED (Places buttons on Left)
