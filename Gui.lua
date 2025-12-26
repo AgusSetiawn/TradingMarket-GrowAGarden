@@ -16,25 +16,22 @@ if not Controller then
     return
 end
 
--- [1] EARLY LOADING NOTIFICATION
+-- [1] INSTANT LOADING FEEDBACK
 print("🔍 [XZNE DEBUG] 3. Sending Notification")
 local function ShowEarlyNotification()
     local StarterGui = game:GetService("StarterGui")
     pcall(function()
         StarterGui:SetCore("SendNotification", {
             Title = "XZNE ScriptHub";
-            Text = "Loading UI library...";
-            Duration = 3;
+            Text = "Initializing... Please wait";
+            Duration = 2;
         })
     end)
 end
 ShowEarlyNotification()
 
--- [CRITICAL] Load saved config BEFORE creating UI
-print("🔍 [XZNE DEBUG] 3a. Loading Saved Config")
-Controller.LoadConfig()
-Controller.RequestUpdate()  -- Update cache from loaded config
-print("🔍 [XZNE DEBUG] 3b. Config Loaded and Cache Updated")
+-- ❌ OPTIMIZATION: LoadConfig() already called in Main.lua (redundant)
+-- Controller.LoadConfig() removed to save 50-100ms
 
 -- [2] LOAD WINDUI
 print("🔍 [XZNE DEBUG] 4. Loading WindUI")
@@ -79,12 +76,14 @@ task.defer(function()
     print("✅ [XZNE] Icons registered")
 end)
 
--- [4] LOAD DATABASES
-print("🔍 [XZNE DEBUG] 6. Loading Databases")
+-- [4] LOAD DATABASES (DEFERRED for faster GUI appearance)
+print("🔍 [XZNE DEBUG] 6. Deferring Database Load")
 local PetDatabase, ItemDatabase = {}, {}
 local DatabaseReady = false
 
-task.spawn(function()
+-- ✅ OPTIMIZATION: Defer DB load until after GUI renders
+task.defer(function()
+    task.wait(0.3)  -- Let GUI render first
     local Repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/"
     local success, result = pcall(function()
         -- Load as raw lua table return
@@ -266,8 +265,8 @@ end)
 
 -- [GUI POPULATION]
 print("🔍 [XZNE DEBUG] 15. Pre-rendering Dropdowns")
-task.spawn(function()
-    task.wait(0.7)
+task.defer(function()
+    -- ✅ OPTIMIZATION: Removed arbitrary 0.7s delay (saves 700ms)
     while not DatabaseReady do task.wait(0.1) end
     print("🔄 [XZNE] Updating Dropdowns...")
 
