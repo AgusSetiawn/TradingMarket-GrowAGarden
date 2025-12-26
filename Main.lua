@@ -125,17 +125,25 @@ local TradeBoothsData = nil -- Fallback
 
 task.spawn(function()
     pcall(function()
-        local RepModules = ReplicatedStorage:WaitForChild("Modules", 5)
+        local RepModules = ReplicatedStorage:WaitForChild("Modules", 10)  -- Increased timeout
         if RepModules then
             -- Booths Hook
-            local ReplicationReciever = require(RepModules:WaitForChild("ReplicationReciever", 2))
+            local ReplicationReciever = require(RepModules:WaitForChild("ReplicationReciever", 5))
             if ReplicationReciever then
                 BoothsReceiver = ReplicationReciever.new("Booths")
                 print("✅ [XZNE] BoothsReceiver Hooked")
+            else
+                warn("❌ [XZNE] ReplicationReciever not found!")
             end
             -- Pets Hook
-            DataService = require(RepModules:WaitForChild("DataService", 2))
-            if DataService then print("✅ [XZNE] DataService Hooked") end
+            DataService = require(RepModules:WaitForChild("DataService", 5))
+            if DataService then 
+                print("✅ [XZNE] DataService Hooked") 
+            else
+                warn("❌ [XZNE] DataService not found!")
+            end
+        else
+            warn("❌ [XZNE] Modules folder not found in ReplicatedStorage!")
         end
     end)
     
@@ -144,6 +152,9 @@ task.spawn(function()
             TradeBoothsData = require(ReplicatedStorage.Data.TradeBoothsData)
             print("✅ [XZNE] TradeBoothsData Hooked (Fallback)")
         end)
+        if not TradeBoothsData then
+            warn("❌ [XZNE] TradeBoothsData fallback ALSO failed! Auto functions will NOT work.")
+        end
     end
 end)
 
@@ -192,8 +203,17 @@ local function GetBoothsData()
     end
     
     local data = nil
-    if BoothsReceiver then data = BoothsReceiver:GetData()
-    elseif TradeBoothsData then data = TradeBoothsData:GetData() end
+    if BoothsReceiver then 
+        data = BoothsReceiver:GetData()
+    elseif TradeBoothsData then 
+        data = TradeBoothsData:GetData() 
+    else
+        -- DEBUG: Log if no hooks available
+        if not DataCache.warningShown then
+            warn("⚠️ [XZNE DEBUG] No data hooks available (BoothsReceiver and TradeBoothsData are nil)")
+            DataCache.warningShown = true
+        end
+    end
     
     DataCache.data = data
     DataCache.time = currentTime
@@ -242,11 +262,19 @@ local function RunAutoBuy()
     if not Config.AutoBuy then return end
     
     local data = GetBoothsData()
-    if not data then return end
+    if not data then 
+        print("[DEBUG] AutoBuy: No booths data available")
+        return 
+    end
     
     local targetType = Config.BuyCategory == "Pet" and "Pet" or "Holdable"
     local targetLower = CachedTargets.Buy
-    if targetLower == "" then return end -- Early exit
+    if targetLower == "" then 
+        print("[DEBUG] AutoBuy: No target set")
+        return 
+    end
+    
+    print("[DEBUG] AutoBuy running - Target: " .. Config.BuyTarget .. " (" .. targetType .. "), MaxPrice: " .. Config.MaxPrice)
     
     local maxPrice = Config.MaxPrice
     
