@@ -23,14 +23,8 @@ local MyPlayerKey = "Player_" .. LocalUserId
 if _G.XZNE_Controller then
     warn("⚠️ [XZNE] Already running! Cleaning up old instance...")
     
-    -- Stop old controller immediately (safe access)
-    if _G.XZNE_Controller.Config then
-        _G.XZNE_Controller.Config.Running = false
-        _G.XZNE_Controller.Config.AutoBuy = false
-        _G.XZNE_Controller.Config.AutoList = false
-        _G.XZNE_Controller.Config.AutoClear = false
-        _G.XZNE_Controller.Config.AutoClaim = false
-    end
+    -- Stop old controller immediately
+    _G.XZNE_Controller.Config.Running = false
     
     -- Destroy old window if exists
     if _G.XZNE_Controller.Window and _G.XZNE_Controller.Window.Destroy then
@@ -39,8 +33,11 @@ if _G.XZNE_Controller then
         end)
     end
     
-    -- Wait for cleanup but keep config
-    task.wait(0.5)
+    -- Clear global reference
+    _G.XZNE_Controller = nil
+    
+    -- Wait for cleanup
+    task.wait(0.8)
     print("✅ [XZNE] Old instance cleaned, reinitializing...")
 end
 
@@ -48,27 +45,26 @@ _G.XZNE_Controller = {
     Config = {
         -- Global
         Running = true,
-        Speed = 1.0, -- Deprecated: kept for backward compatibility
+        Speed = 1.0, -- Replaces ListDelay for global speed
         
         -- Auto Buy (Sniper)
         AutoBuy = false,
         BuyCategory = "Item", -- "Item" or "Pet"
         BuyTarget = "Bone Blossom",
         MaxPrice = 5,
-        BuySpeed = 1.0, -- Individual speed control (0-10 seconds)
         
         -- Auto List
         AutoList = false,
         ListCategory = "Item", 
         ListTarget = "Bone Blossom",
         Price = 5, -- (ListPrice)
-        ListSpeed = 1.0, -- Individual speed control (0-10 seconds)
+        ListDelay = 2.0, -- Specific delay for listing (optional overriding Speed)
         
         -- Auto Clear
         AutoClear = false,
         RemoveCategory = "Item",
         RemoveTarget = "Bone Blossom",
-        RemoveSpeed = 1.0, -- Individual speed control (0-10 seconds)
+        DeleteAll = false,
         
         -- Auto Claim
         AutoClaim = false,
@@ -273,7 +269,7 @@ local function RunAutoBuy()
                                 print("🔫 Sniping: " .. realName .. " @ " .. listingInfo.Price)
                                 pcall(function() BuyListingRemote:InvokeServer(owner, listingUUID) end)
                                 Stats.SnipeCount = Stats.SnipeCount + 1
-                                task.wait(Config.BuySpeed or 1.0)
+                                task.wait(0.5)
                             end
                         end
                     end
@@ -314,7 +310,7 @@ local function RunAutoList()
                     if petName and string.find(string.lower(petName), targetLower) then
                         pcall(function() CreateListingRemote:InvokeServer("Pet", petUUID, price) end)
                         ListingDebounce[petUUID] = currentTime
-                        task.wait(Config.ListSpeed or 1.0)
+                        task.wait(Config.Speed)
                     end
                 end
             end
@@ -348,7 +344,7 @@ local function RunAutoClear()
     if not Config.AutoClear then return end
     
     local targetLower = CachedTargets.Remove
-    if targetLower == "" then return end -- Early exit
+    if not Config.DeleteAll and targetLower == "" then return end -- Early exit
     
     local data = GetBoothsData()
     if not data then return end
@@ -361,16 +357,16 @@ local function RunAutoClear()
             if not Config.Running or not Config.AutoClear then break end
             
             -- Filter by Category first
-            if listingInfo.ItemType == targetType then
+            if listingInfo.ItemType == targetType or Config.DeleteAll then
                 local itemId = listingInfo.ItemId
                 local itemData = myData.Items[itemId]
                 
                 if itemData then
                     local realName = itemData.Name or itemData.ItemName or itemData.PetType or (itemData.ItemData and itemData.ItemData.ItemName) or ""
                     
-                    if string.find(string.lower(tostring(realName)), targetLower) then
+                    if Config.DeleteAll or string.find(string.lower(tostring(realName)), targetLower) then
                          pcall(function() RemoveListingRemote:InvokeServer(listingUUID) end)
-                         task.wait(Config.RemoveSpeed or 1.0)
+                         task.wait(Config.Speed)
                     end
                 end
             end
@@ -378,69 +374,26 @@ local function RunAutoClear()
     end
 end
 
--- >> AUTO CLAIM (Improved: Smart Empty Booth Search + TP)
+-- >> AUTO CLAIM
 local function RunAutoClaim()
     if not Config.AutoClaim then return end
+    if GetMyBooth() then return end
     
-    -- Find Booth Folder
     local folder = Workspace:FindFirstChild("TradeWorld") and Workspace.TradeWorld:FindFirstChild("Booths")
     if not folder then return end
     
-    -- 1. Check if we ALREADY own a booth (Stop claiming to avoid spam/switching)
     for _, booth in pairs(folder:GetChildren()) do
-        local ownerId = booth:GetAttribute("OwnerId") or booth:GetAttribute("UserId")
-        if not ownerId then
-            local ownerValue = booth:FindFirstChild("OwnerId") or booth:FindFirstChild("UserId")
-            if ownerValue then ownerId = ownerValue.Value end
-        end
-        
-        -- If we own this booth, stop and optionally teleport to it
-        if ownerId and tonumber(ownerId) == LocalUserId then
-            -- Already have booth, no need to claim more
-            return
-        end
-    end
-    
-    -- 2. Search for Empty Booth and Claim
-    for _, booth in pairs(folder:GetChildren()) do
-        if not Config.Running or not Config.AutoClaim then break end
-        
-        -- Get owner ID
-        local ownerId = booth:GetAttribute("OwnerId") or booth:GetAttribute("UserId")
-        if not ownerId then
-            local ownerValue = booth:FindFirstChild("OwnerId") or booth:FindFirstChild("UserId")
-            if ownerValue then ownerId = ownerValue.Value end
-        end
-        
-        -- If booth is empty (nil, 0, or empty string)
-        if ownerId == nil or ownerId == 0 or ownerId == "" then
-            -- Try to claim
-            local success = pcall(function()
-                ClaimBoothRemote:FireServer(booth)
-            end)
-            
-            if success then
-                -- Teleport to booth (Improved: Natural position + velocity reset)
-                local char = LocalPlayer.Character
-                if char and char.PrimaryPart and booth.PrimaryPart then
-                    -- TP to booth (Y+3 above, Z+2 forward for natural look)
-                    char:SetPrimaryPartCFrame(booth.PrimaryPart.CFrame * CFrame.new(0, 3, 2))
-                    
-                    -- Reset velocity to prevent character being thrown
-                    if char.PrimaryPart.AssemblyLinearVelocity then
-                        char.PrimaryPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    end
-                end
-                
-                print("✅ [XZNE] Booth Claimed & Teleported!")
-                
-                -- Wait for server to process ownership
-                task.wait(2)
-                
-                -- Exit loop (Mission complete)
-                return
-            end
-        end
+         local oid = booth:GetAttribute("OwnerId")
+         if not oid then local v = booth:FindFirstChild("OwnerId"); if v then oid = v.Value end end
+         
+         if oid == nil or oid == 0 or oid == "" then
+             pcall(function() ClaimBoothRemote:FireServer(booth) end)
+             if LocalPlayer.Character and LocalPlayer.Character.PrimaryPart then
+                  LocalPlayer.Character:SetPrimaryPartCFrame(booth.PrimaryPart.CFrame + Vector3.new(0,3,0))
+             end
+             task.wait(1)
+             if GetMyBooth() then return end
+         end
     end
 end
 

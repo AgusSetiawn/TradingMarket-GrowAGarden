@@ -209,12 +209,6 @@ UIElements.MaxPrice = SniperSection:Input({
     Callback = function(txt) Controller.Config.MaxPrice = tonumber(txt) or 5; Controller.SaveConfig() end
 })
 
-UIElements.BuySpeed = SniperSection:Slider({
-    Title = "⏱️ Buy Speed", Desc = "Delay between buy attempts (0-10 seconds)",
-    Value = { Min = 0, Max = 10, Default = Controller.Config.BuySpeed or 1.0 }, Step = 0.1,
-    Callback = function(val) Controller.Config.BuySpeed = val; Controller.SaveConfig() end
-})
-
 UIElements.AutoBuy = SniperSection:Toggle({
     Title = "🚀 Enable Auto Buy",
     Desc = "Start automatic purchasing when enabled",
@@ -270,12 +264,6 @@ UIElements.Price = ListSection:Input({
     Callback = function(txt) Controller.Config.Price = tonumber(txt) or 5; Controller.SaveConfig() end
 })
 
-UIElements.ListSpeed = ListSection:Slider({
-    Title = "⏱️ List Speed", Desc = "Delay between listing actions (0-10 seconds)",
-    Value = { Min = 0, Max = 10, Default = Controller.Config.ListSpeed or 1.0 }, Step = 0.1,
-    Callback = function(val) Controller.Config.ListSpeed = val; Controller.SaveConfig() end
-})
-
 UIElements.AutoList = ListSection:Toggle({
     Title = "🚀 Enable Auto List",
     Desc = "Start automatic listing when enabled",
@@ -328,12 +316,6 @@ UIElements.AutoClear = ClearSection:Toggle({
     Callback = function(val) Controller.Config.AutoClear = val; Controller.SaveConfig() end
 })
 
-UIElements.RemoveSpeed = ClearSection:Slider({
-    Title = "⏱️ Remove Speed", Desc = "Delay between remove actions (0-10 seconds)",
-    Value = { Min = 0, Max = 10, Default = Controller.Config.RemoveSpeed or 1.0 }, Step = 0.1,
-    Callback = function(val) Controller.Config.RemoveSpeed = val; Controller.SaveConfig() end
-})
-
 -- == BOOTH TAB ==
 local BoothTab = Window:Tab({ Title = "Booth", Icon = "xzne:home" })
 local BoothSection = BoothTab:Section({ Title = "Booth Control" })
@@ -350,28 +332,20 @@ BoothSection:Button({
 local SettingsTab = Window:Tab({ Title = "Settings", Icon = "xzne:settings" })
 local PerfSection = SettingsTab:Section({ Title = "Performance & Safety" })
 
+UIElements.Speed = PerfSection:Slider({
+    Title = "Global Speed", Desc = "Delay between actions", 
+    Value = { Min = 0.5, Max = 5, Default = Controller.Config.Speed }, Step = 0.1,
+    Callback = function(val) Controller.Config.Speed = val; Controller.SaveConfig() end
+})
+
+UIElements.DeleteAll = PerfSection:Toggle({
+    Title = "Delete ALL Mode", Desc = "DANGER: Trashes EVERYTHING", Default = Controller.Config.DeleteAll,
+    Callback = function(val) Controller.Config.DeleteAll = val; Controller.SaveConfig() end
+})
+
 PerfSection:Button({
-    Title = "Close & Stop All", Desc = "Stop all automation and close UI", Icon = "xzne:stop",
-    Callback = function() 
-        -- Stop all running operations
-        Controller.Config.Running = false
-        Controller.Config.AutoBuy = false
-        Controller.Config.AutoList = false
-        Controller.Config.AutoClear = false
-        Controller.Config.AutoClaim = false
-        
-        -- Save config
-        Controller.SaveConfig()
-        
-        -- Clear window reference to allow re-execution
-        Controller.Window = nil
-        
-        -- Destroy UI
-        task.wait(0.2)
-        Window:Destroy()
-        
-        print("✅ [XZNE] GUI closed. Run Loader.lua again to reopen.")
-    end
+    Title = "Destroy UI", Desc = "Close interface", Icon = "xzne:stop",
+    Callback = function() Window:Destroy() end
 })
 
 -- [GUI POPULATION - Pre-render ALL dropdowns at startup for instant category switching]
@@ -465,16 +439,17 @@ task.spawn(function()
         if cfg[1] then pcall(function() cfg[1]:Set(cfg[2], false, true) end) end
     end
     
-    -- Sync individual speed sliders
-    if UIElements.BuySpeed and UIElements.BuySpeed.Set then
-        pcall(function() UIElements.BuySpeed:Set(Controller.Config.BuySpeed or 1.0) end)
-    end
-    if UIElements.ListSpeed and UIElements.ListSpeed.Set then
-        pcall(function() UIElements.ListSpeed:Set(Controller.Config.ListSpeed or 1.0) end)
-    end
-    if UIElements.RemoveSpeed and UIElements.RemoveSpeed.Set then
-        pcall(function() UIElements.RemoveSpeed:Set(Controller.Config.RemoveSpeed or 1.0) end)
-    end
+    SyncSlider(UIElements.Speed, Controller.Config.Speed)
+    
+    -- Sync category dropdowns (small values, fast)
+    SyncDropdown(UIElements.BuyCategory, Controller.Config.BuyCategory)
+    SyncDropdown(UIElements.ListCategory, Controller.Config.ListCategory)
+    SyncDropdown(UIElements.RemoveCategory, Controller.Config.RemoveCategory)
+    
+    -- Populate heavy dropdowns asynchronously (background, no freeze)
+    PopulateDropdown(UIElements.BuyTarget, Controller.Config.BuyCategory, Controller.Config.BuyTarget)
+    PopulateDropdown(UIElements.ListTarget, Controller.Config.ListCategory, Controller.Config.ListTarget)
+    PopulateDropdown(UIElements.RemoveTarget, Controller.Config.RemoveCategory, Controller.Config.RemoveTarget)
     
     -- Show ready notification after population starts
     task.wait(0.5)
