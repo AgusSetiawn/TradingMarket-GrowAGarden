@@ -110,13 +110,15 @@ local function LoadDatabasesFromGame()
     end)
     
     if success2 and SeedData then
-        for itemName, itemData in pairs(SeedData) do
-            -- Use SeedName as the tradeable item name
-            local tradeName = itemData.SeedName or itemName
-            table.insert(items, tradeName)
+        for cropName, itemData in pairs(SeedData) do
+            -- ✅ CRITICAL FIX: Use CROP NAME (what gets traded), NOT SeedName
+            -- Example: cropName = "Carrot" (tradeable fruit)
+            --          itemData.SeedName = "Carrot Seed" (not tradeable)
+            -- Booths list "Carrot", so we need "Carrot" in dropdown!
+            table.insert(items, cropName)
         end
         table.sort(items)  -- Alphabetical
-        print("✅ [XZNE] Loaded", #items, "items from SeedData")
+        print("✅ [XZNE] Loaded", #items, "items from SeedData (crop names)")
     else
         warn("❌ [XZNE] Failed to load SeedData")
     end
