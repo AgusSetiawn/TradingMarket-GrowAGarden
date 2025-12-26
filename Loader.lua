@@ -11,12 +11,19 @@ print("[XZNE] Booting v0.0.01 [Beta] (Official Main)...")
 local function LoadScript(Script)
     -- Cache Busting: ?t=os.time() forces fresh download every execution
     local Success, Result = pcall(function()
-        return loadstring(game:HttpGet(Repo .. Script .. "?t=" .. tostring(os.time())))()
+        local Content = game:HttpGet(Repo .. Script .. "?t=" .. tostring(os.time()))
+        if not Content then return nil, "HTTP 404/Empty" end
+        
+        local Func, SyntaxErr = loadstring(Content)
+        if not Func then
+            return nil, "Syntax Error: " .. tostring(SyntaxErr)
+        end
+        
+        return Func()
     end)
     
-    if not Success then
-        warn("[XZNE] Failed to load " .. Script .. ": " .. tostring(Result))
-        -- Fallback not needed if Repo is correct
+    if not Success or Result == nil then
+        warn("❌ [XZNE] Failed to load " .. Script .. ": " .. tostring(Result))
     end
 end
 
