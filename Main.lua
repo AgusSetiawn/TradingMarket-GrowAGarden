@@ -205,10 +205,10 @@ local function GetBoothsData()
     return data
 end
 
-local function GetMyBooth()
+local function GetMyBooth(noCache)
     local currentTime = tick()
-    -- Cache for 2 seconds
-    if BoothCache.booth and (currentTime - BoothCache.time < 2) then
+    -- Cache for 2 seconds (unless forced)
+    if not noCache and BoothCache.booth and (currentTime - BoothCache.time < 2) then
         return BoothCache.booth
     end
     
@@ -217,7 +217,9 @@ local function GetMyBooth()
     for _, b in pairs(folder and folder:GetChildren() or {}) do
         local oid = b:GetAttribute("OwnerId") or b:GetAttribute("UserId")
         if not oid then local v = b:FindFirstChild("OwnerId"); if v then oid = v.Value end end
-        if tostring(oid) == tostring(LocalUserId) then
+        
+        -- Strict check
+        if oid and tonumber(oid) == LocalUserId then
             BoothCache.booth = b
             BoothCache.time = currentTime
             return b
@@ -228,156 +230,7 @@ local function GetMyBooth()
     return nil
 end
 
-local function GetCachedPlayer(userId)
-    local currentTime = tick()
-    local cached = PlayerLookupCache[userId]
-    if cached and (currentTime - cached.time < 5) then
-        return cached.player
-    end
-    
-    local player = Players:GetPlayerByUserId(userId)
-    PlayerLookupCache[userId] = { player = player, time = currentTime }
-    return player
-end
-
--- [5] CORE LOGIC
-
--- >> AUTO BUY (SNIPER)
-local function RunAutoBuy()
-    if not Config.AutoBuy then return end
-    
-    local data = GetBoothsData()
-    if not data then return end
-    
-    local targetType = Config.BuyCategory == "Pet" and "Pet" or "Holdable"
-    local targetLower = CachedTargets.Buy
-    if targetLower == "" then return end -- Early exit
-    
-    local maxPrice = Config.MaxPrice
-    
-    for playerKey, playerData in pairs(data.Players) do
-        if not Config.Running then break end
-        if playerKey ~= MyPlayerKey and playerData.Listings then
-            for listingUUID, listingInfo in pairs(playerData.Listings) do
-                -- Optimization: Check Price & Type FIRST
-                if listingInfo.Price <= maxPrice and listingInfo.ItemType == targetType then
-                    local itemData = playerData.Items[listingInfo.ItemId]
-                    if itemData then
-                        local realName = itemData.Name or itemData.ItemName or itemData.PetType or (itemData.ItemData and itemData.ItemData.ItemName) or ""
-                        
-                        if string.find(string.lower(tostring(realName)), targetLower) then
-                            -- Buy with cached player lookup!
-                            local ownerId = tonumber(string.match(playerKey, "Player_(%d+)"))
-                            local owner = GetCachedPlayer(ownerId)
-                            
-                            if owner then
-                                print("🔫 Sniping: " .. realName .. " @ " .. listingInfo.Price)
-                                pcall(function() BuyListingRemote:InvokeServer(owner, listingUUID) end)
-                                Stats.SnipeCount = Stats.SnipeCount + 1
-                                task.wait(Config.BuySpeed or 1.0)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
-
--- >> AUTO LIST (Item & Pet)
-local function RunAutoList()
-    if not Config.AutoList then return end
-    
-    local targetLower = CachedTargets.List
-    if targetLower == "" then return end -- Early exit
-    
-    -- Check Active Listings (Avoid Duplicates)
-    local data = GetBoothsData()
-    local myData = data and data.Players[MyPlayerKey]
-    local listedUUIDs = {}
-    if myData and myData.Listings then
-        for _, v in pairs(myData.Listings) do listedUUIDs[v.ItemId] = true end
-    end
-    
-    local targetType = Config.ListCategory == "Pet" and "Pet" or "Holdable"
-    local price = Config.Price
-    local currentTime = tick()
-    
-    if targetType == "Pet" then
-        -- Pet Listing (requires DataService)
-        local playerData = DataService and DataService:GetData()
-        if playerData and playerData.PetsData and playerData.PetsData.PetInventory then
-            for petUUID, petData in pairs(playerData.PetsData.PetInventory.Data) do
-                if not Config.Running or not Config.AutoList then break end
-                
-                if not listedUUIDs[petUUID] and (not ListingDebounce[petUUID] or currentTime - ListingDebounce[petUUID] > 5) then
-                    local petName = petData.PetType or petData.Name
-                    if petName and string.find(string.lower(petName), targetLower) then
-                        pcall(function() CreateListingRemote:InvokeServer("Pet", petUUID, price) end)
-                        ListingDebounce[petUUID] = currentTime
-                        task.wait(Config.ListSpeed or 1.0)
-                    end
-                end
-            end
-        end
-    else
-        -- Item Listing (Backpack)
-        local backpack = LocalPlayer:FindFirstChild("Backpack")
-        if backpack then
-            for _, item in pairs(backpack:GetChildren()) do
-                if not Config.Running or not Config.AutoList then break end
-                
-                if item:IsA("Tool") then
-                    local realName = item:GetAttribute("f")
-                    local uuid = item:GetAttribute("c")
-                    
-                    if realName and uuid and not listedUUIDs[uuid] and (not ListingDebounce[uuid] or currentTime - ListingDebounce[uuid] > 5) then
-                         if string.find(string.lower(realName), targetLower) then
-                             pcall(function() CreateListingRemote:InvokeServer("Holdable", uuid, price) end)
-                             ListingDebounce[uuid] = currentTime
-                             task.wait(Config.Speed)
-                         end
-                    end
-                end
-            end
-        end
-    end
-end
-
--- >> AUTO CLEAR (Smart Remove)
-local function RunAutoClear()
-    if not Config.AutoClear then return end
-    
-    local targetLower = CachedTargets.Remove
-    if targetLower == "" then return end -- Early exit
-    
-    local data = GetBoothsData()
-    if not data then return end
-    local myData = data.Players[MyPlayerKey]
-    
-    local targetType = Config.RemoveCategory == "Pet" and "Pet" or "Holdable"
-    
-    if myData and myData.Listings then
-        for listingUUID, listingInfo in pairs(myData.Listings) do
-            if not Config.Running or not Config.AutoClear then break end
-            
-            -- Filter by Category first
-            if listingInfo.ItemType == targetType then
-                local itemId = listingInfo.ItemId
-                local itemData = myData.Items[itemId]
-                
-                if itemData then
-                    local realName = itemData.Name or itemData.ItemName or itemData.PetType or (itemData.ItemData and itemData.ItemData.ItemName) or ""
-                    
-                    if string.find(string.lower(tostring(realName)), targetLower) then
-                         pcall(function() RemoveListingRemote:InvokeServer(listingUUID) end)
-                         task.wait(Config.RemoveSpeed or 1.0)
-                    end
-                end
-            end
-        end
-    end
-end
+-- ... (CachedPlayer is fine) ...
 
 -- >> AUTO CLAIM (Received: Smart Empty Booth Search + Shuffle + TP First + TP Protocol)
 local function RunAutoClaim()
@@ -388,16 +241,10 @@ local function RunAutoClaim()
     if not folder then return end
     
     -- 1. Check if we ALREADY own a booth
-    for _, booth in pairs(folder:GetChildren()) do
-        local ownerId = booth:GetAttribute("OwnerId") or booth:GetAttribute("UserId")
-        if not ownerId then
-            local ownerValue = booth:FindFirstChild("OwnerId") or booth:FindFirstChild("UserId")
-            if ownerValue then ownerId = ownerValue.Value end
-        end
-        
-        if ownerId and tonumber(ownerId) == LocalUserId then
-            return -- Already have booth
-        end
+    local myBooth = GetMyBooth(true) -- Force check
+    if myBooth then
+        warn("⚠️ [XZNE] Stopping AutoClaim: You already own a booth!")
+        return
     end
     
     -- 2. Scramble booth list (Anti-Stuck)
@@ -450,13 +297,13 @@ local function RunAutoClaim()
             -- C. Verify Result (Wait and check if we got it)
             task.wait(1.0)
             
-            if GetMyBooth() then
-                print("✅ [XZNE] Booth Claimed Successfully!")
+            if GetMyBooth(true) then -- Force strict check
+                print("✅ [XZNE] Booth Claimed Verification Passed!")
                 return -- Exit loop and function
             end
             
             -- If we are here, claim failed. Loop continues to next random booth.
-             print("⚠️ [XZNE] Claim failed, trying next booth...")
+             print("⚠️ [XZNE] Claim verification failed, trying next...")
         end
     end
 end
