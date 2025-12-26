@@ -373,6 +373,8 @@ local function RunAutoClear()
                          task.wait(Config.RemoveSpeed or 1.0)
                     end
                 end
+            end
+        end
     end
 end
 
