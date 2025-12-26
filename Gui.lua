@@ -68,30 +68,26 @@ end)
 -- [3] REGISTER PREMIUM ICON SET (Lucide Icons - Modern & Consistent)
 WindUI.Creator.AddIcons("xzne", {
     -- Navigation & Core
-    ["home"] = "rbxassetid://10723407389",           -- home (Lucide)
-    ["settings"] = "rbxassetid://10734950309",       -- settings (gear)
-    ["info"] = "rbxassetid://10747376114",           -- info (circle-i)
+    ["home"] = "rbxassetid://10723407389",           -- home
+    ["settings"] = "rbxassetid://10734950309",       -- settings
+    ["info"] = "rbxassetid://10747376114",           -- info
     
-    -- Actions
-    ["play"] = "rbxassetid://10747373176",           -- play (triangle)
-    ["stop"] = "rbxassetid://10747384394",           -- stop (square)
-    ["refresh"] = "rbxassetid://10747387708",        -- refresh (arrows)
-  ["check"] = "rbxassetid://10709790644",          -- check (checkmark)
-    ["trash"] = "rbxassetid://10747373176",          -- trash (bin)
+    -- Tabs (Matches Tab definitions)
+    ["target"] = "rbxassetid://10723351967",         -- Sniper Tab (was crosshair)
+    ["dollar"] = "rbxassetid://10709790948",         -- Sell Tab
+    ["trash"] = "rbxassetid://10747373176",          -- Trash Tab
+    ["store"] = "rbxassetid://10723374761",          -- Booth Tab (was home)
     
-    -- Utility
-    ["search"] = "rbxassetid://10734898355",         -- search (magnifier)
-    ["tag"] = "rbxassetid://10747384394",            -- tag (label)
-    ["log-out"] = "rbxassetid://10734898355",        -- log-out (door)
-    ["crosshair"] = "rbxassetid://10709790537",      -- crosshair (target)
-    ["box"] = "rbxassetid://10747384449",            -- box (package)
-    
-    -- Premium additions
-    ["star"] = "rbxassetid://10723434711",           -- star (favorite)
-    ["zap"] = "rbxassetid://10747384394",            -- zap (lightning)
-    ["heart"] = "rbxassetid://10723434833",          -- heart (like)
-    ["shield"] = "rbxassetid://10723407389",         -- shield (protection)
-    ["dollar"] = "rbxassetid://10709790948"          -- dollar (currency)
+    -- Actions & Status
+    ["play"] = "rbxassetid://10747373176",           
+    ["stop"] = "rbxassetid://10747384394",           
+    ["refresh"] = "rbxassetid://10747387708",        
+    ["check"] = "rbxassetid://10709790644",          
+    ["search"] = "rbxassetid://10734898355",         
+    ["package"] = "rbxassetid://10747384449",        -- Inventory/Box
+    ["star"] = "rbxassetid://10723434711",           
+    ["zap"] = "rbxassetid://10747384394",            
+    ["shield"] = "rbxassetid://10723407389"          
 })
 
 -- [4] CREATE WINDOW (Enhanced Visual Quality)
