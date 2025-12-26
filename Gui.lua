@@ -117,30 +117,55 @@ task.defer(function()
     print("✅ [XZNE] Icons registered")
 end)
 
--- [4] LOAD DATABASES (DEFERRED for faster GUI appearance)
-print("🔍 [XZNE DEBUG] 6. Deferring Database Load")
+-- [4] PROGRESSIVE DATABASE LOADING (Batched to prevent freeze)
+print("🔍 [XZNE DEBUG] 6. Starting Progressive Database Load")
 local PetDatabase, ItemDatabase = {}, {}
 local DatabaseReady = false
 
--- ✅ OPTIMIZATION: Defer DB load until after GUI renders
+-- ✅ OPTIMIZATION: Load database in chunks to prevent freeze
 task.defer(function()
     task.wait(0.3)  -- Let GUI render first
+    
+    print("📥 [XZNE] Loading database progressively (batched)...")
     local Repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/"
-    local success, result = pcall(function()
-        -- Load as raw lua table return
+    
+    local success, fullDB = pcall(function()
         return loadstring(game:HttpGet(Repo .. "Database.lua"))() 
     end)
     
-    if success and result then
-        if result.Pets then PetDatabase = result.Pets end
-        if result.Items then ItemDatabase = result.Items end
-        DatabaseReady = true
-        print("✅ [XZNE] External Database Loaded ("..#PetDatabase.." pets, "..#ItemDatabase.." items)")
-    else
-        warn("⚠️ [XZNE] Failed to load external database: " .. tostring(result))
-        -- Fallback empty
-        DatabaseReady = true
+    if not success or not fullDB then
+        warn("⚠️ [XZNE] Failed to load database: " .. tostring(fullDB))
+        DatabaseReady = true  -- Set ready anyway to allow script to continue
+        return
     end
+    
+    local allPets = fullDB.Pets or {}
+    local allItems = fullDB.Items or {}
+    local CHUNK_SIZE = 80  -- Load 80 items at a time
+    
+    -- Progressive Pet Loading
+    for i = 1, #allPets, CHUNK_SIZE do
+        -- Add chunk to database
+        for j = i, math.min(i + CHUNK_SIZE - 1, #allPets) do
+            table.insert(PetDatabase, allPets[j])
+        end
+        
+        print("🔄 [XZNE] Pets: " .. #PetDatabase .. "/" .. #allPets .. " loaded")
+        task.wait(0.2)  -- Smooth 200ms delay between chunks
+    end
+    
+    -- Progressive Item Loading  
+    for i = 1, #allItems, CHUNK_SIZE do
+        for j = i, math.min(i + CHUNK_SIZE - 1, #allItems) do
+            table.insert(ItemDatabase, allItems[j])
+        end
+        
+        print("🔄 [XZNE] Items: " .. #ItemDatabase .. "/" .. #allItems .. " loaded")
+        task.wait(0.2)
+    end
+    
+    DatabaseReady = true
+    print("✅ [XZNE] Database fully loaded (" .. #PetDatabase .. " pets, " .. #ItemDatabase .. " items)")
 end)
 
 -- [5] CREATE WINDOW (Premium Glassmorphism Style)
