@@ -6,6 +6,15 @@
 
 -- IMPORTANT: Official Main Branch
 local Repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/"
+
+-- [CRITICAL] Execution Lock: Prevent re-entry during load
+if _G.XZNE_EXECUTING then
+    warn("⚠️ [XZNE] Script is already loading! Please wait for current execution to finish.")
+    warn("⚠️ [XZNE] If stuck, wait 10 seconds or restart Roblox.")
+    return
+end
+_G.XZNE_EXECUTING = true
+
 print("[XZNE] Booting v0.0.01 [Beta] (Official Main)...")
 
 local function LoadScript(Script)
@@ -39,8 +48,16 @@ end
 
 if not _G.XZNE_Controller then
     warn("❌ [XZNE] Controller Failed to Load! Check Main.lua.")
+    _G.XZNE_EXECUTING = false  -- Release lock on failure
     return
 end
 
 -- 3. Load GUI (Clean Modular Load)
 LoadScript("Gui.lua")
+
+-- [CRITICAL] Release execution lock after successful load
+task.defer(function()
+    task.wait(0.5)  -- Small delay to ensure GUI is stable
+    _G.XZNE_EXECUTING = false
+    print("✅ [XZNE] Load complete. Ready for re-execution if needed.")
+end)
