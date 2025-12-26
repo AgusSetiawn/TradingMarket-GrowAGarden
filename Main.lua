@@ -23,12 +23,14 @@ local MyPlayerKey = "Player_" .. LocalUserId
 if _G.XZNE_Controller then
     warn("⚠️ [XZNE] Already running! Cleaning up old instance...")
     
-    -- Stop old controller immediately
-    _G.XZNE_Controller.Config.Running = false
-    _G.XZNE_Controller.Config.AutoBuy = false
-    _G.XZNE_Controller.Config.AutoList = false
-    _G.XZNE_Controller.Config.AutoClear = false
-    _G.XZNE_Controller.Config.AutoClaim = false
+    -- Stop old controller immediately (safe access)
+    if _G.XZNE_Controller.Config then
+        _G.XZNE_Controller.Config.Running = false
+        _G.XZNE_Controller.Config.AutoBuy = false
+        _G.XZNE_Controller.Config.AutoList = false
+        _G.XZNE_Controller.Config.AutoClear = false
+        _G.XZNE_Controller.Config.AutoClaim = false
+    end
     
     -- Destroy old window if exists
     if _G.XZNE_Controller.Window and _G.XZNE_Controller.Window.Destroy then
