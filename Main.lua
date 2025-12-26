@@ -122,6 +122,7 @@ local ClaimBoothRemote = BoothsRemote:WaitForChild("ClaimBooth")
 local RemoveBoothRemote = BoothsRemote:WaitForChild("RemoveBooth")
 local RemoveListingRemote = BoothsRemote:WaitForChild("RemoveListing")
 local BuyListingRemote = BoothsRemote:WaitForChild("BuyListing")
+local PlayerTeleportTriggered = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("PlayerTeleportTriggered")
 
 local BoothsReceiver = nil
 local DataService = nil -- For Pets
@@ -378,7 +379,7 @@ local function RunAutoClear()
     end
 end
 
--- >> AUTO CLAIM (Received: Smart Empty Booth Search + Shuffle + TP First)
+-- >> AUTO CLAIM (Received: Smart Empty Booth Search + Shuffle + TP First + TP Protocol)
 local function RunAutoClaim()
     if not Config.AutoClaim then return end
     
@@ -386,7 +387,7 @@ local function RunAutoClaim()
     local folder = Workspace:FindFirstChild("TradeWorld") and Workspace.TradeWorld:FindFirstChild("Booths")
     if not folder then return end
     
-    -- 1. Check if we ALREADY own a booth (Stop claiming to avoid spam/switching)
+    -- 1. Check if we ALREADY own a booth
     for _, booth in pairs(folder:GetChildren()) do
         local ownerId = booth:GetAttribute("OwnerId") or booth:GetAttribute("UserId")
         if not ownerId then
@@ -394,54 +395,71 @@ local function RunAutoClaim()
             if ownerValue then ownerId = ownerValue.Value end
         end
         
-        -- If we own this booth, stop and optionally teleport to it
         if ownerId and tonumber(ownerId) == LocalUserId then
             return -- Already have booth
         end
     end
     
-    -- 2. Get all booths and SHUFFLE them (Prevents getting stuck on one bugged booth)
+    -- 2. Scramble booth list (Anti-Stuck)
     local booths = folder:GetChildren()
     for i = #booths, 2, -1 do
         local j = math.random(i)
         booths[i], booths[j] = booths[j], booths[i]
     end
     
-    -- 3. Search for Empty Booth and Claim
+    -- 3. Search Loop
     for _, booth in ipairs(booths) do
         if not Config.Running or not Config.AutoClaim then break end
         
-        -- Get owner ID
         local ownerId = booth:GetAttribute("OwnerId") or booth:GetAttribute("UserId")
         if not ownerId then
             local ownerValue = booth:FindFirstChild("OwnerId") or booth:FindFirstChild("UserId")
             if ownerValue then ownerId = ownerValue.Value end
         end
         
-        -- If booth is empty (nil, 0, or empty string)
+        -- Found empty booth
         if ownerId == nil or ownerId == 0 or ownerId == "" then
             print("trying to claim booth detected")
-            -- A. Teleport FIRST (Fixes proximity checks)
+            
+            -- A. Teleport Protocol (Based on Decompiled Code)
             local char = LocalPlayer.Character
             if char and char.PrimaryPart and booth.PrimaryPart then
-                -- TP to booth (Y+3 above, Z+2 forward for natural look)
-                char:SetPrimaryPartCFrame(booth.PrimaryPart.CFrame * CFrame.new(0, 3, 2))
+                -- 1. Move Local Character
+                local targetCFrame = booth.PrimaryPart.CFrame * CFrame.new(0, 3, 2)
+                char:SetPrimaryPartCFrame(targetCFrame)
                 
-                -- Reset velocity to prevent character being thrown
+                -- 2. Velocity Reset
                 if char.PrimaryPart.AssemblyLinearVelocity then
                     char.PrimaryPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 end
+                
+                -- 3. Fire Server Event (Critical for Anti-Cheat/State)
+                pcall(function()
+                    PlayerTeleportTriggered:FireServer("Booth")
+                end)
             end
             
-            -- Wait for TP to register
+            -- Wait for TP/Server sync
             task.wait(0.5)
             
-            -- B. Try to claim
+            -- B. Attempt Claim
             pcall(function()
                 ClaimBoothRemote:FireServer(booth)
             end)
             
             -- C. Verify Result (Wait and check if we got it)
+            task.wait(1.0)
+            
+            if GetMyBooth() then
+                print("✅ [XZNE] Booth Claimed Successfully!")
+                return -- Exit loop and function
+            end
+            
+            -- If we are here, claim failed. Loop continues to next random booth.
+             print("⚠️ [XZNE] Claim failed, trying next booth...")
+        end
+    end
+end
             task.wait(1.0)
             
             if GetMyBooth() then
