@@ -378,7 +378,7 @@ local function RunAutoClear()
     end
 end
 
--- >> AUTO CLAIM (Improved: Smart Empty Booth Search + TP)
+-- >> AUTO CLAIM (V2: Proper Multi-Booth Search + Verification)
 local function RunAutoClaim()
     if not Config.AutoClaim then return end
     
@@ -386,62 +386,88 @@ local function RunAutoClaim()
     local folder = Workspace:FindFirstChild("TradeWorld") and Workspace.TradeWorld:FindFirstChild("Booths")
     if not folder then return end
     
-    -- 1. Check if we ALREADY own a booth (Stop claiming to avoid spam/switching)
-    for _, booth in pairs(folder:GetChildren()) do
-        local ownerId = booth:GetAttribute("OwnerId") or booth:GetAttribute("UserId")
-        if not ownerId then
-            local ownerValue = booth:FindFirstChild("OwnerId") or booth:FindFirstChild("UserId")
-            if ownerValue then ownerId = ownerValue.Value end
+    -- Helper: Get Booth Owner ID
+    local function GetBoothOwner(boothInstance)
+        local ownerId = boothInstance:GetAttribute("OwnerId") or boothInstance:GetAttribute("UserId")
+        if ownerId and ownerId ~= 0 and ownerId ~= "" then
+            return tonumber(ownerId)
         end
         
-        -- If we own this booth, stop and optionally teleport to it
-        if ownerId and tonumber(ownerId) == LocalUserId then
-            -- Already have booth, no need to claim more
+        local ownerValue = boothInstance:FindFirstChild("OwnerId") or boothInstance:FindFirstChild("UserId")
+        if ownerValue and ownerValue.Value ~= 0 and ownerValue.Value ~= "" then
+            return tonumber(ownerValue.Value)
+        end
+        
+        return nil -- Booth is empty
+    end
+    
+    -- 1. Check if we ALREADY own a booth (Stop claiming to avoid spam/switching)
+    for _, booth in pairs(folder:GetChildren()) do
+        local owner = GetBoothOwner(booth)
+        if owner == LocalUserId then
+            -- Already have booth, no need to claim
             return
         end
     end
     
-    -- 2. Search for Empty Booth and Claim
+    -- 2. Search for Empty Booth and Claim (Try multiple booths if needed)
     for _, booth in pairs(folder:GetChildren()) do
         if not Config.Running or not Config.AutoClaim then break end
         
-        -- Get owner ID
-        local ownerId = booth:GetAttribute("OwnerId") or booth:GetAttribute("UserId")
-        if not ownerId then
-            local ownerValue = booth:FindFirstChild("OwnerId") or booth:FindFirstChild("UserId")
-            if ownerValue then ownerId = ownerValue.Value end
-        end
+        local owner = GetBoothOwner(booth)
         
-        -- If booth is empty (nil, 0, or empty string)
-        if ownerId == nil or ownerId == 0 or ownerId == "" then
+        -- If booth is empty
+        if owner == nil then
+            print("🔍 [XZNE] Found empty booth, attempting claim...")
+            
             -- Try to claim
-            local success = pcall(function()
+            pcall(function()
                 ClaimBoothRemote:FireServer(booth)
             end)
             
-            if success then
-                -- Teleport to booth (Improved: Natural position + velocity reset)
-                local char = LocalPlayer.Character
-                if char and char.PrimaryPart and booth.PrimaryPart then
-                    -- TP to booth (Y+3 above, Z+2 forward for natural look)
-                    char:SetPrimaryPartCFrame(booth.PrimaryPart.CFrame * CFrame.new(0, 3, 2))
-                    
-                    -- Reset velocity to prevent character being thrown
-                    if char.PrimaryPart.AssemblyLinearVelocity then
-                        char.PrimaryPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            -- Wait for server to process
+            task.wait(1.5)
+            
+            -- Verify if claim was successful
+            local newOwner = GetBoothOwner(booth)
+            if newOwner == LocalUserId then
+                print("✅ [XZNE] Booth Claimed Successfully!")
+                
+                -- Teleport using game's official method (more reliable)
+                local TeleportEvent = ReplicatedStorage:FindFirstChild("GameEvents")
+                if TeleportEvent then
+                    TeleportEvent = TeleportEvent:FindFirstChild("PlayerTeleportTriggered")
+                end
+                
+                if TeleportEvent and booth.PrimaryPart then
+                    -- Use game's teleport system
+                    pcall(function()
+                        TeleportEvent:FireServer(booth.PrimaryPart.CFrame * CFrame.new(0, 3, 0))
+                    end)
+                else
+                    -- Fallback: Manual teleport
+                    local char = LocalPlayer.Character
+                    if char and char.PrimaryPart and booth.PrimaryPart then
+                        char:SetPrimaryPartCFrame(booth.PrimaryPart.CFrame * CFrame.new(0, 3, 2))
+                        
+                        -- Reset velocity
+                        if char.PrimaryPart.AssemblyLinearVelocity then
+                            char.PrimaryPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        end
                     end
                 end
                 
-                print("✅ [XZNE] Booth Claimed & Teleported!")
-                
-                -- Wait for server to process ownership
-                task.wait(2)
-                
-                -- Exit loop (Mission complete)
+                -- Mission complete
                 return
+            else
+                -- Claim failed (someone else got it), continue to next booth
+                print("⚠️ [XZNE] Claim failed, searching for another booth...")
             end
         end
     end
+    
+    -- If we reach here, no empty booths found
+    -- Will retry on next loop iteration
 end
 
 -- [6] API EXPORTS
