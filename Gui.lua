@@ -139,14 +139,14 @@ UIElements.BuyTargetPet = SniperSection:Dropdown({
     Title = "Target Pet", 
     Desc = "🔍 Search pets...",
     Values = {}, Default = 1, Searchable = true,
-    Callback = function(val) Controller.Config.BuyTarget = val; Controller.Config.BuyCategory = "Pet"; Controller.SaveConfig() end
+    Callback = function(val) Controller.Config.BuyTarget = val; Controller.Config.BuyCategory = "Pet"; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
 UIElements.BuyTargetItem = SniperSection:Dropdown({
     Title = "Target Item", 
     Desc = "🔍 Search items...",
     Values = {}, Default = 1, Searchable = true,
-    Callback = function(val) Controller.Config.BuyTarget = val; Controller.Config.BuyCategory = "Item"; Controller.SaveConfig() end
+    Callback = function(val) Controller.Config.BuyTarget = val; Controller.Config.BuyCategory = "Item"; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
 SniperSection:Divider()
@@ -174,12 +174,12 @@ ListSection:Divider()
 
 UIElements.ListTargetPet = ListSection:Dropdown({
     Title = "Pet to List", Desc = "🔍 Search...", Values = {}, Default = 1, Searchable = true,
-    Callback = function(val) Controller.Config.ListTarget = val; Controller.Config.ListCategory = "Pet"; Controller.SaveConfig() end
+    Callback = function(val) Controller.Config.ListTarget = val; Controller.Config.ListCategory = "Pet"; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
 UIElements.ListTargetItem = ListSection:Dropdown({
     Title = "Item to List", Desc = "🔍 Search...", Values = {}, Default = 1, Searchable = true,
-    Callback = function(val) Controller.Config.ListTarget = val; Controller.Config.ListCategory = "Item"; Controller.SaveConfig() end
+    Callback = function(val) Controller.Config.ListTarget = val; Controller.Config.ListCategory = "Item"; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
 UIElements.Price = ListSection:Input({
@@ -203,12 +203,12 @@ ClearSection:Divider()
 
 UIElements.RemoveTargetPet = ClearSection:Dropdown({
     Title = "Pet to Remove", Desc = "🔍 Search...", Values = {}, Default = 1, Searchable = true,
-    Callback = function(val) Controller.Config.RemoveTarget = val; Controller.Config.RemoveCategory = "Pet"; Controller.SaveConfig() end
+    Callback = function(val) Controller.Config.RemoveTarget = val; Controller.Config.RemoveCategory = "Pet"; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
 UIElements.RemoveTargetItem = ClearSection:Dropdown({
     Title = "Item to Remove", Desc = "🔍 Search...", Values = {}, Default = 1, Searchable = true,
-    Callback = function(val) Controller.Config.RemoveTarget = val; Controller.Config.RemoveCategory = "Item"; Controller.SaveConfig() end
+    Callback = function(val) Controller.Config.RemoveTarget = val; Controller.Config.RemoveCategory = "Item"; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
 ClearSection:Divider()
