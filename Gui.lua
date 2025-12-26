@@ -108,8 +108,8 @@ print("🔍 [XZNE DEBUG] 7. Creating Window")
 local Window = WindUI:CreateWindow({
     Title = "XZNE ScriptHub",
     Icon = "xzne:target",
-    Author = ".refox",
-    Folder = "XZNE_Config",
+    Author = "By. Xzero One",
+    -- Folder = "XZNE_Config",  -- ❌ REMOVED: Caused dual state system (WindUI state vs our JSON)
     Transparency = 0.45,       -- 0.45 = Ideal Glass Effect
     Acrylic = true,           -- Enable Glassmorphism Blur
     Theme = "Dark",           -- Dark Mode for contrast
