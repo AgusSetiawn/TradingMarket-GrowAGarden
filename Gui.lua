@@ -33,19 +33,60 @@ ShowEarlyNotification()
 -- ❌ OPTIMIZATION: LoadConfig() already called in Main.lua (redundant)
 -- Controller.LoadConfig() removed to save 50-100ms
 
--- [2] LOAD WINDUI
+-- [2] LOAD WINDUI (WITH INTELLIGENT CACHING)
 print("🔍 [XZNE DEBUG] 4. Loading WindUI")
-do
-    local success, result = pcall(function()
-        local url = "https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"
-        local content = game:HttpGet(url)
-        print("🔍 [XZNE DEBUG] 4a. WindUI Content Size:", #content)
-        if #content < 100 then warn("⚠️ WindUI content suspicious!") end
+
+local WINDUI_CACHE = "XZNE_WindUI_Cache_v1.lua"
+
+local function LoadWindUI()
+    -- ✅ FAST PATH: Try cache first (10-50ms)
+    if isfile and isfile(WINDUI_CACHE) then
+        local cacheSuccess, cacheResult = pcall(function()
+            local cached = readfile(WINDUI_CACHE)
+            if cached and #cached > 1000 then  -- Sanity check
+                local func, err = loadstring(cached)
+                if func then
+                    print("⚡ [XZNE] WindUI loaded from cache (instant!)")
+                    return func()
+                end
+            end
+        end)
         
-        local func, err = loadstring(content)
-        if not func then error("WindUI Loadstring Error: " .. tostring(err)) end
-        return func()
-    end)
+        if cacheSuccess and cacheResult then 
+            return cacheResult 
+        else
+            warn("⚠️ [XZNE] Cache corrupt, re-downloading...")
+        end
+    end
+    
+    -- ⏬ SLOW PATH: Download WindUI (first run or cache miss)
+    print("📥 [XZNE] Downloading WindUI (first run - will be cached)...")
+    local url = "https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"
+    local content = game:HttpGet(url)
+    
+    if #content < 100 then 
+        error("WindUI content invalid or empty") 
+    end
+    
+    -- Save to cache for next time
+    if writefile then
+        pcall(function() 
+            writefile(WINDUI_CACHE, content)
+            print("💾 [XZNE] WindUI cached for next execution")
+        end)
+    end
+    
+    local func, err = loadstring(content)
+    if not func then 
+        error("WindUI Loadstring Error: " .. tostring(err)) 
+    end
+    
+    return func()
+end
+
+-- Execute with error handling
+do
+    local success, result = pcall(LoadWindUI)
     
     if success and result then
         WindUI = result
