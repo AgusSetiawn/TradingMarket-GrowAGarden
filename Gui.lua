@@ -5,28 +5,27 @@
     🔗 Connects to: Main.lua (_G.XZNE_Controller)
 ]]
 
+print("✅ [XZNE GUI] Starting GUI Load...")
+
 local WindUI
 local Controller = _G.XZNE_Controller
 
+-- Safety Check with Print (Avoid warn/return issues debug)
 if not Controller then
-    warn("[XZNE] Controller not found! Please run Main.lua first.")
-    return
+    print("❌ [XZNE GUI] CRITICAL: Controller not found! Run Main.lua first.")
+    -- We continue for debug purposes, but code will fail later if used
+else
+    print("✅ [XZNE GUI] Controller found: " .. tostring(Controller))
 end
 
--- [1] EARLY LOADING NOTIFICATION (User feedback during WindUI download)
-local function ShowEarlyNotification()
-    local StarterGui = game:GetService("StarterGui")
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = "XZNE ScriptHub";
-            Text = "Loading UI library...";
-            Duration = 3;
-        })
-    end)
-end
-ShowEarlyNotification()
+-- [1] EARLY LOADING NOTIFICATION
+pcall(function()
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "XZNE ScriptHub"; Text = "Loading UI library..."; Duration = 3;
+    })
+end)
 
--- [2] LOAD WINDUI (Force Online to prevent nil value errors)
+-- [2] LOAD WINDUI
 do
     local success, result = pcall(function()
         return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
@@ -189,9 +188,10 @@ UIElements.AutoBuy = SniperSection:Toggle({
     Callback = function(val) Controller.Config.AutoBuy = val; Controller.SaveConfig() end
 })
 
--- == INVENTORY TAB ==
-local InvTab = Window:Tab({ Title = "Inventory", Icon = "xzne:package" })
-local ListSection = InvTab:Section({ Title = "Auto List (Sell)" })
+
+-- == TAB 2: SELL (Auto List) ==
+local SellTab = Window:Tab({ Title = "Sell Items", Icon = "xzne:dollar", Desc = "Auto List / Sell" })
+local ListSection = SellTab:Section({ Title = "Listing Configuration" })
 
 -- Help paragraph
 ListSection:Paragraph({
@@ -241,7 +241,9 @@ UIElements.AutoList = ListSection:Toggle({
 })
 
 
-local ClearSection = InvTab:Section({ Title = "Remove List" })
+-- == TAB 3: TRASH (Auto Remove) ==
+local TrashTab = Window:Tab({ Title = "Trash Items", Icon = "xzne:trash", Desc = "Auto Clear / Remove" })
+local ClearSection = TrashTab:Section({ Title = "Removal Configuration" })
 
 -- Help paragraph
 ClearSection:Paragraph({
