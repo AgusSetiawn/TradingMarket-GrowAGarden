@@ -134,7 +134,8 @@ local BoothsReceiver = nil
 local DataService = nil -- For Pets
 local TradeBoothsData = nil -- Fallback
 
-task.spawn(function()
+-- ✅ OPTIMIZATION: Use defer instead of spawn to ensure GUI loads first
+task.defer(function()
     pcall(function()
         local RepModules = ReplicatedStorage:WaitForChild("Modules", 10)  -- Increased timeout
         if RepModules then
@@ -188,19 +189,27 @@ local DataCache = { data = nil, time = 0 }
 local PlayerLookupCache = {}
 
 -- [PERFORMANCE] Debounce Cleanup (runs every 30s)
-task.spawn(function()
+-- ✅ OPTIMIZATION: Defer start and skip empty table iterations
+task.defer(function()
     while true do
         task.wait(30)
         local currentTime = tick()
-        for uuid, timestamp in pairs(ListingDebounce) do
-            if currentTime - timestamp > 10 then
-                ListingDebounce[uuid] = nil
+        
+        -- Only iterate if table has entries
+        if next(ListingDebounce) then
+            for uuid, timestamp in pairs(ListingDebounce) do
+                if currentTime - timestamp > 10 then
+                    ListingDebounce[uuid] = nil
+                end
             end
         end
-        -- Cleanup player lookup cache
-        for userId, cacheEntry in pairs(PlayerLookupCache) do
-            if currentTime - cacheEntry.time > 5 then
-                PlayerLookupCache[userId] = nil
+        
+        -- Cleanup player lookup cache (only if not empty)
+        if next(PlayerLookupCache) then
+            for userId, cacheEntry in pairs(PlayerLookupCache) do
+                if currentTime - cacheEntry.time > 5 then
+                    PlayerLookupCache[userId] = nil
+                end
             end
         end
     end
@@ -451,7 +460,11 @@ function Controller.RequestUpdate()
 end
 
 -- [7] MAIN LOOP
-task.spawn(function()
+-- ✅ OPTIMIZATION: Defer start by 1s to let GUI render first
+local MIN_SPEED = 0.5  -- Safety: Never faster than 2 FPS impact
+
+task.defer(function()
+    task.wait(1)  -- Let GUI finish loading
     print("[XZNE] Logic Core v0.0.01 [Beta] Started")
     while true do
         if not Config.Running then task.wait(1) else
@@ -462,8 +475,8 @@ task.spawn(function()
                 if Config.AutoClear then RunAutoClear() end
             end)
             
-            -- Dynamic Speed
-            task.wait(Config.Speed or 1)
+            -- Dynamic Speed with safety bound
+            task.wait(math_max(Config.Speed or 1, MIN_SPEED))
         end
     end
 end)
