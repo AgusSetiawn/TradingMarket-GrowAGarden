@@ -33,60 +33,19 @@ ShowEarlyNotification()
 -- ❌ OPTIMIZATION: LoadConfig() already called in Main.lua (redundant)
 -- Controller.LoadConfig() removed to save 50-100ms
 
--- [2] LOAD WINDUI (WITH INTELLIGENT CACHING)
+-- [2] LOAD WINDUI
 print("🔍 [XZNE DEBUG] 4. Loading WindUI")
-
-local WINDUI_CACHE = "XZNE_WindUI_Cache_v1.lua"
-
-local function LoadWindUI()
-    -- ✅ FAST PATH: Try cache first (10-50ms)
-    if isfile and isfile(WINDUI_CACHE) then
-        local cacheSuccess, cacheResult = pcall(function()
-            local cached = readfile(WINDUI_CACHE)
-            if cached and #cached > 1000 then  -- Sanity check
-                local func, err = loadstring(cached)
-                if func then
-                    print("⚡ [XZNE] WindUI loaded from cache (instant!)")
-                    return func()
-                end
-            end
-        end)
-        
-        if cacheSuccess and cacheResult then 
-            return cacheResult 
-        else
-            warn("⚠️ [XZNE] Cache corrupt, re-downloading...")
-        end
-    end
-    
-    -- ⏬ SLOW PATH: Download WindUI (first run or cache miss)
-    print("📥 [XZNE] Downloading WindUI (first run - will be cached)...")
-    local url = "https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"
-    local content = game:HttpGet(url)
-    
-    if #content < 100 then 
-        error("WindUI content invalid or empty") 
-    end
-    
-    -- Save to cache for next time
-    if writefile then
-        pcall(function() 
-            writefile(WINDUI_CACHE, content)
-            print("💾 [XZNE] WindUI cached for next execution")
-        end)
-    end
-    
-    local func, err = loadstring(content)
-    if not func then 
-        error("WindUI Loadstring Error: " .. tostring(err)) 
-    end
-    
-    return func()
-end
-
--- Execute with error handling
 do
-    local success, result = pcall(LoadWindUI)
+    local success, result = pcall(function()
+        local url = "https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"
+        local content = game:HttpGet(url)
+        print("🔍 [XZNE DEBUG] 4a. WindUI Content Size:", #content)
+        if #content < 100 then warn("⚠️ WindUI content suspicious!") end
+        
+        local func, err = loadstring(content)
+        if not func then error("WindUI Loadstring Error: " .. tostring(err)) end
+        return func()
+    end)
     
     if success and result then
         WindUI = result
@@ -117,55 +76,30 @@ task.defer(function()
     print("✅ [XZNE] Icons registered")
 end)
 
--- [4] PROGRESSIVE DATABASE LOADING (Batched to prevent freeze)
-print("🔍 [XZNE DEBUG] 6. Starting Progressive Database Load")
+-- [4] LOAD DATABASES (DEFERRED for faster GUI appearance)
+print("🔍 [XZNE DEBUG] 6. Deferring Database Load")
 local PetDatabase, ItemDatabase = {}, {}
 local DatabaseReady = false
 
--- ✅ OPTIMIZATION: Load database in chunks to prevent freeze
+-- ✅ OPTIMIZATION: Defer DB load until after GUI renders
 task.defer(function()
     task.wait(0.3)  -- Let GUI render first
-    
-    print("📥 [XZNE] Loading database progressively (batched)...")
     local Repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/"
-    
-    local success, fullDB = pcall(function()
+    local success, result = pcall(function()
+        -- Load as raw lua table return
         return loadstring(game:HttpGet(Repo .. "Database.lua"))() 
     end)
     
-    if not success or not fullDB then
-        warn("⚠️ [XZNE] Failed to load database: " .. tostring(fullDB))
-        DatabaseReady = true  -- Set ready anyway to allow script to continue
-        return
+    if success and result then
+        if result.Pets then PetDatabase = result.Pets end
+        if result.Items then ItemDatabase = result.Items end
+        DatabaseReady = true
+        print("✅ [XZNE] External Database Loaded ("..#PetDatabase.." pets, "..#ItemDatabase.." items)")
+    else
+        warn("⚠️ [XZNE] Failed to load external database: " .. tostring(result))
+        -- Fallback empty
+        DatabaseReady = true
     end
-    
-    local allPets = fullDB.Pets or {}
-    local allItems = fullDB.Items or {}
-    local CHUNK_SIZE = 80  -- Load 80 items at a time
-    
-    -- Progressive Pet Loading
-    for i = 1, #allPets, CHUNK_SIZE do
-        -- Add chunk to database
-        for j = i, math.min(i + CHUNK_SIZE - 1, #allPets) do
-            table.insert(PetDatabase, allPets[j])
-        end
-        
-        print("🔄 [XZNE] Pets: " .. #PetDatabase .. "/" .. #allPets .. " loaded")
-        task.wait(0.2)  -- Smooth 200ms delay between chunks
-    end
-    
-    -- Progressive Item Loading  
-    for i = 1, #allItems, CHUNK_SIZE do
-        for j = i, math.min(i + CHUNK_SIZE - 1, #allItems) do
-            table.insert(ItemDatabase, allItems[j])
-        end
-        
-        print("🔄 [XZNE] Items: " .. #ItemDatabase .. "/" .. #allItems .. " loaded")
-        task.wait(0.2)
-    end
-    
-    DatabaseReady = true
-    print("✅ [XZNE] Database fully loaded (" .. #PetDatabase .. " pets, " .. #ItemDatabase .. " items)")
 end)
 
 -- [5] CREATE WINDOW (Premium Glassmorphism Style)
@@ -334,7 +268,10 @@ print("🔍 [XZNE DEBUG] 15. Pre-rendering Dropdowns")
 task.defer(function()
     -- ✅ OPTIMIZATION: Removed arbitrary 0.7s delay (saves 700ms)
     while not DatabaseReady do task.wait(0.1) end
-    print("🔄 [XZNE] Updating Dropdowns (batched to prevent freeze)...")
+    
+    -- ✅ LAZY LOADING: Wait 2s after GUI ready, then populate slowly
+    task.wait(2)
+    print("🔄 [XZNE] Populating dropdowns in background...")
 
     local function SafeUpdate(element, db)
         if element then
@@ -344,24 +281,24 @@ task.defer(function()
         end
     end
     
-    -- ✅ BATCHED RENDERING: 100ms delay between each to prevent freeze
+    -- ✅ PROGRESSIVE LOADING: Populate in background, 1s between each
     SafeUpdate(UIElements.BuyTargetPet, PetDatabase)
-    task.wait(0.1)  -- Batch 1: Let UI render before next
+    task.wait(1)  -- Progressive: 1s delay (user can interact with GUI)
     
     SafeUpdate(UIElements.BuyTargetItem, ItemDatabase)
-    task.wait(0.1)  -- Batch 2
+    task.wait(1)
     
     SafeUpdate(UIElements.ListTargetPet, PetDatabase)
-    task.wait(0.1)  -- Batch 3
+    task.wait(1)
     
     SafeUpdate(UIElements.ListTargetItem, ItemDatabase)
-    task.wait(0.1)  -- Batch 4
+    task.wait(1)
     
     SafeUpdate(UIElements.RemoveTargetPet, PetDatabase)
-    task.wait(0.1)  -- Batch 5
+    task.wait(1)
     
     SafeUpdate(UIElements.RemoveTargetItem, ItemDatabase)
-    task.wait(0.1)  -- Batch 6: Final dropdown
+    task.wait(0.5)  -- Final dropdown
     
     -- Default Selections (Fix empty targets)
     if not Controller.Config.BuyTarget or Controller.Config.BuyTarget == "" then
@@ -377,7 +314,7 @@ task.defer(function()
          if db and db.Select then pcall(function() db:Select(Controller.Config.BuyTarget) end) end
     end
     
-    print("✅ [XZNE] Dropdowns Updated!")
+    print("✅ [XZNE] All dropdowns populated!")
 end)
 
 -- Notify User
