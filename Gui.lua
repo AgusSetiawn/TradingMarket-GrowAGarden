@@ -77,30 +77,57 @@ task.defer(function()
 end)
 
 -- [4] LOAD DATABASES (DEFERRED for faster GUI appearance)
-print("🔍 [XZNE DEBUG] 6. Deferring Database Load")
-local PetDatabase, ItemDatabase = {}, {}
-local DatabaseReady = false
+-- [3] LOAD DATABASES FROM GAME SERVER (Instant, Always Updated)
+print("🔍 [XZNE DEBUG] 5. Loading Databases from Game Server")
 
--- ✅ OPTIMIZATION: Defer DB load until after GUI renders
-task.defer(function()
-    task.wait(0.3)  -- Let GUI render first
-    local Repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/"
-    local success, result = pcall(function()
-        -- Load as raw lua table return
-        return loadstring(game:HttpGet(Repo .. "Database.lua"))() 
+local function LoadDatabasesFromGame()
+    local pets = {}
+    local items = {}
+    local loadTime = tick()
+    
+    -- Load Pets from PetRegistry.PetList
+    local success1, PetRegistry = pcall(function()
+        return require(game.ReplicatedStorage.Data.PetRegistry)
     end)
     
-    if success and result then
-        if result.Pets then PetDatabase = result.Pets end
-        if result.Items then ItemDatabase = result.Items end
-        DatabaseReady = true
-        print("✅ [XZNE] External Database Loaded ("..#PetDatabase.." pets, "..#ItemDatabase.." items)")
+    if success1 and PetRegistry and PetRegistry.PetList then
+        for petName, petData in pairs(PetRegistry.PetList) do
+            table.insert(pets, petName)
+        end
+        table.sort(pets)  -- Alphabetical
+        print("✅ [XZNE] Loaded", #pets, "pets from PetRegistry")
     else
-        warn("⚠️ [XZNE] Failed to load external database: " .. tostring(result))
-        -- Fallback empty
-        DatabaseReady = true
+        warn("❌ [XZNE] Failed to load PetRegistry")
     end
-end)
+    
+    -- Load Items from SeedData (crops/fruits that can be traded)
+    local success2, SeedData = pcall(function()
+        return require(game.ReplicatedStorage.Data.SeedData)
+    end)
+    
+    if success2 and SeedData then
+        for itemName, itemData in pairs(SeedData) do
+            -- Use SeedName as the tradeable item name
+            local tradeName = itemData.SeedName or itemName
+            table.insert(items, tradeName)
+        end
+        table.sort(items)  -- Alphabetical
+        print("✅ [XZNE] Loaded", #items, "items from SeedData")
+    else
+        warn("❌ [XZNE] Failed to load SeedData")
+    end
+    
+    local elapsed = (tick() - loadTime) * 1000  -- Convert to ms
+    print(string.format("⚡ [XZNE] Database loaded in %.2fms (instant!)", elapsed))
+    
+    return pets, items
+end
+
+-- Load databases (synchronous, instant)
+local PetDatabase, ItemDatabase = LoadDatabasesFromGame()
+local DatabaseReady = true
+
+print("🔍 [XZNE DEBUG] 6. Database Ready: " .. #PetDatabase .. " Pets, " .. #ItemDatabase .. " Items")
 
 -- [5] CREATE WINDOW (Premium Glassmorphism Style)
 print("🔍 [XZNE DEBUG] 7. Creating Window")
