@@ -287,8 +287,8 @@ UIElements.AutoClear = ClearSection:Toggle({
 
 ClearSection:Divider()
 
--- == BOOTH TAB ==
-local BoothTab = Window:Tab({ Title = "Booth", Icon = "xzne:store" })
+-- == TAB 4: BOOTH ==
+local BoothTab = Window:Tab({ Title = "Booth", Icon = "xzne:store", Desc = "Claim & Manage" })
 local BoothSection = BoothTab:Section({ Title = "Booth Control" })
 UIElements.AutoClaim = BoothSection:Toggle({
     Title = "Auto Claim Booth", Desc = "Fast claim empty booths", Default = Controller.Config.AutoClaim,
