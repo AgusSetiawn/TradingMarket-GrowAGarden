@@ -382,9 +382,14 @@ end
 local function RunAutoClaim()
     if not Config.AutoClaim then return end
     
+    print("🔄 [XZNE] Auto Claim: Scanning for booths...")
+    
     -- Find Booth Folder
     local folder = Workspace:FindFirstChild("TradeWorld") and Workspace.TradeWorld:FindFirstChild("Booths")
-    if not folder then return end
+    if not folder then 
+        warn("⚠️ [XZNE] Auto Claim: Booth folder not found!")
+        return 
+    end
     
     -- Helper: Get Booth Owner ID
     local function GetBoothOwner(boothInstance)
@@ -394,23 +399,31 @@ local function RunAutoClaim()
         end
         
         local ownerValue = boothInstance:FindFirstChild("OwnerId") or boothInstance:FindFirstChild("UserId")
-        if ownerValue and ownerValue.Value ~= 0 and ownerValue.Value ~= "" then
+        if ownerValue and ownerValue.Value and ownerValue.Value ~= 0 and ownerValue.Value ~= "" then
             return tonumber(ownerValue.Value)
         end
         
         return nil -- Booth is empty
     end
     
+    -- Count booths
+    local boothCount = 0
+    for _ in pairs(folder:GetChildren()) do boothCount = boothCount + 1 end
+    print("📊 [XZNE] Auto Claim: Found " .. boothCount .. " booths")
+    
     -- 1. Check if we ALREADY own a booth (Stop claiming to avoid spam/switching)
     for _, booth in pairs(folder:GetChildren()) do
         local owner = GetBoothOwner(booth)
         if owner == LocalUserId then
-            -- Already have booth, no need to claim
+            print("✅ [XZNE] Auto Claim: Already own a booth!")
             return
         end
     end
     
+    print("🔍 [XZNE] Auto Claim: Don't have booth, searching for empty ones...")
+    
     -- 2. Search for Empty Booth and Claim (Try multiple booths if needed)
+    local emptyFound = 0
     for _, booth in pairs(folder:GetChildren()) do
         if not Config.Running or not Config.AutoClaim then break end
         
@@ -418,7 +431,8 @@ local function RunAutoClaim()
         
         -- If booth is empty
         if owner == nil then
-            print("🔍 [XZNE] Found empty booth, attempting claim...")
+            emptyFound = emptyFound + 1
+            print("🆓 [XZNE] Found empty booth #" .. emptyFound .. ", attempting claim...")
             
             -- Try to claim
             pcall(function()
@@ -441,11 +455,13 @@ local function RunAutoClaim()
                 
                 if TeleportEvent and booth.PrimaryPart then
                     -- Use game's teleport system
+                    print("📍 [XZNE] Using PlayerTeleportTriggered event...")
                     pcall(function()
                         TeleportEvent:FireServer(booth.PrimaryPart.CFrame * CFrame.new(0, 3, 0))
                     end)
                 else
                     -- Fallback: Manual teleport
+                    print("📍 [XZNE] Using manual teleport (fallback)...")
                     local char = LocalPlayer.Character
                     if char and char.PrimaryPart and booth.PrimaryPart then
                         char:SetPrimaryPartCFrame(booth.PrimaryPart.CFrame * CFrame.new(0, 3, 2))
@@ -461,13 +477,14 @@ local function RunAutoClaim()
                 return
             else
                 -- Claim failed (someone else got it), continue to next booth
-                print("⚠️ [XZNE] Claim failed, searching for another booth...")
+                print("❌ [XZNE] Claim failed (owner: " .. tostring(newOwner) .. "), trying next booth...")
             end
         end
     end
     
-    -- If we reach here, no empty booths found
-    -- Will retry on next loop iteration
+    if emptyFound == 0 then
+        print("⏸️ [XZNE] Auto Claim: No empty booths found, will retry next cycle")
+    end
 end
 
 -- [6] API EXPORTS
