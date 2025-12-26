@@ -143,14 +143,14 @@ print("🔍 [XZNE DEBUG] 10. Creating Dropdowns")
 UIElements.BuyTargetPet = SniperSection:Dropdown({
     Title = "Target Pet", 
     Desc = "🔍 Search pets...",
-    Values = {}, Default = 1, Search = true,
+    Values = {}, Default = 1, SearchBarEnabled = true,
     Callback = function(val) Controller.Config.BuyTarget = val; Controller.Config.BuyCategory = "Pet"; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
 UIElements.BuyTargetItem = SniperSection:Dropdown({
     Title = "Target Item", 
     Desc = "🔍 Search items...",
-    Values = {}, Default = 1, Search = true,
+    Values = {}, Default = 1, SearchBarEnabled = true,
     Callback = function(val) Controller.Config.BuyTarget = val; Controller.Config.BuyCategory = "Item"; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
@@ -178,12 +178,12 @@ ListSection:Paragraph({
 ListSection:Divider()
 
 UIElements.ListTargetPet = ListSection:Dropdown({
-    Title = "Pet to List", Desc = "🔍 Search...", Values = {}, Default = 1, Search = true,
+    Title = "Pet to List", Desc = "🔍 Search...", Values = {}, Default = 1, SearchBarEnabled = true,
     Callback = function(val) Controller.Config.ListTarget = val; Controller.Config.ListCategory = "Pet"; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
 UIElements.ListTargetItem = ListSection:Dropdown({
-    Title = "Item to List", Desc = "🔍 Search...", Values = {}, Default = 1, Search = true,
+    Title = "Item to List", Desc = "🔍 Search...", Values = {}, Default = 1, SearchBarEnabled = true,
     Callback = function(val) Controller.Config.ListTarget = val; Controller.Config.ListCategory = "Item"; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
@@ -207,12 +207,12 @@ ClearSection:Paragraph({
 ClearSection:Divider()
 
 UIElements.RemoveTargetPet = ClearSection:Dropdown({
-    Title = "Pet to Remove", Desc = "🔍 Search...", Values = {}, Default = 1, Search = true,
+    Title = "Pet to Remove", Desc = "🔍 Search...", Values = {}, Default = 1, SearchBarEnabled = true,
     Callback = function(val) Controller.Config.RemoveTarget = val; Controller.Config.RemoveCategory = "Pet"; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
 UIElements.RemoveTargetItem = ClearSection:Dropdown({
-    Title = "Item to Remove", Desc = "🔍 Search...", Values = {}, Default = 1, Search = true,
+    Title = "Item to Remove", Desc = "🔍 Search...", Values = {}, Default = 1, SearchBarEnabled = true,
     Callback = function(val) Controller.Config.RemoveTarget = val; Controller.Config.RemoveCategory = "Item"; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
