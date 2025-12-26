@@ -266,19 +266,49 @@ UIElements.AutoList = ListSection:Toggle({
 })
 
 
-local ClearSection = InvTab:Section({ Title = "Auto Clear" })
+local ClearSection = InvTab:Section({ Title = "Remove List" })
 
 -- Help paragraph
 ClearSection:Paragraph({
-    Title = "💡 How to Use",
-    Desc = "Select pet or item to automatically remove from inventory"
+    Title = "💡 How to Remove",
+    Desc = "Select items from booth listing to automatically remove/unlist"
 })
 
--- ZERO-LAG: Separate dropdowns for Pet and Item (already defined earlier in multi_replace)
--- Note: RemoveTargetPet and RemoveTargetItem are created in the earlier code update
+ClearSection:Divider()
+
+-- ZERO-LAG: Separate dropdowns for Pet and Item (NOW ACTUALLY ADDED!)
+UIElements.RemoveTargetPet = ClearSection:Dropdown({
+    Title = "Pet to Remove",
+    Desc = "🔍 Search pets to unlist...",
+    Values = {},
+    Default = 1,
+    Searchable = true,
+    Callback = function(val) 
+        Controller.Config.RemoveTarget = val
+        Controller.Config.RemoveCategory = "Pet"
+        Controller.RequestUpdate()
+        Controller.SaveConfig()
+    end
+})
+
+UIElements.RemoveTargetItem = ClearSection:Dropdown({
+    Title = "Item to Remove",
+    Desc = "🔍 Search items to unlist...",
+    Values = {},
+    Default = 1,
+    Searchable = true,
+    Callback = function(val) 
+        Controller.Config.RemoveTarget = val
+        Controller.Config.RemoveCategory = "Item"
+        Controller.RequestUpdate()
+        Controller.SaveConfig()
+    end
+})
+
+ClearSection:Divider()
 
 UIElements.AutoClear = ClearSection:Toggle({
-    Title = "Start Auto Clear", Desc = "Delete specific items", Default = Controller.Config.AutoClear,
+    Title = "Start Auto Remove", Desc = "Automatically remove selected items from booth", Default = Controller.Config.AutoClear,
     Callback = function(val) Controller.Config.AutoClear = val; Controller.SaveConfig() end
 })
 
