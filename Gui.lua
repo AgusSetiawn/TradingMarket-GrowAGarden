@@ -128,31 +128,6 @@ local Window = WindUI:CreateWindow({
     }
 })
 
--- [5] REGISTER ICONS (Deferred after window init for faster appearance)
-task.defer(function()
-    WindUI.Creator.AddIcons("xzne", {
-        -- Navigation & Core
-        ["home"] = "rbxassetid://10723407389",
-        ["settings"] = "rbxassetid://10734950309",
-        ["info"] = "rbxassetid://10747376114",
-        -- Actions
-        ["play"] = "rbxassetid://10747373176",
-        ["stop"] = "rbxassetid://10747384394",
-        ["refresh"] = "rbxassetid://10747387708",
-        ["check"] = "rbxassetid://10709790644",
-        ["trash"] = "rbxassetid://10747373176",
-        -- Utility
-        ["search"] = "rbxassetid://10734898355",
-        ["tag"] = "rbxassetid://10747384394",
-        ["log-out"] = "rbxassetid://10734898355",
-        ["crosshair"] = "rbxassetid://10709790537",
-        ["box"] = "rbxassetid://10747384449",
-        -- Premium additions
-        ["star"] = "rbxassetid://10723434711",
-        ["zap"] = "rbxassetid://10747384394",
-        ["heart"] = "rbxassetid://10723434833",
-        ["shield"] = "rbxassetid://10723407389",
-        ["dollar"] = "rbxassetid://10709790948"
     })
 end)
 
@@ -162,7 +137,7 @@ Controller.Window = Window
 local UIElements = {}
 
 -- == SNIPER TAB ==
-local SniperTab = Window:Tab({ Title = "Sniper", Icon = "xzne:crosshair" })
+local SniperTab = Window:Tab({ Title = "Sniper", Icon = "xzne:target" })
 local SniperSection = SniperTab:Section({ Title = "Auto Buy Configuration" })
 
 -- Help paragraph
@@ -215,7 +190,7 @@ UIElements.AutoBuy = SniperSection:Toggle({
 })
 
 -- == INVENTORY TAB ==
-local InvTab = Window:Tab({ Title = "Inventory", Icon = "xzne:box" })
+local InvTab = Window:Tab({ Title = "Inventory", Icon = "xzne:package" })
 local ListSection = InvTab:Section({ Title = "Auto List (Sell)" })
 
 -- Help paragraph
@@ -315,7 +290,7 @@ UIElements.AutoClear = ClearSection:Toggle({
 ClearSection:Divider()
 
 -- == BOOTH TAB ==
-local BoothTab = Window:Tab({ Title = "Booth", Icon = "xzne:home" })
+local BoothTab = Window:Tab({ Title = "Booth", Icon = "xzne:store" })
 local BoothSection = BoothTab:Section({ Title = "Booth Control" })
 UIElements.AutoClaim = BoothSection:Toggle({
     Title = "Auto Claim Booth", Desc = "Fast claim empty booths", Default = Controller.Config.AutoClaim,
@@ -328,6 +303,43 @@ BoothSection:Button({
 
 -- == SETTINGS TAB ==
 local SettingsTab = Window:Tab({ Title = "Settings", Icon = "xzne:settings" })
+
+-- Stats Section  
+local StatsSection = SettingsTab:Section({ Title = "📊 Session Statistics" })
+local StatsParagraph = StatsSection:Paragraph({
+    Title = "Performance Metrics",
+    Desc = "Sniped: 0 | Listed: 0 | Removed: 0 | Uptime: 0m"
+})
+
+StatsSection:Divider()
+
+-- Update stats display every 10 seconds
+task.spawn(function()
+    local startTime = tick()
+    while true do
+        task.wait(10)
+        local uptime = math.floor((tick() - startTime) / 60)
+        local stats = Controller.Stats
+        
+        -- Find and update the paragraph
+        pcall(function()
+            -- Update description with current stats
+            local desc = string.format(
+                "Sniped: %d | Listed: %d | Removed: %d | Uptime: %dm",
+                stats.SnipeCount or 0,
+                stats.ListedCount or 0,
+                stats.RemovedCount or 0,
+                uptime
+            )
+            -- Update the paragraph's description
+            if StatsParagraph and StatsParagraph.SetDesc then
+                StatsParagraph:SetDesc(desc)
+            end
+            print("[Stats] " .. desc)
+        end)
+    end
+end)
+
 local PerfSection = SettingsTab:Section({ Title = "Performance & Safety" })
 
 UIElements.Speed = PerfSection:Slider({
