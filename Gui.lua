@@ -265,7 +265,7 @@ TargetSection:Space() -- Break merge
 
 UIElements.DelaySlider = TargetSection:Slider({
     Title = "Action Delay",
-    Desc = "Wait time between actions (0-10s)",
+    Desc = "Delay Between Actions (0–10s)",
     Step = 0.1,
     Value = {
         Min = 0,
