@@ -49,7 +49,6 @@ if _G.XZNE_Controller then
     
     -- Wait for cleanup
     task.wait(0.8)
-    print("✅ [XZNE] Old instance cleaned, reinitializing...")
 end
 
 _G.XZNE_Controller = {
@@ -116,7 +115,6 @@ function Controller.LoadConfig()
             end
             -- Update dependent caches
             Controller.UpdateCache() 
-            print("✅ [XZNE] Config Loaded")
         end
     end
 end
@@ -143,14 +141,13 @@ task.defer(function()
             local ReplicationReciever = require(RepModules:WaitForChild("ReplicationReciever", 5))
             if ReplicationReciever then
                 BoothsReceiver = ReplicationReciever.new("Booths")
-                print("✅ [XZNE] BoothsReceiver Hooked")
             else
                 warn("❌ [XZNE] ReplicationReciever not found!")
             end
             -- Pets Hook
             DataService = require(RepModules:WaitForChild("DataService", 5))
             if DataService then 
-                print("✅ [XZNE] DataService Hooked") 
+                -- Hooked successfully
             else
                 warn("❌ [XZNE] DataService not found!")
             end
@@ -162,7 +159,6 @@ task.defer(function()
     if not BoothsReceiver then
         pcall(function()
             TradeBoothsData = require(ReplicatedStorage.Data.TradeBoothsData)
-            print("✅ [XZNE] TradeBoothsData Hooked (Fallback)")
         end)
         if not TradeBoothsData then
             warn("❌ [XZNE] TradeBoothsData fallback ALSO failed! Auto functions will NOT work.")
@@ -284,18 +280,14 @@ local function RunAutoBuy()
     
     local data = GetBoothsData()
     if not data then 
-        print("[DEBUG] AutoBuy: No booths data available")
         return 
     end
     
     local targetType = Config.BuyCategory == "Pet" and "Pet" or "Holdable"
     local targetLower = CachedTargets.Buy
     if targetLower == "" then 
-        print("[DEBUG] AutoBuy: No target set")
         return 
     end
-    
-    print("[DEBUG] AutoBuy running - Target: " .. Config.BuyTarget .. " (" .. targetType .. "), MaxPrice: " .. Config.MaxPrice)
     
     local maxPrice = Config.MaxPrice
     
@@ -316,7 +308,6 @@ local function RunAutoBuy()
                             local owner = GetCachedPlayer(ownerId)
                             
                             if owner then
-                                print("🔫 Sniping: " .. realName .. " @ " .. listingInfo.Price)
                                 pcall(function() BuyListingRemote:InvokeServer(owner, listingUUID) end)
                                 Stats.SnipeCount = Stats.SnipeCount + 1
                                 task.wait(0.5)
@@ -465,7 +456,6 @@ local MIN_SPEED = 0.5  -- Safety: Never faster than 2 FPS impact
 
 task.defer(function()
     task.wait(1)  -- Let GUI finish loading
-    print("[XZNE] Logic Core v0.0.01 [Beta] Started")
     while true do
         if not Config.Running then task.wait(1) else
             pcall(function()

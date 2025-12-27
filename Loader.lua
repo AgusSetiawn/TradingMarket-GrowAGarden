@@ -15,8 +15,6 @@ if _G.XZNE_EXECUTING then
 end
 _G.XZNE_EXECUTING = true
 
-print("[XZNE] Booting v0.0.01 [Beta] (Official Main)...")
-
 local function LoadScript(Script)
     -- Cache Busting: ?t=os.time() forces fresh download every execution
     local Success, Result = pcall(function()
@@ -59,5 +57,4 @@ LoadScript("Gui.lua")
 task.defer(function()
     task.wait(0.5)  -- Small delay to ensure GUI is stable
     _G.XZNE_EXECUTING = false
-    print("✅ [XZNE] Load complete. Ready for re-execution if needed.")
 end)

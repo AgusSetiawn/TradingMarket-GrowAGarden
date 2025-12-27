@@ -5,11 +5,8 @@
     🔗 Connects to: Main.lua (_G.XZNE_Controller)
 ]]
 
-print("🔍 [XZNE DEBUG] 1. Gui.lua Start")
-
 local WindUI
 local Controller = _G.XZNE_Controller
-print("🔍 [XZNE DEBUG] 2. Controller Found:", Controller ~= nil)
 
 if not Controller then
     warn("[XZNE] Controller not found! Please run Main.lua first.")
@@ -17,7 +14,6 @@ if not Controller then
 end
 
 -- [1] INSTANT LOADING FEEDBACK
-print("🔍 [XZNE DEBUG] 3. Sending Notification")
 local function ShowEarlyNotification()
     local StarterGui = game:GetService("StarterGui")
     pcall(function()
@@ -34,12 +30,10 @@ ShowEarlyNotification()
 -- Controller.LoadConfig() removed to save 50-100ms
 
 -- [2] LOAD WINDUI
-print("🔍 [XZNE DEBUG] 4. Loading WindUI")
 do
     local success, result = pcall(function()
         local url = "https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"
         local content = game:HttpGet(url)
-        print("🔍 [XZNE DEBUG] 4a. WindUI Content Size:", #content)
         if #content < 100 then warn("⚠️ WindUI content suspicious!") end
         
         local func, err = loadstring(content)
@@ -49,7 +43,6 @@ do
     
     if success and result then
         WindUI = result
-        print("✅ [XZNE] WindUI loaded")
     else
         warn("[XZNE] Failed to load WindUI lib! Error: " .. tostring(result))
         return
@@ -57,7 +50,6 @@ do
 end
 
 -- [3] REGISTER ICONS
-print("🔍 [XZNE DEBUG] 5. Registering Icons")
 task.defer(function()
     WindUI.Creator.AddIcons("xzne", {
         ["target"] = "rbxassetid://10734884548",      -- Crosshair → Target (Sniper)
@@ -73,11 +65,10 @@ task.defer(function()
         ["info"] = "rbxassetid://10723407389",       -- Info
         ["chart"] = "rbxassetid://10723346959"       -- Stats
     })
-    print("✅ [XZNE] Icons registered")
 end)
 
 -- [4] LOAD DATABASES (DEFERRED for faster GUI appearance)
-print("🔍 [XZNE DEBUG] 6. Deferring Database Load")
+local HttpService = game:GetService("HttpService")
 local PetDatabase, ItemDatabase = {}, {}
 local DatabaseReady = false
 
@@ -102,14 +93,12 @@ task.defer(function()
                 PetDatabase = decoded.Pets or {}
                 ItemDatabase = decoded.Items or {}
                 DatabaseReady = true
-                print("✅ [XZNE] Database loaded from cache (INSTANT! "..#PetDatabase.." pets, "..#ItemDatabase.." items)")
                 return  -- ✅ INSTANT LOAD - DONE!
             end
         end
     end
     
     -- Fallback: Download from GitHub (first run or cache failed)
-    print("🔄 [XZNE] Downloading database from GitHub...")
     local Repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/"
     
     -- Try JSON first (50% faster than Lua)
@@ -130,18 +119,15 @@ task.defer(function()
             if writefile then
                 pcall(function() 
                     writefile(CachedDBFile, content) 
-                    print("💾 [XZNE] Database cached locally for instant future loads")
                 end)
             end
             
             DatabaseReady = true
-            print("✅ [XZNE] Database downloaded ("..#PetDatabase.." pets, "..#ItemDatabase.." items)")
             return
         end
     end
     
     -- Last resort: Try Lua format (backward compatibility)
-    warn("⚠️ [XZNE] JSON failed, trying Lua format...")
     local luaSuccess, luaResult = pcall(function()
         return loadstring(game:HttpGet(Repo .. "Database.lua"))()
     end)
@@ -150,7 +136,6 @@ task.defer(function()
         PetDatabase = luaResult.Pets or {}
         ItemDatabase = luaResult.Items or {}
         DatabaseReady = true
-        print("✅ [XZNE] Database loaded from Lua fallback")
     else
         warn("❌ [XZNE] Failed to load database from all sources")
         PetDatabase = {}
@@ -160,7 +145,6 @@ task.defer(function()
 end)
 
 -- [5] CREATE WINDOW (Premium Glassmorphism Style)
-print("🔍 [XZNE DEBUG] 7. Creating Window")
 local Window = WindUI:CreateWindow({
     Title = "XZNE ScriptHub",
     Icon = "xzne:target",
@@ -179,13 +163,12 @@ local Window = WindUI:CreateWindow({
         ButtonsType = "Default" -- Force Windows Style (Right side)
     }
 })
-
-print("🔍 [XZNE DEBUG] 8. Window Created")
+-- Store window reference for cleanup
+Controller.Window = Window
 
 local UIElements = {}
 
--- == SNIPER TAB ==
-print("🔍 [XZNE DEBUG] 9. Creating Sniper Tab")
+-- [6] CREATE TABS & UI ELEMENTS
 local SniperTab = Window:Tab({ Title = "Sniper", Icon = "xzne:target" })
 local SniperSection = SniperTab:Section({ Title = "Auto Buy Configuration" })
 
@@ -196,7 +179,6 @@ SniperSection:Paragraph({
 SniperSection:Divider()
 
 -- Dropdowns
-print("🔍 [XZNE DEBUG] 10. Creating Dropdowns")
 UIElements.BuyTargetPet = SniperSection:Dropdown({
     Title = "Target Pet", 
     Desc = "🔍 Search pets...",
@@ -223,8 +205,7 @@ UIElements.AutoBuy = SniperSection:Toggle({
     Callback = function(val) Controller.Config.AutoBuy = val; Controller.SaveConfig() end
 })
 
--- == INVENTORY TAB == (List)
-print("🔍 [XZNE DEBUG] 11. Creating Inventory Tab")
+-- [INVENTORY TAB]
 local InvTab = Window:Tab({ Title = "Inventory", Icon = "xzne:package" })
 local ListSection = InvTab:Section({ Title = "Auto List (Sell)" })
 
@@ -281,7 +262,6 @@ UIElements.AutoClear = ClearSection:Toggle({
 })
 
 -- == BOOTH TAB ==
-print("🔍 [XZNE DEBUG] 13. Creating Booth Tab")
 local BoothTab = Window:Tab({ Title = "Booth", Icon = "xzne:store" })
 local BoothSection = BoothTab:Section({ Title = "Booth Control" })
 UIElements.AutoClaim = BoothSection:Toggle({
@@ -294,7 +274,6 @@ BoothSection:Button({
 })
 
 -- == SETTINGS TAB ==
-print("🔍 [XZNE DEBUG] 14. Creating Settings Tab")
 local SettingsTab = Window:Tab({ Title = "Settings", Icon = "xzne:settings" })
 
 -- Stats
@@ -321,14 +300,12 @@ task.spawn(function()
 end)
 
 -- [GUI POPULATION]
-print("🔍 [XZNE DEBUG] 15. Pre-rendering Dropdowns")
 task.defer(function()
     -- ✅ OPTIMIZATION: Removed arbitrary 0.7s delay (saves 700ms)
     while not DatabaseReady do task.wait(0.1) end
     
     -- ✅ LAZY LOADING: Wait 2s after GUI ready, then populate slowly
     task.wait(2)
-    print("🔄 [XZNE] Populating dropdowns in background...")
 
     local function SafeUpdate(element, db)
         if element then
@@ -362,7 +339,6 @@ task.defer(function()
         if #ItemDatabase > 0 then
             pcall(function() UIElements.BuyTargetItem:Select(ItemDatabase[1]) end)
             Controller.Config.BuyTarget = ItemDatabase[1]
-            print("[GUI] Default BuyTarget: " .. ItemDatabase[1])
         end
     end
     -- Apply Saved Selections
@@ -370,8 +346,6 @@ task.defer(function()
          local db = Controller.Config.BuyCategory == "Pet" and UIElements.BuyTargetPet or UIElements.BuyTargetItem
          if db and db.Select then pcall(function() db:Select(Controller.Config.BuyTarget) end) end
     end
-    
-    print("✅ [XZNE] All dropdowns populated!")
 end)
 
 -- Notify User
