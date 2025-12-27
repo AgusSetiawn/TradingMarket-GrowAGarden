@@ -194,18 +194,7 @@ local function AutoSave()
     pcall(function() myConfig:Save() end)
     pcall(function() Controller.UpdateCache() end)
 end
-    Title = "Open Hub",
-    Icon = "zap",  -- Matches the Window Icon
-    CornerRadius = UDim.new(0, 16),
-    StrokeThickness = 2,
-    Color = ColorSequence.new( -- Indigo to Purple Gradient matching theme
-        Color3.fromRGB(99, 102, 241), 
-        Color3.fromRGB(168, 85, 247) 
-    ),
-    OnlyMobile = false,
-    Enabled = true,
-    Draggable = true,
-})
+
 
 -- Add minimize toggle keybind (RightControl)
 local UserInputService = game:GetService("UserInputService")
