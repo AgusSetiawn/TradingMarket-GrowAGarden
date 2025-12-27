@@ -165,6 +165,22 @@ local Window = WindUI:CreateWindow({
 -- Store window reference for cleanup
 Controller.Window = Window
 
+-- [6] CONFIGURE OPEN BUTTON (Minimize State)
+-- Matches the "Premium" aesthetic requested
+Window:EditOpenButton({
+    Title = "Open Hub",
+    Icon = "zap",  -- Matches the Window Icon
+    CornerRadius = UDim.new(0, 16),
+    StrokeThickness = 2,
+    Color = ColorSequence.new( -- Indigo to Purple Gradient matching theme
+        Color3.fromRGB(99, 102, 241), 
+        Color3.fromRGB(168, 85, 247) 
+    ),
+    OnlyMobile = false,
+    Enabled = true,
+    Draggable = true,
+})
+
 -- Add minimize toggle keybind (RightControl)
 local UserInputService = game:GetService("UserInputService")
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -241,6 +257,21 @@ UIElements.TargetItem = TargetSection:Dropdown({
         Controller.Config.RemoveTarget = val
         Controller.Config.RemoveCategory = "Item"
         Controller.RequestUpdate()
+        Controller.SaveConfig()
+    end
+})
+
+UIElements.DelaySlider = TargetSection:Slider({
+    Title = "Action Delay",
+    Desc = "Wait time between actions (0-10s)",
+    Step = 0.1,
+    Value = {
+        Min = 0,
+        Max = 10,
+        Default = Controller.Config.Speed or 1,
+    },
+    Callback = function(val)
+        Controller.Config.Speed = val
         Controller.SaveConfig()
     end
 })

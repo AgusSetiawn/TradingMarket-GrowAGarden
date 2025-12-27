@@ -322,7 +322,9 @@ local function RunAutoBuy()
                             if owner then
                                 pcall(function() BuyListingRemote:InvokeServer(owner, listingUUID) end)
                                 Stats.SnipeCount = Stats.SnipeCount + 1
-                                task.wait(0.5)
+                                pcall(function() BuyListingRemote:InvokeServer(owner, listingUUID) end)
+                                Stats.SnipeCount = Stats.SnipeCount + 1
+                                task.wait(Config.Speed) -- Respect global speed setting
                             end
                         end
                     end
@@ -464,7 +466,7 @@ end
 
 -- [7] MAIN LOOP
 -- ✅ OPTIMIZATION: Defer start by 1s to let GUI render first
-local MIN_SPEED = 0.5  -- Safety: Never faster than 2 FPS impact
+local MIN_SPEED = 0  -- Safety: Allow 0s delay as requested (was 0.5)
 
 task.defer(function()
     task.wait(1)  -- Let GUI finish loading
