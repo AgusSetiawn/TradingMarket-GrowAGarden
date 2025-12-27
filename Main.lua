@@ -93,43 +93,10 @@ local Stats = Controller.Stats
 local ListingDebounce = {}
 local CachedTargets = { Buy = "", List = "", Remove = "" }
 
--- [CONFIG PERSISTENCE]
-local FileName = "XZNE ScriptHub/Config.json"
-local lastSaveTime = 0
+-- [CONFIG]
+-- Config is now handled by Gui.lua (WindUI ConfigManager)
+-- Passively holds state for logic to use.
 
-function Controller.SaveConfig()
-    if not HttpService then return end
-    
-    -- Debounce: Max 1 save per 2 seconds
-    local now = tick()
-    if now - lastSaveTime < 2 then return end
-    lastSaveTime = now
-    
-    -- Create config folder if not exists
-    if makefolder and not isfolder("XZNE ScriptHub") then
-        makefolder("XZNE ScriptHub")
-    end
-    
-    local success, json = pcall(function() return HttpService:JSONEncode(Config) end)
-    if success then
-        pcall(function() writefile(FileName, json) end)
-    end
-end
-
-function Controller.LoadConfig()
-    if not isfile or not isfile(FileName) then return end
-    local success, content = pcall(function() return readfile(FileName) end)
-    if success and content then
-        local decodedS, decoded = pcall(function() return HttpService:JSONDecode(content) end)
-        if decodedS and decoded then
-            for k, v in pairs(decoded) do
-                if Config[k] ~= nil then Config[k] = v end
-            end
-            -- Update dependent caches
-            Controller.UpdateCache() 
-        end
-    end
-end
 
 -- [3] REMOTES & HOOKS
 local TradeEvents = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("TradeEvents")
@@ -188,8 +155,8 @@ function Controller.UpdateCache()
 end
 Controller.UpdateCache() -- Init
 
--- Load saved config immediately after initialization
-Controller.LoadConfig()
+-- Init Cache
+Controller.UpdateCache()
 
 -- [PERFORMANCE] Caches
 local BoothCache = { booth = nil, time = 0 }
@@ -321,6 +288,8 @@ local function RunAutoBuy()
                             local owner = GetCachedPlayer(ownerId)
                             
                             if owner then
+                                pcall(function() BuyListingRemote:InvokeServer(owner, listingUUID) end)
+                                Stats.SnipeCount = Stats.SnipeCount + 1
                                 pcall(function() BuyListingRemote:InvokeServer(owner, listingUUID) end)
                                 Stats.SnipeCount = Stats.SnipeCount + 1
                                 task.wait(Config.Speed) -- Respect global speed setting

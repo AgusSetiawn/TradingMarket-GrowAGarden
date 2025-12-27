@@ -13,7 +13,16 @@ if not Controller then
     return
 end
 
--- [1] INSTANT LOADING FEEDBACK
+-- [1] CONFIG MANAGER SETUP
+local ConfigManager = WindUI.ConfigManager
+local myConfig = ConfigManager:CreateConfig("XZNE_Config")
+
+local function AutoSave()
+    pcall(function() myConfig:Save() end)
+    Controller.UpdateCache() -- Update Main.lua caches
+end
+
+-- [2] INSTANT LOADING FEEDBACK
 local function ShowEarlyNotification()
     local StarterGui = game:GetService("StarterGui")
     pcall(function()
@@ -138,13 +147,13 @@ end)
 -- [5] CREATE WINDOW (Premium Mac-Style Design)
 local Window = WindUI:CreateWindow({
     Title = "XZNE ScriptHub",
-    Icon = "rbxassetid://110223904365911",  -- Custom Logo (Fixed)
+    Icon = "zap",  -- Lightning bolt icon (from Lucide library)
     Author = "By. Xzero One",
     Size = UDim2.fromOffset(580, 460),  -- Optimal size
     
     -- Premium Settings
-    Transparency = 0.5,       -- Semi-transparent for Glass effect
-    Acrylic = true,           -- Attempting to use Library's built-in blur
+    Transparency = 0.5,       -- Higher transparency for glassmorphism effect
+    Acrylic = true,           -- Glassmorphism
     Theme = "Dark",
     NewElements = true,
     
@@ -164,10 +173,6 @@ local Window = WindUI:CreateWindow({
 })
 -- Store window reference for cleanup
 Controller.Window = Window
-
--- [7] CONFIG MANAGER SETUP
-local ConfigManager = Window.ConfigManager
-local MyConfig = ConfigManager:CreateConfig("XZNE_Config")
 
 -- [6] CONFIGURE OPEN BUTTON (Minimize State)
 -- Matches the "Premium" aesthetic requested
@@ -208,9 +213,16 @@ local MainTab = Window:Tab({
     IconColor = Color3.fromRGB(99, 102, 241),  -- Indigo
     IconShape = "Square",  -- Colored square wrapper
 })
+MainTab:Space() -- Spacing for better UI
+
+-- [SETTINGS TAB with Premium Icon]
+local SettingsTab = Window:Tab({ 
+    Title = "Settings", 
+    Icon = "settings",  -- Settings gear icon
     IconColor = Color3.fromRGB(251, 146, 60),  -- Orange
     IconShape = "Square",  -- Colored square wrapper
 })
+SettingsTab:Space() -- Spacing for better UI
 
 -- === TARGET SELECTION SECTION ===
 local TargetSection = MainTab:Section({ 
@@ -229,17 +241,13 @@ UIElements.TargetPet = TargetSection:Dropdown({
     Title = "Target Pet", 
     Desc = "🔍 Search pets...",
     Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
-    Flag = "TargetPet",
+    Flag = "BuyTarget", -- Binds to Config
     Callback = function(val) 
-        -- Update ALL configs to use this pet
         Controller.Config.BuyTarget = val
-        Controller.Config.BuyCategory = "Pet"
+        -- Sync other keys for logic compatibility
         Controller.Config.ListTarget = val
-        Controller.Config.ListCategory = "Pet"
         Controller.Config.RemoveTarget = val
-        Controller.Config.RemoveCategory = "Pet"
-        Controller.RequestUpdate()
-        Controller.SaveConfig()
+        AutoSave()
     end
 })
 
@@ -250,17 +258,13 @@ UIElements.TargetItem = TargetSection:Dropdown({
     Title = "Target Item", 
     Desc = "🔍 Search items...",
     Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
-    Flag = "TargetItem",
+    Flag = "BuyTargetItem", -- Separate flag for Item dropdown
     Callback = function(val) 
-        -- Update ALL configs to use this item
         Controller.Config.BuyTarget = val
-        Controller.Config.BuyCategory = "Item"
+        -- Sync other keys
         Controller.Config.ListTarget = val
-        Controller.Config.ListCategory = "Item"
         Controller.Config.RemoveTarget = val
-        Controller.Config.RemoveCategory = "Item"
-        Controller.RequestUpdate()
-        Controller.SaveConfig()
+        AutoSave()
     end
 })
 
@@ -268,17 +272,17 @@ TargetSection:Space() -- Break merge
 
 UIElements.DelaySlider = TargetSection:Slider({
     Title = "Action Delay",
-    Desc = "Action Delay (0–10s)",
+    Desc = "Wait time between actions (0-10s)",
     Step = 0.1,
     Value = {
         Min = 0,
         Max = 10,
         Default = Controller.Config.Speed or 1,
     },
-    Flag = "ActionDelay",
+    Flag = "Speed",
     Callback = function(val)
         Controller.Config.Speed = val
-        MyConfig:Save()
+        AutoSave()
     end
 })
 
@@ -290,20 +294,24 @@ local BuySection = MainTab:Section({ Title = "Auto Buy (Sniper)", Icon = "shoppi
 UIElements.MaxPrice = BuySection:Input({
     Title = "Max Price", Desc = "Maximum price to pay", Default = tostring(Controller.Config.MaxPrice), Numeric = true,
     Flag = "MaxPrice",
-    Callback = function(txt) Controller.Config.MaxPrice = tonumber(txt) or 5; MyConfig:Save() end
+    Callback = function(txt) 
+        Controller.Config.MaxPrice = tonumber(txt) or 5
+        AutoSave() 
+    end
 })
 
 UIElements.AutoBuy = BuySection:Toggle({
     Title = "Enable Auto Buy", Desc = "Snipe selected target", Default = false,
     Flag = "AutoBuy",
     Callback = function(val)
-        if val and (not Controller.Config.BuyTarget or Controller.Config.BuyTarget == "" or Controller.Config.BuyTarget == "— None —") then
-            UIElements.AutoBuy:Set(false)
-            warn("⚠️ [XZNE] Select a target first!")
-            return
+        -- Validation
+        if val and (UIElements.TargetPet.Value == "— None —" and UIElements.TargetItem.Value == "— None —") then
+             -- No visual feedback needed, just don't enable config logic
+             -- WindUI might toggle visually, but Logic won't run if we don't set Config
+             warn("⚠️ Select a target first!")
         end
         Controller.Config.AutoBuy = val
-        MyConfig:Save()
+        AutoSave()
     end
 })
 
@@ -314,21 +322,19 @@ local ListSection = MainTab:Section({ Title = "Auto List", Icon = "tag" })
 
 UIElements.Price = ListSection:Input({
     Title = "Listing Price", Desc = "Price per item", Default = tostring(Controller.Config.Price), Numeric = true,
-    Flag = "ListPrice",
-    Callback = function(txt) Controller.Config.Price = tonumber(txt) or 5; MyConfig:Save() end
+    Flag = "Price",
+    Callback = function(txt) 
+        Controller.Config.Price = tonumber(txt) or 5
+        AutoSave() 
+    end
 })
 
 UIElements.AutoList = ListSection:Toggle({
     Title = "Enable Auto List", Desc = "List selected target", Default = false,
     Flag = "AutoList",
     Callback = function(val)
-        if val and (not Controller.Config.ListTarget or Controller.Config.ListTarget == "" or Controller.Config.ListTarget == "— None —") then
-            UIElements.AutoList:Set(false)
-            warn("⚠️ [XZNE] Select a target first!")
-            return
-        end
         Controller.Config.AutoList = val
-        MyConfig:Save()
+        AutoSave()
     end
 })
 
@@ -341,13 +347,8 @@ UIElements.AutoClear = RemoveSection:Toggle({
     Title = "Enable Auto Remove", Desc = "Remove selected target", Default = false,
     Flag = "AutoClear",
     Callback = function(val)
-        if val and (not Controller.Config.RemoveTarget or Controller.Config.RemoveTarget == "" or Controller.Config.RemoveTarget == "— None —") then
-            UIElements.AutoClear:Set(false)
-            warn("⚠️ [XZNE] Select a target first!")
-            return
-        end
         Controller.Config.AutoClear = val
-        MyConfig:Save()
+        AutoSave()
     end
 })
 
@@ -361,7 +362,7 @@ UIElements.AutoClaim = BoothSection:Toggle({
     Flag = "AutoClaim",
     Callback = function(val)
         Controller.Config.AutoClaim = val
-        MyConfig:Save()
+        AutoSave()
     end
 })
 
@@ -396,25 +397,21 @@ task.defer(function()
     SafeUpdate(UIElements.TargetItem, ItemDatabase)
     
     -- Apply saved selections (only if valid and not None)
-    if Controller.Config.BuyTarget and Controller.Config.BuyTarget ~= "" and Controller.Config.BuyTarget ~= "— None —" then
-        local db = Controller.Config.BuyCategory == "Pet" and UIElements.TargetPet or UIElements.TargetItem
-        if db and db.Select then 
-            task.defer(function()
-                pcall(function() db:Select(Controller.Config.BuyTarget) end)
-            end)
-        end
-    end
-    
-    -- [8] AUTO LOAD CONFIG
-    -- Must be done after dropdowns are populated to valid values
+    -- LOAD CONFIG NOW (After dropdowns are populated)
     task.wait(0.2)
     pcall(function()
-        MyConfig:Load() 
-        print("✅ [XZNE] Config Loaded via ConfigManager")
+        myConfig:Load()
+        print("✅ [XZNE] Config Loaded!")
+        
+        -- Sync Loaded Logic to Main Loop immediately
+        Controller.UpdateCache()
+        
+        -- Restore special logic for targets
+        if UIElements.TargetPet.Value ~= "— None —" then Controller.Config.BuyTarget = UIElements.TargetPet.Value end
+        if UIElements.TargetItem.Value ~= "— None —" then Controller.Config.BuyTarget = UIElements.TargetItem.Value end
     end)
+    
 end)
-
-
 
 -- Stats Section (in Settings Tab)
 local StatsSection = SettingsTab:Section({ Title = "📊 Session Statistics" })
@@ -442,6 +439,7 @@ end)
 
 
 -- Notify User
+Controller.Window = Window
 print("✅ [XZNE] GUI Loaded Successfully!")
 WindUI:Notify({
     Title = "XZNE ScriptHub Loaded",
