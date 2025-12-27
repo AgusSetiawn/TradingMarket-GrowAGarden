@@ -153,12 +153,12 @@ end)
 -- [5] CREATE WINDOW (Premium Mac-Style Design)
 local Window = WindUI:CreateWindow({
     Title = "XZNE ScriptHub",
-    Icon = "rbxassetid://110223904365911",  -- Custom logo (direct asset)
+    Icon = "zap",  -- Lightning bolt icon (from Lucide library)
     Author = "By. Xzero One",
     Size = UDim2.fromOffset(580, 460),  -- Optimal size
     
     -- Premium Settings
-    Transparency = 0.25,       -- Very transparent for glass
+    Transparency = 0.5,       -- Higher transparency for glassmorphism effect
     Acrylic = true,           -- Glassmorphism
     Theme = "Dark",
     NewElements = true,
@@ -185,8 +185,10 @@ local UserInputService = game:GetService("UserInputService")
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not gameProcessed and input.KeyCode == Enum.KeyCode.RightControl then
         pcall(function()
-            if Window and Window.Enabled ~= nil then
-                Window.Enabled = not Window.Enabled
+            if Window and Window.ToggleVisibility then
+                Window:ToggleVisibility()
+            elseif Window and Window.Visible ~= nil then
+                Window.Visible = not Window.Visible
             end
         end)
     end
@@ -197,15 +199,17 @@ local UIElements = {}
 -- [MAIN TAB with Premium Icon]
 local MainTab = Window:Tab({ 
     Title = "Trading", 
-    Icon = "rbxassetid://10734884548",  -- Target icon
-    Color = Color3.fromRGB(99, 102, 241)  -- Indigo
+    Icon = "target",  -- Target/Crosshair icon
+    IconColor = Color3.fromRGB(99, 102, 241),  -- Indigo
+    IconShape = "Square",  -- Colored square wrapper
 })
 
 -- [SETTINGS TAB with Premium Icon]
 local SettingsTab = Window:Tab({ 
     Title = "Settings", 
-    Icon = "rbxassetid://10734950309",  -- Settings icon
-    Color = Color3.fromRGB(251, 146, 60)  -- Orange
+    Icon = "settings",  -- Settings gear icon
+    IconColor = Color3.fromRGB(251, 146, 60),  -- Orange
+    IconShape = "Square",  -- Colored square wrapper
 })
 
 -- === TARGET SELECTION SECTION ===
@@ -391,10 +395,7 @@ task.defer(function()
     end)
 end)
 
--- Settings Tab
-local SettingsTab = Window:Tab({ Title = "Settings", Icon = "xzne:settings" })
-
--- Stats
+-- Stats Section (in Settings Tab)
 local StatsSection = SettingsTab:Section({ Title = "📊 Session Statistics" })
 local StatsParagraph = StatsSection:Paragraph({
     Title = "Performance Metrics",
