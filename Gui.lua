@@ -437,32 +437,47 @@ task.defer(function()
         if LoadFromJSON() then
             print("✅ [XZNE] Config Loaded from Custom Path!")
             
-            -- [CONFIG MAPPING] 
-            -- Explicitly map Config keys to UI Elements for reliability
-            local ConfigMap = {
-                Speed = UIElements.DelaySlider,
-                MaxPrice = UIElements.MaxPrice,
+            -- [CONFIG LOAD VISUALS]
+            print("✅ [XZNE] Applying Config to UI...")
+            
+            -- 1. Sliders (Try SetValue first, then Set)
+            if Controller.Config.Speed then 
+                pcall(function() UIElements.DelaySlider:SetValue(Controller.Config.Speed) end) 
+            end
+
+            -- 2. Toggles (Set)
+            local toggles = {
                 AutoBuy = UIElements.AutoBuy,
-                Price = UIElements.Price,
                 AutoList = UIElements.AutoList,
                 AutoClear = UIElements.AutoClear,
                 AutoClaim = UIElements.AutoClaim
-                -- Targets handled separately below
             }
-            
-            -- Apply Simple Values
-            for key, element in pairs(ConfigMap) do
-                 if Controller.Config[key] ~= nil then
-                     pcall(function() element:Set(Controller.Config[key]) end)
-                 end
+            for key, toggle in pairs(toggles) do
+                if Controller.Config[key] ~= nil then
+                    -- Ensure we pass a boolean
+                    local state = Controller.Config[key] == true
+                    pcall(function() toggle:Set(state) end)
+                end
+            end
+
+            -- 3. Inputs (Set) - User confirmed these work
+            if Controller.Config.MaxPrice then 
+                pcall(function() UIElements.MaxPrice:Set(Controller.Config.MaxPrice) end)
+            end
+            if Controller.Config.Price then 
+                 pcall(function() UIElements.Price:Set(Controller.Config.Price) end)
             end
             
-            -- Apply Targets (Handling Shared Logic)
+            -- 4. Dropdowns (Select) - Critical Fix
             local savedTarget = Controller.Config.BuyTarget
             if savedTarget and savedTarget ~= "— None —" then
-                -- Try setting both; WindUI usually ignores if value not in dropdown
-                pcall(function() UIElements.TargetPet:Set(savedTarget) end)
-                pcall(function() UIElements.TargetItem:Set(savedTarget) end)
+                -- Try selecting in BOTH. One will fail (silent), one will succeed.
+                task.spawn(function()
+                    pcall(function() UIElements.TargetPet:Select(savedTarget) end)
+                end)
+                task.spawn(function()
+                    pcall(function() UIElements.TargetItem:Select(savedTarget) end)
+                end)
             end
             
         else
