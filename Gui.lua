@@ -437,20 +437,36 @@ task.defer(function()
         if LoadFromJSON() then
             print("✅ [XZNE] Config Loaded from Custom Path!")
             
-            -- Apply Values to UI Elements
-            -- Map Config Keys to UI Elements via 'Flag' property we set earlier
-            for _, pc in pairs(UIElements) do
-                if pc.Flag and Controller.Config[pc.Flag] ~= nil then
-                    pcall(function() pc:Set(Controller.Config[pc.Flag]) end)
-                end
+            -- [CONFIG MAPPING] 
+            -- Explicitly map Config keys to UI Elements for reliability
+            local ConfigMap = {
+                Speed = UIElements.DelaySlider,
+                MaxPrice = UIElements.MaxPrice,
+                AutoBuy = UIElements.AutoBuy,
+                Price = UIElements.Price,
+                AutoList = UIElements.AutoList,
+                AutoClear = UIElements.AutoClear,
+                AutoClaim = UIElements.AutoClaim
+                -- Targets handled separately below
+            }
+            
+            -- Apply Simple Values
+            for key, element in pairs(ConfigMap) do
+                 if Controller.Config[key] ~= nil then
+                     pcall(function() element:Set(Controller.Config[key]) end)
+                 end
             end
             
-            -- Restore special logic for targets (Consistency)
-            if UIElements.TargetPet.Value ~= "— None —" and UIElements.TargetPet.Value == Controller.Config.BuyTarget then
-                -- Already set by pc:Set above
-            elseif UIElements.TargetItem.Value ~= "— None —" and UIElements.TargetItem.Value == Controller.Config.BuyTarget then
-                -- Already set
+            -- Apply Targets (Handling Shared Logic)
+            local savedTarget = Controller.Config.BuyTarget
+            if savedTarget and savedTarget ~= "— None —" then
+                -- Try setting both; WindUI usually ignores if value not in dropdown
+                pcall(function() UIElements.TargetPet:Set(savedTarget) end)
+                pcall(function() UIElements.TargetItem:Set(savedTarget) end)
             end
+            
+        else
+             warn("⚠️ [XZNE] No config file found or load failed.")
         end
     end)
     
