@@ -25,4 +25,4 @@ data = {
 with open('Database.json', 'w', encoding='utf-8') as f:
     json.dump(data, f, ensure_ascii=False)
 
-print(f"✅ Generated Database.json: {len(pets)} pets + {len(items)} items = {len(pets)+len(items)} total")
+print(f"Generated Database.json: {len(pets)} pets + {len(items)} items = {len(pets)+len(items)} total")
