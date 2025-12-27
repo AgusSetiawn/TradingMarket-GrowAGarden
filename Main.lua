@@ -323,8 +323,6 @@ local function RunAutoBuy()
                             if owner then
                                 pcall(function() BuyListingRemote:InvokeServer(owner, listingUUID) end)
                                 Stats.SnipeCount = Stats.SnipeCount + 1
-                                pcall(function() BuyListingRemote:InvokeServer(owner, listingUUID) end)
-                                Stats.SnipeCount = Stats.SnipeCount + 1
                                 task.wait(Config.Speed) -- Respect global speed setting
                             end
                         end
