@@ -51,6 +51,45 @@ do
     end
 end
 
+-- [3] CONFIGURATION SYSTEM (Custom Path)
+-- Satisfies request: "XZNE ScriptHub/Config.json"
+local ConfigFile = "XZNE ScriptHub/Config.json"
+
+local function SaveToJSON()
+    if not isfolder("XZNE ScriptHub") then makefolder("XZNE ScriptHub") end
+    
+    local success, json = pcall(function()
+        return HttpService:JSONEncode(Controller.Config)
+    end)
+    
+    if success then
+        writefile(ConfigFile, json)
+    end
+end
+
+local function AutoSave()
+    pcall(SaveToJSON)
+    pcall(function() Controller.UpdateCache() end)
+end
+
+-- Load Logic (Passive)
+local function LoadFromJSON()
+    if isfile(ConfigFile) then
+        local success, result = pcall(readfile, ConfigFile)
+        if success and result then
+            local decoded = HttpService:JSONDecode(result)
+            if decoded then
+                for k,v in pairs(decoded) do
+                    Controller.Config[k] = v
+                end
+                Controller.UpdateCache()
+                return true
+            end
+        end
+    end
+    return false
+end
+
 -- [3] ICONS
 -- Using WindUI Native Lucide Icons for better consistency and "Geist" feel.
 -- No custom registration needed.
@@ -392,16 +431,27 @@ task.defer(function()
     -- Apply saved selections (only if valid and not None)
     -- LOAD CONFIG NOW (After dropdowns are populated)
     task.wait(0.2)
+    -- LOAD CONFIG NOW (After dropdowns are populated)
+    task.wait(0.2)
     pcall(function()
-        myConfig:Load()
-        print("✅ [XZNE] Config Loaded!")
-        
-        -- Sync Loaded Logic to Main Loop immediately
-        Controller.UpdateCache()
-        
-        -- Restore special logic for targets
-        if UIElements.TargetPet.Value ~= "— None —" then Controller.Config.BuyTarget = UIElements.TargetPet.Value end
-        if UIElements.TargetItem.Value ~= "— None —" then Controller.Config.BuyTarget = UIElements.TargetItem.Value end
+        if LoadFromJSON() then
+            print("✅ [XZNE] Config Loaded from Custom Path!")
+            
+            -- Apply Values to UI Elements
+            -- Map Config Keys to UI Elements via 'Flag' property we set earlier
+            for _, pc in pairs(UIElements) do
+                if pc.Flag and Controller.Config[pc.Flag] ~= nil then
+                    pcall(function() pc:Set(Controller.Config[pc.Flag]) end)
+                end
+            end
+            
+            -- Restore special logic for targets (Consistency)
+            if UIElements.TargetPet.Value ~= "— None —" and UIElements.TargetPet.Value == Controller.Config.BuyTarget then
+                -- Already set by pc:Set above
+            elseif UIElements.TargetItem.Value ~= "— None —" and UIElements.TargetItem.Value == Controller.Config.BuyTarget then
+                -- Already set
+            end
+        end
     end)
     
 end)
