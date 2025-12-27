@@ -53,6 +53,7 @@ end
 
 -- [3] CONFIGURATION SYSTEM (Custom Path)
 -- Satisfies request: "XZNE ScriptHub/Config.json"
+local HttpService = game:GetService("HttpService")
 local ConfigFile = "XZNE ScriptHub/Config.json"
 
 local function SaveToJSON()
@@ -95,7 +96,6 @@ end
 -- No custom registration needed.
 
 -- [4] LOAD DATABASES (DEFERRED for faster GUI appearance)
-local HttpService = game:GetService("HttpService")
 local PetDatabase, ItemDatabase = {}, {}
 local DatabaseReady = false
 
