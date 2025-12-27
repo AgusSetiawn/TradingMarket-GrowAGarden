@@ -190,7 +190,7 @@ TargetSection:Divider()
 UIElements.TargetPet = TargetSection:Dropdown({
     Title = "Target Pet", 
     Desc = "🔍 Search pets...",
-    Values = {"— None —"}, Default = 1, Search = true,
+    Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
     Callback = function(val) 
         -- Update ALL configs to use this pet
         Controller.Config.BuyTarget = val
@@ -208,7 +208,7 @@ UIElements.TargetPet = TargetSection:Dropdown({
 UIElements.TargetItem = TargetSection:Dropdown({
     Title = "Target Item", 
     Desc = "🔍 Search items...",
-    Values = {"— None —"}, Default = 1, Search = true,
+    Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
     Callback = function(val) 
         -- Update ALL configs to use this item
         Controller.Config.BuyTarget = val
