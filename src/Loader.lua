@@ -19,7 +19,17 @@ local function LoadScript(Script)
     -- Cache Busting: ?t=os.time() forces fresh download every execution
     local Success, Result = pcall(function()
         local Content = game:HttpGet(Repo .. Script .. "?t=" .. tostring(os.time()))
-        if not Content then return nil, "HTTP 404/Empty" end
+        
+        -- CRITICAL: Validate content before loadstring
+        if not Content or #Content < 50 then 
+            return nil, "HTTP Error: Empty or invalid content (got " .. #(Content or "") .. " bytes)"
+        end
+        
+        -- Check if content looks like valid Lua (starts with -- or local or function)
+        local firstLine = string.match(Content, "^([^\n]+)")
+        if not firstLine or (#firstLine > 0 and not string.match(firstLine, "^%-%-") and not string.match(firstLine, "^%s*local") and not string.match(firstLine, "^%s*function")) then
+            warn("⚠️ [XZNE DEBUG] Suspicious content for " .. Script .. ": " .. tostring(firstLine))
+        end
         
         local Func, SyntaxErr = loadstring(Content)
         if not Func then
@@ -31,11 +41,20 @@ local function LoadScript(Script)
     
     if not Success or Result == nil then
         warn("❌ [XZNE] Failed to load " .. Script .. ": " .. tostring(Result))
+        return false
     end
+    
+    return true
 end
 
 -- 1. Load Logic
-LoadScript("src/Main.lua")
+local mainLoaded = LoadScript("src/Main.lua")
+
+if not mainLoaded then
+    warn("❌ [XZNE] Failed to load Main.lua! Check GitHub repo structure.")
+    _G.XZNE_EXECUTING = false
+    return
+end
 
 -- 2. Wait for Controller (Safety Check)
 local Timeout = 0
