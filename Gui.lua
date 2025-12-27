@@ -143,8 +143,8 @@ local Window = WindUI:CreateWindow({
     Size = UDim2.fromOffset(580, 460),  -- Optimal size
     
     -- Premium Settings
-    Transparency = 0.5,       -- Higher transparency for glassmorphism effect
-    Acrylic = true,           -- Glassmorphism
+    Transparency = 0.3,       -- Dark Glassy look
+    Acrylic = false,          -- Disabled (Broken/Unsupported)
     Theme = "Dark",
     NewElements = true,
     
@@ -164,6 +164,18 @@ local Window = WindUI:CreateWindow({
 })
 -- Store window reference for cleanup
 Controller.Window = Window
+
+-- [CUSTOM BLUR FIX]
+-- Since WindUI Acrylic is broken, we use native Lighting Blur
+local Blur = Instance.new("BlurEffect")
+Blur.Name = "XZNE_Blur"
+Blur.Size = 24 -- Medium blur for premium feel
+Blur.Parent = game:GetService("Lighting")
+Blur.Enabled = true -- Default on
+
+-- Cleanup blur on script end
+if _G.XZNE_Blur and _G.XZNE_Blur ~= Blur then _G.XZNE_Blur:Destroy() end
+_G.XZNE_Blur = Blur -- Store global to clear later if needed
 
 -- [6] CONFIGURE OPEN BUTTON (Minimize State)
 -- Matches the "Premium" aesthetic requested
@@ -188,8 +200,13 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         pcall(function()
             if Window and Window.ToggleVisibility then
                 Window:ToggleVisibility()
+                -- Toggle Blur with Window
+                if Window.Visible ~= nil then
+                    Blur.Enabled = Window.Visible
+                end
             elseif Window and Window.Visible ~= nil then
                 Window.Visible = not Window.Visible
+                Blur.Enabled = Window.Visible
             end
         end)
     end
