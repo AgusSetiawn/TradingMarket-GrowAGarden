@@ -53,11 +53,13 @@ end
 
 -- [3] CONFIGURATION SYSTEM -> Moved to after Window creation
 
+
 -- [3] ICONS
 -- Using WindUI Native Lucide Icons for better consistency and "Geist" feel.
 -- No custom registration needed.
 
 -- [4] LOAD DATABASES (DEFERRED for faster GUI appearance)
+local HttpService = game:GetService("HttpService")  -- Needed for JSON decode
 local PetDatabase, ItemDatabase = {}, {}
 local DatabaseReady = false
 
@@ -141,7 +143,7 @@ end)
 -- [5] CREATE WINDOW (Premium Mac-Style Design)
 local Window = WindUI:CreateWindow({
     Title = "XZNE ScriptHub",
-    Icon = "zap",  -- Lightning bolt icon (from Lucide library)
+    Icon = "rbxassetid://123378346805284", -- Lightning bolt icon (from Lucide library)
     Author = "By. Xzero One",
     Size = UDim2.fromOffset(580, 460),  -- Optimal size
     
@@ -194,7 +196,6 @@ local function AutoSave()
     pcall(function() myConfig:Save() end)
     pcall(function() Controller.UpdateCache() end)
 end
-
 
 -- Add minimize toggle keybind (RightControl)
 local UserInputService = game:GetService("UserInputService")
