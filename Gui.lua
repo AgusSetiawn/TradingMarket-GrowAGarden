@@ -51,14 +51,7 @@ do
     end
 end
 
--- [3] CONFIGURATION SYSTEM (WindUI Native)
-local ConfigManager = WindUI.ConfigManager
-local myConfig = ConfigManager:CreateConfig("XZNE_Config")
-
-local function AutoSave()
-    pcall(function() myConfig:Save() end)
-    pcall(function() Controller.UpdateCache() end)
-end
+-- [3] CONFIGURATION SYSTEM -> Moved to after Window creation
 
 -- [3] ICONS
 -- Using WindUI Native Lucide Icons for better consistency and "Geist" feel.
@@ -178,6 +171,29 @@ Controller.Window = Window
 -- [6] CONFIGURE OPEN BUTTON (Minimize State)
 -- Matches the "Premium" aesthetic requested
 Window:EditOpenButton({
+    Title = "Open Script",
+    Icon = "zap",
+    CornerRadius = UDim.new(0, 10),
+    Stroke = {
+        Thickness = 2,
+        Color = Color3.fromRGB(100, 100, 255),
+        Transparency = 0.5
+    },
+    Color = {
+        Color3.fromRGB(20, 20, 30),
+        Color3.fromRGB(40, 40, 60) 
+    },
+    Shadow = true
+})
+
+-- [3] CONFIGURATION SYSTEM (Correctly placed after Window creation)
+local ConfigManager = Window.ConfigManager -- Accessed from the Window instance!
+local myConfig = ConfigManager:CreateConfig("XZNE_Config")
+
+local function AutoSave()
+    pcall(function() myConfig:Save() end)
+    pcall(function() Controller.UpdateCache() end)
+end
     Title = "Open Hub",
     Icon = "zap",  -- Matches the Window Icon
     CornerRadius = UDim.new(0, 16),
