@@ -235,8 +235,8 @@ UIElements.AutoList = ListSection:Toggle({
     Callback = function(val) Controller.Config.AutoList = val; Controller.SaveConfig() end
 })
 
--- == REMOVE LIST (Clear) ==
-print("🔍 [XZNE DEBUG] 12. Creating Remove List Only")
+-- [REMOVE TAB]
+local RemoveTab = Window:Tab({ Title = "Remove", Icon = "xzne:trash-2" })
 local ClearSection = InvTab:Section({ Title = "Remove List" })
 
 ClearSection:Paragraph({
@@ -299,54 +299,84 @@ task.spawn(function()
     end
 end)
 
--- [GUI POPULATION]
-task.defer(function()
-    -- ✅ OPTIMIZATION: Removed arbitrary 0.7s delay (saves 700ms)
-    while not DatabaseReady do task.wait(0.1) end
-    
-    -- ✅ LAZY LOADING: Wait 2s after GUI ready, then populate slowly
-    task.wait(2)
+-- [GUI POPULATION - TAB-BASED LAZY LOADING]
+-- Track which tabs have been populated
+local dropdownsPopulated = {
+    Sniper = false,
+    Inventory = false,
+    Remove = false
+}
 
-    local function SafeUpdate(element, db)
-        if element then
-            element.Values = db
-            element.Desc = "🔍 Search "..#db.." items..."
-            if element.Refresh then pcall(function() element:Refresh(db) end) end
-        end
+-- Helper function to populate dropdowns
+local function SafeUpdate(element, db)
+    if element then
+        element.Values = db
+        element.Desc = "🔍 Search "..#db.." items..."
+        if element.Refresh then pcall(function() element:Refresh(db) end) end
+    end
+end
+
+-- Function to populate specific tab's dropdowns
+local function PopulateTabDropdowns(tabName)
+    if dropdownsPopulated[tabName] then 
+        return -- Already populated
     end
     
-    -- ✅ PROGRESSIVE LOADING: Populate in background, 1s between each
-    SafeUpdate(UIElements.BuyTargetPet, PetDatabase)
-    task.wait(1)  -- Progressive: 1s delay (user can interact with GUI)
+    -- Wait for database if not ready yet
+    while not DatabaseReady do task.wait(0.1) end
     
-    SafeUpdate(UIElements.BuyTargetItem, ItemDatabase)
-    task.wait(1)
+    if tabName == "Sniper" then
+        SafeUpdate(UIElements.BuyTargetPet, PetDatabase)
+        task.wait(0.05) -- Small delay between dropdowns
+        SafeUpdate(UIElements.BuyTargetItem, ItemDatabase)
+        dropdownsPopulated.Sniper = true
+        
+    elseif tabName == "Inventory" then
+        SafeUpdate(UIElements.ListTargetPet, PetDatabase)
+        task.wait(0.05)
+        SafeUpdate(UIElements.ListTargetItem, ItemDatabase)
+        dropdownsPopulated.Inventory = true
+        
+    elseif tabName == "Remove" then
+        SafeUpdate(UIElements.RemoveTargetPet, PetDatabase)
+        task.wait(0.05)
+        SafeUpdate(UIElements.RemoveTargetItem, ItemDatabase)
+        dropdownsPopulated.Remove = true
+    end
     
-    SafeUpdate(UIElements.ListTargetPet, PetDatabase)
-    task.wait(1)
+    -- Apply saved selections after populating
+    if Controller.Config.BuyTarget and tabName == "Sniper" then
+        local db = Controller.Config.BuyCategory == "Pet" and UIElements.BuyTargetPet or UIElements.BuyTargetItem
+        if db and db.Select then 
+            task.defer(function()
+                pcall(function() db:Select(Controller.Config.BuyTarget) end)
+            end)
+        end
+    end
+end
+
+-- Populate default tab (Sniper) on startup
+task.defer(function()
+    task.wait(2) -- Wait for GUI to be fully ready
+    PopulateTabDropdowns("Sniper") -- Load only first tab
     
-    SafeUpdate(UIElements.ListTargetItem, ItemDatabase)
-    task.wait(1)
-    
-    SafeUpdate(UIElements.RemoveTargetPet, PetDatabase)
-    task.wait(1)
-    
-    SafeUpdate(UIElements.RemoveTargetItem, ItemDatabase)
-    task.wait(0.5)  -- Final dropdown
-    
-    -- Default Selections (Fix empty targets)
+    -- Set default selection if empty
     if not Controller.Config.BuyTarget or Controller.Config.BuyTarget == "" then
         if #ItemDatabase > 0 then
             pcall(function() UIElements.BuyTargetItem:Select(ItemDatabase[1]) end)
             Controller.Config.BuyTarget = ItemDatabase[1]
         end
     end
-    -- Apply Saved Selections
-    if Controller.Config.BuyTarget then
-         local db = Controller.Config.BuyCategory == "Pet" and UIElements.BuyTargetPet or UIElements.BuyTargetItem
-         if db and db.Select then pcall(function() db:Select(Controller.Config.BuyTarget) end) end
-    end
 end)
+
+-- Hook tab change events for lazy loading
+pcall(function()
+    -- WindUI tab switching - load dropdowns when tab is activated
+    SniperTab.OnTabChanged = function() task.defer(function() PopulateTabDropdowns("Sniper") end) end
+    InvTab.OnTabChanged = function() task.defer(function() PopulateTabDropdowns("Inventory") end) end
+    RemoveTab.OnTabChanged = function() task.defer(function() PopulateTabDropdowns("Remove") end) end
+end)
+
 
 -- Notify User
 Controller.Window = Window
