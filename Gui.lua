@@ -440,12 +440,15 @@ task.defer(function()
             -- [CONFIG LOAD VISUALS]
             print("✅ [XZNE] Applying Config to UI...")
             
-            -- 1. Sliders (Try SetValue first, then Set)
-            if Controller.Config.Speed then 
-                pcall(function() UIElements.DelaySlider:SetValue(Controller.Config.Speed) end) 
+            -- [CONFIG LOAD VISUALS]
+            print("✅ [XZNE] Applying Config to UI...")
+            
+            -- 1. Sliders (Use :Set, verified in WindUI source)
+            if Controller.Config.Speed and UIElements.DelaySlider then 
+                pcall(function() UIElements.DelaySlider:Set(tonumber(Controller.Config.Speed) or 1) end) 
             end
 
-            -- 2. Toggles (Set)
+            -- 2. Toggles (Use :Set, verified in WindUI source)
             local toggles = {
                 AutoBuy = UIElements.AutoBuy,
                 AutoList = UIElements.AutoList,
@@ -454,28 +457,26 @@ task.defer(function()
             }
             for key, toggle in pairs(toggles) do
                 if Controller.Config[key] ~= nil then
-                    -- Ensure we pass a boolean
-                    local state = Controller.Config[key] == true
+                    -- Force boolean
+                    local state = (Controller.Config[key] == true)
                     pcall(function() toggle:Set(state) end)
                 end
             end
 
-            -- 3. Inputs (Set) - User confirmed these work
+            -- 3. Inputs (Use :Set, known working)
             if Controller.Config.MaxPrice then 
-                pcall(function() UIElements.MaxPrice:Set(Controller.Config.MaxPrice) end)
+                pcall(function() UIElements.MaxPrice:Set(tostring(Controller.Config.MaxPrice)) end)
             end
             if Controller.Config.Price then 
-                 pcall(function() UIElements.Price:Set(Controller.Config.Price) end)
+                 pcall(function() UIElements.Price:Set(tostring(Controller.Config.Price)) end)
             end
             
-            -- 4. Dropdowns (Select) - Critical Fix
+            -- 4. Dropdowns (Use :Select, verified in WindUI source)
             local savedTarget = Controller.Config.BuyTarget
             if savedTarget and savedTarget ~= "— None —" then
-                -- Try selecting in BOTH. One will fail (silent), one will succeed.
-                task.spawn(function()
+                task.defer(function()
+                    -- Try selecting in BOTH (One will succeed if item exists)
                     pcall(function() UIElements.TargetPet:Select(savedTarget) end)
-                end)
-                task.spawn(function()
                     pcall(function() UIElements.TargetItem:Select(savedTarget) end)
                 end)
             end
