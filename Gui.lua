@@ -152,7 +152,7 @@ end)
 -- [5] CREATE WINDOW (Premium Glassmorphism Style)
 local Window = WindUI:CreateWindow({
     Title = "XZNE ScriptHub",
-    Icon = "xzne:target",
+    Icon = "rbxassetid://110223904365911",
     Author = "By. Xzero One",
     -- Folder = "XZNE_Config",  -- ❌ REMOVED: Caused dual state system (WindUI state vs our JSON)
     Transparency = 0.45,       -- 0.45 = Ideal Glass Effect
