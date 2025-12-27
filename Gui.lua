@@ -421,32 +421,7 @@ task.defer(function()
     end)
 end)
 
--- === UI SETTINGS SECTION ===
-local UISection = SettingsTab:Section({ Title = "UI Customization", Icon = "palette" })
 
-UISection:Slider({
-    Title = "Window Transparency",
-    Desc = "Adjust background opacity (0.1 - 1)",
-    Step = 0.05,
-    Value = {
-        Min = 0.1,
-        Max = 1,
-        Default = Controller.Config.Transparency or 0.5,
-    },
-    Flag = "Transparency",
-    Callback = function(val)
-        Controller.Config.Transparency = val
-        MyConfig:Save()
-        -- Attempt to apply dynamically
-        if Window and Window.SetTransparency then
-            Window:SetTransparency(val)
-        elseif Window and Window.Frame then
-            Window.Frame.BackgroundTransparency = val
-        end
-    end
-})
-
-UISection:Space()
 
 -- Stats Section (in Settings Tab)
 local StatsSection = SettingsTab:Section({ Title = "📊 Session Statistics" })
