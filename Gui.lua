@@ -13,14 +13,7 @@ if not Controller then
     return
 end
 
--- [1] CONFIG MANAGER SETUP
-local ConfigManager = WindUI.ConfigManager
-local myConfig = ConfigManager:CreateConfig("XZNE_Config")
-
-local function AutoSave()
-    pcall(function() myConfig:Save() end)
-    Controller.UpdateCache() -- Update Main.lua caches
-end
+-- [1] INSTANT LOADING FEEDBACK (Moved up)
 
 -- [2] INSTANT LOADING FEEDBACK
 local function ShowEarlyNotification()
