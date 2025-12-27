@@ -35,7 +35,7 @@ local function LoadScript(Script)
 end
 
 -- 1. Load Logic
-LoadScript("Main.lua")
+LoadScript("src/Main.lua")
 
 -- 2. Wait for Controller (Safety Check)
 local Timeout = 0
@@ -51,7 +51,7 @@ if not _G.XZNE_Controller then
 end
 
 -- 3. Load GUI (Clean Modular Load)
-LoadScript("Gui.lua")
+LoadScript("src/Gui.lua")
 
 -- [CRITICAL] Release execution lock after successful load
 task.defer(function()

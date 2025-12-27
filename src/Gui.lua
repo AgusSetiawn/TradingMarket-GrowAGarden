@@ -73,10 +73,15 @@ local PetDatabase, ItemDatabase = {}, {}
 local DatabaseReady = false
 
 -- ✅ OPTIMIZATION: JSON Database with Local Caching
-local CachedDBFile = "XZNE_Database.json"
+local CachedDBFile = ".xzne/XZNE_Database.json"
 
 task.defer(function()
     task.wait(0.3)  -- Let GUI render first
+    
+    -- Create config folder if not exists
+    if makefolder and not isfolder(".xzne") then
+        makefolder(".xzne")
+    end
     
     -- Try loading from local cache first (INSTANT if cached)
     if isfile and isfile(CachedDBFile) then
@@ -103,7 +108,7 @@ task.defer(function()
     
     -- Try JSON first (50% faster than Lua)
     local success, content = pcall(function()
-        return game:HttpGet(Repo .. "Database.json")
+        return game:HttpGet(Repo .. "data/Database.json")
     end)
     
     if success and content and #content > 100 then
@@ -129,7 +134,7 @@ task.defer(function()
     
     -- Last resort: Try Lua format (backward compatibility)
     local luaSuccess, luaResult = pcall(function()
-        return loadstring(game:HttpGet(Repo .. "Database.lua"))()
+        return loadstring(game:HttpGet(Repo .. "data/Database.lua"))()
     end)
     
     if luaSuccess and luaResult then
@@ -168,62 +173,73 @@ Controller.Window = Window
 
 local UIElements = {}
 
--- [6] CREATE TABS & UI ELEMENTS
-local SniperTab = Window:Tab({ Title = "Sniper", Icon = "xzne:target" })
-local SniperSection = SniperTab:Section({ Title = "Auto Buy Configuration" })
+-- [SINGLE MAIN TAB - ULTRA SIMPLIFIED]
+local MainTab = Window:Tab({ Title = "Main", Icon = "xzne:target" })
 
-SniperSection:Paragraph({
+-- === SHARED TARGET SELECTION ===
+local TargetSection = MainTab:Section({ Title = "🎯 Target Selection", Icon = "crosshair" })
+
+TargetSection:Paragraph({
     Title = "💡 Quick Guide",
-    Desc = "Select target. Set max price. Enable Auto Buy."
+    Desc = "Select your target Pet or Item below. Then enable which function you want to use (Buy/List/Remove)."
 })
-SniperSection:Divider()
+TargetSection:Divider()
 
--- Dropdowns
-UIElements.BuyTargetPet = SniperSection:Dropdown({
+-- SHARED Pet Dropdown (used by ALL functions)
+UIElements.TargetPet = TargetSection:Dropdown({
     Title = "Target Pet", 
-    Desc = "🔍 Search pets...",
+    Desc = "🔍 Search 277 pets...",
     Values = {}, Default = 1, Search = true,
-    Callback = function(val) Controller.Config.BuyTarget = val; Controller.Config.BuyCategory = "Pet"; Controller.RequestUpdate(); Controller.SaveConfig() end
+    Callback = function(val) 
+        -- Update ALL configs to use this pet
+        Controller.Config.BuyTarget = val
+        Controller.Config.BuyCategory = "Pet"
+        Controller.Config.ListTarget = val
+        Controller.Config.ListCategory = "Pet"
+        Controller.Config.RemoveTarget = val
+        Controller.Config.RemoveCategory = "Pet"
+        Controller.RequestUpdate()
+        Controller.SaveConfig()
+    end
 })
 
-UIElements.BuyTargetItem = SniperSection:Dropdown({
+-- SHARED Item Dropdown (used by ALL functions)
+UIElements.TargetItem = TargetSection:Dropdown({
     Title = "Target Item", 
-    Desc = "🔍 Search items...",
+    Desc = "🔍 Search 363 items...",
     Values = {}, Default = 1, Search = true,
-    Callback = function(val) Controller.Config.BuyTarget = val; Controller.Config.BuyCategory = "Item"; Controller.RequestUpdate(); Controller.SaveConfig() end
+    Callback = function(val) 
+        -- Update ALL configs to use this item
+        Controller.Config.BuyTarget = val
+        Controller.Config.BuyCategory = "Item"
+        Controller.Config.ListTarget = val
+        Controller.Config.ListCategory = "Item"
+        Controller.Config.RemoveTarget = val
+        Controller.Config.RemoveCategory = "Item"
+        Controller.RequestUpdate()
+        Controller.SaveConfig()
+    end
 })
 
-SniperSection:Divider()
+TargetSection:Divider()
 
-UIElements.MaxPrice = SniperSection:Input({
-    Title = "Max Price", Desc = "Max price", Default = tostring(Controller.Config.MaxPrice), Numeric = true,
+-- === AUTO BUY SECTION ===
+local BuySection = MainTab:Section({ Title = "💰 Auto Buy (Sniper)", Icon = "zap" })
+
+UIElements.MaxPrice = BuySection:Input({
+    Title = "Max Price", Desc = "Maximum price to pay", Default = tostring(Controller.Config.MaxPrice), Numeric = true,
     Callback = function(txt) Controller.Config.MaxPrice = tonumber(txt) or 5; Controller.SaveConfig() end
 })
 
-UIElements.AutoBuy = SniperSection:Toggle({
-    Title = "Enable Auto Buy", Desc = "Snipe cheap items", Default = Controller.Config.AutoBuy,
+UIElements.AutoBuy = BuySection:Toggle({
+    Title = "Enable Auto Buy", Desc = "Snipe selected target", Default = Controller.Config.AutoBuy,
     Callback = function(val) Controller.Config.AutoBuy = val; Controller.SaveConfig() end
 })
 
--- [INVENTORY TAB]
-local InvTab = Window:Tab({ Title = "Inventory", Icon = "xzne:package" })
-local ListSection = InvTab:Section({ Title = "Auto List (Sell)" })
+BuySection:Divider()
 
-ListSection:Paragraph({
-    Title = "💡 How to List",
-    Desc = "Choose items to list. Set price. Enable Auto List."
-})
-ListSection:Divider()
-
-UIElements.ListTargetPet = ListSection:Dropdown({
-    Title = "Pet to List", Desc = "🔍 Search...", Values = {}, Default = 1, Search = true,
-    Callback = function(val) Controller.Config.ListTarget = val; Controller.Config.ListCategory = "Pet"; Controller.RequestUpdate(); Controller.SaveConfig() end
-})
-
-UIElements.ListTargetItem = ListSection:Dropdown({
-    Title = "Item to List", Desc = "🔍 Search...", Values = {}, Default = 1, Search = true,
-    Callback = function(val) Controller.Config.ListTarget = val; Controller.Config.ListCategory = "Item"; Controller.RequestUpdate(); Controller.SaveConfig() end
-})
+-- === AUTO LIST SECTION ===
+local ListSection = MainTab:Section({ Title = "📦 Auto List (Sell)", Icon = "xzne:package" })
 
 UIElements.Price = ListSection:Input({
     Title = "Listing Price", Desc = "Price per item", Default = tostring(Controller.Config.Price), Numeric = true,
@@ -231,49 +247,81 @@ UIElements.Price = ListSection:Input({
 })
 
 UIElements.AutoList = ListSection:Toggle({
-    Title = "Start Auto List", Desc = "List automatically", Default = Controller.Config.AutoList,
+    Title = "Enable Auto List", Desc = "List selected target", Default = Controller.Config.AutoList,
     Callback = function(val) Controller.Config.AutoList = val; Controller.SaveConfig() end
 })
 
--- [REMOVE TAB]
-local RemoveTab = Window:Tab({ Title = "Remove", Icon = "xzne:trash-2" })
-local ClearSection = InvTab:Section({ Title = "Remove List" })
+ListSection:Divider()
 
-ClearSection:Paragraph({
-    Title = "💡 How to Remove", Desc = "Select items to unlist."
-})
-ClearSection:Divider()
+-- === AUTO REMOVE SECTION ===
+local RemoveSection = MainTab:Section({ Title = "🗑️ Auto Remove", Icon = "xzne:trash-2" })
 
-UIElements.RemoveTargetPet = ClearSection:Dropdown({
-    Title = "Pet to Remove", Desc = "🔍 Search...", Values = {}, Default = 1, Search = true,
-    Callback = function(val) Controller.Config.RemoveTarget = val; Controller.Config.RemoveCategory = "Pet"; Controller.RequestUpdate(); Controller.SaveConfig() end
-})
-
-UIElements.RemoveTargetItem = ClearSection:Dropdown({
-    Title = "Item to Remove", Desc = "🔍 Search...", Values = {}, Default = 1, Search = true,
-    Callback = function(val) Controller.Config.RemoveTarget = val; Controller.Config.RemoveCategory = "Item"; Controller.RequestUpdate(); Controller.SaveConfig() end
-})
-
-ClearSection:Divider()
-
-UIElements.AutoClear = ClearSection:Toggle({
-    Title = "Start Auto Remove", Desc = "Remove selected items", Default = Controller.Config.AutoClear,
+UIElements.AutoClear = RemoveSection:Toggle({
+    Title = "Enable Auto Remove", Desc = "Remove selected target", Default = Controller.Config.AutoClear,
     Callback = function(val) Controller.Config.AutoClear = val; Controller.SaveConfig() end
 })
 
--- == BOOTH TAB ==
-local BoothTab = Window:Tab({ Title = "Booth", Icon = "xzne:store" })
-local BoothSection = BoothTab:Section({ Title = "Booth Control" })
+UIElements.DeleteAll = RemoveSection:Toggle({
+    Title = "Remove ALL Listings", Desc = "Clear entire booth", Default = Controller.Config.DeleteAll,
+    Callback = function(val) Controller.Config.DeleteAll = val; Controller.SaveConfig() end
+})
+
+RemoveSection:Divider()
+
+-- === BOOTH CONTROL SECTION ===
+local BoothSection = MainTab:Section({ Title = "🏪 Booth Control", Icon = "xzne:store" })
+
 UIElements.AutoClaim = BoothSection:Toggle({
-    Title = "Auto Claim Booth", Desc = "Fast claim", Default = Controller.Config.AutoClaim,
+    Title = "Auto Claim Booth", Desc = "Automatically claim booth", Default = Controller.Config.AutoClaim,
     Callback = function(val) Controller.Config.AutoClaim = val; Controller.SaveConfig() end
 })
+
 BoothSection:Button({
-    Title = "Unclaim Booth", Desc = "Release ownership", Icon = "xzne:log-out",
+    Title = "Unclaim Booth", Desc = "Release booth ownership", Icon = "xzne:log-out",
     Callback = function() Controller.UnclaimBooth() end
 })
 
--- == SETTINGS TAB ==
+-- [GUI POPULATION - 2 SHARED DROPDOWNS]
+task.defer(function()
+    -- Wait for database
+    while not DatabaseReady do task.wait(0.1) end
+    task.wait(1) -- Small delay for GUI stability
+    
+    -- Helper function to populate dropdowns  
+    local function SafeUpdate(element, db)
+        if element then
+            element.Values = db
+            element.Desc = "🔍 Search "..#db.." items..."
+            if element.Refresh then pcall(function() element:Refresh(db) end) end
+        end
+    end
+    
+    -- Populate only 2 dropdowns (shared across all functions)
+    SafeUpdate(UIElements.TargetPet, PetDatabase)
+    task.wait(0.05)
+    SafeUpdate(UIElements.TargetItem, ItemDatabase)
+    
+    -- Set default selection if empty
+    if not Controller.Config.BuyTarget or Controller.Config.BuyTarget == "" then
+        if #ItemDatabase > 0 then
+            pcall(function() UIElements.TargetItem:Select(ItemDatabase[1]) end)
+            Controller.Config.BuyTarget = ItemDatabase[1]
+            Controller.Config.BuyCategory = "Item"
+        end
+    end
+    
+    -- Apply saved selections
+    if Controller.Config.BuyTarget then
+        local db = Controller.Config.BuyCategory == "Pet" and UIElements.TargetPet or UIElements.TargetItem
+        if db and db.Select then 
+            task.defer(function()
+                pcall(function() db:Select(Controller.Config.BuyTarget) end)
+            end)
+        end
+    end
+end)
+
+-- Settings Tab
 local SettingsTab = Window:Tab({ Title = "Settings", Icon = "xzne:settings" })
 
 -- Stats
@@ -299,83 +347,6 @@ task.spawn(function()
     end
 end)
 
--- [GUI POPULATION - TAB-BASED LAZY LOADING]
--- Track which tabs have been populated
-local dropdownsPopulated = {
-    Sniper = false,
-    Inventory = false,
-    Remove = false
-}
-
--- Helper function to populate dropdowns
-local function SafeUpdate(element, db)
-    if element then
-        element.Values = db
-        element.Desc = "🔍 Search "..#db.." items..."
-        if element.Refresh then pcall(function() element:Refresh(db) end) end
-    end
-end
-
--- Function to populate specific tab's dropdowns
-local function PopulateTabDropdowns(tabName)
-    if dropdownsPopulated[tabName] then 
-        return -- Already populated
-    end
-    
-    -- Wait for database if not ready yet
-    while not DatabaseReady do task.wait(0.1) end
-    
-    if tabName == "Sniper" then
-        SafeUpdate(UIElements.BuyTargetPet, PetDatabase)
-        task.wait(0.05) -- Small delay between dropdowns
-        SafeUpdate(UIElements.BuyTargetItem, ItemDatabase)
-        dropdownsPopulated.Sniper = true
-        
-    elseif tabName == "Inventory" then
-        SafeUpdate(UIElements.ListTargetPet, PetDatabase)
-        task.wait(0.05)
-        SafeUpdate(UIElements.ListTargetItem, ItemDatabase)
-        dropdownsPopulated.Inventory = true
-        
-    elseif tabName == "Remove" then
-        SafeUpdate(UIElements.RemoveTargetPet, PetDatabase)
-        task.wait(0.05)
-        SafeUpdate(UIElements.RemoveTargetItem, ItemDatabase)
-        dropdownsPopulated.Remove = true
-    end
-    
-    -- Apply saved selections after populating
-    if Controller.Config.BuyTarget and tabName == "Sniper" then
-        local db = Controller.Config.BuyCategory == "Pet" and UIElements.BuyTargetPet or UIElements.BuyTargetItem
-        if db and db.Select then 
-            task.defer(function()
-                pcall(function() db:Select(Controller.Config.BuyTarget) end)
-            end)
-        end
-    end
-end
-
--- Populate default tab (Sniper) on startup
-task.defer(function()
-    task.wait(2) -- Wait for GUI to be fully ready
-    PopulateTabDropdowns("Sniper") -- Load only first tab
-    
-    -- Set default selection if empty
-    if not Controller.Config.BuyTarget or Controller.Config.BuyTarget == "" then
-        if #ItemDatabase > 0 then
-            pcall(function() UIElements.BuyTargetItem:Select(ItemDatabase[1]) end)
-            Controller.Config.BuyTarget = ItemDatabase[1]
-        end
-    end
-end)
-
--- Hook tab change events for lazy loading
-pcall(function()
-    -- WindUI tab switching - load dropdowns when tab is activated
-    SniperTab.OnTabChanged = function() task.defer(function() PopulateTabDropdowns("Sniper") end) end
-    InvTab.OnTabChanged = function() task.defer(function() PopulateTabDropdowns("Inventory") end) end
-    RemoveTab.OnTabChanged = function() task.defer(function() PopulateTabDropdowns("Remove") end) end
-end)
 
 
 -- Notify User
