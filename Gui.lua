@@ -153,20 +153,18 @@ end)
 -- [5] CREATE WINDOW (Premium Mac-Style Design)
 local Window = WindUI:CreateWindow({
     Title = "XZNE ScriptHub",
+    Icon = "zap",  -- Lightning bolt icon (from Lucide library)
     Author = "By. Xzero One",
-    Size = UDim2.fromOffset(580, 460),
+    Size = UDim2.fromOffset(580, 460),  -- Optimal size
     
     -- Premium Settings
-    Transparency = 0.5,
-    Acrylic = true,
+    Transparency = 0.5,       -- Higher transparency for glassmorphism effect
+    Acrylic = true,           -- Glassmorphism
     Theme = "Dark",
     NewElements = true,
-
-    -- Windows Style Buttons (Right Side)
-    ButtonsType = "Default",
     
-    -- Restore User's Custom Logo (Note: Ensure this ID is correct!)
-    Icon = "rbxassetid://110223904365911",
+    -- Mac Style Buttons (like screenshot!)
+    ButtonsType = "Mac",  -- Red, Yellow, Green dots!
     
     Topbar = {
         Height = 50,
@@ -217,10 +215,7 @@ local SettingsTab = Window:Tab({
 -- === TARGET SELECTION SECTION ===
 local TargetSection = MainTab:Section({ 
     Title = "Target Selection", 
-    Icon = "crosshair",
-    Box = true,
-    BoxBorder = true,
-    Opened = true
+    Icon = "crosshair"
 })
 
 TargetSection:Paragraph({
@@ -234,6 +229,7 @@ UIElements.TargetPet = TargetSection:Dropdown({
     Title = "Target Pet", 
     Desc = "🔍 Search pets...",
     Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
+    FullWidth = true,
     Callback = function(val) 
         -- Update ALL configs to use this pet
         Controller.Config.BuyTarget = val
@@ -252,6 +248,7 @@ UIElements.TargetItem = TargetSection:Dropdown({
     Title = "Target Item", 
     Desc = "🔍 Search items...",
     Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
+    FullWidth = true,
     Callback = function(val) 
         -- Update ALL configs to use this item
         Controller.Config.BuyTarget = val
@@ -268,14 +265,7 @@ UIElements.TargetItem = TargetSection:Dropdown({
 TargetSection:Divider()
 
 -- === AUTO BUY SECTION ===
--- === AUTO BUY SECTION ===
-local BuySection = MainTab:Section({ 
-    Title = "Auto Buy (Sniper)", 
-    Icon = "zap",
-    Box = true,
-    BoxBorder = true,
-    Opened = true
-})
+local BuySection = MainTab:Section({ Title = "Auto Buy (Sniper)", Icon = "zap" })
 
 UIElements.MaxPrice = BuySection:Input({
     Title = "Max Price", Desc = "Maximum price to pay", Default = tostring(Controller.Config.MaxPrice), Numeric = true,
@@ -298,14 +288,7 @@ UIElements.AutoBuy = BuySection:Toggle({
 BuySection:Divider()
 
 -- === AUTO LIST SECTION ===
--- === AUTO LIST SECTION ===
-local ListSection = MainTab:Section({ 
-    Title = "Auto List", 
-    Icon = "xzne:package",
-    Box = true,
-    BoxBorder = true,
-    Opened = true
-})
+local ListSection = MainTab:Section({ Title = "Auto List", Icon = "xzne:package" })
 
 UIElements.Price = ListSection:Input({
     Title = "Listing Price", Desc = "Price per item", Default = tostring(Controller.Config.Price), Numeric = true,
@@ -328,14 +311,7 @@ UIElements.AutoList = ListSection:Toggle({
 ListSection:Divider()
 
 -- === AUTO REMOVE SECTION ===
--- === AUTO REMOVE SECTION ===
-local RemoveSection = MainTab:Section({ 
-    Title = "Auto Remove", 
-    Icon = "xzne:trash-2",
-    Box = true,
-    BoxBorder = true,
-    Opened = true
-})
+local RemoveSection = MainTab:Section({ Title = "Auto Remove", Icon = "xzne:trash-2" })
 
 UIElements.AutoClear = RemoveSection:Toggle({
     Title = "Enable Auto Remove", Desc = "Remove selected target", Default = false,
@@ -353,14 +329,7 @@ UIElements.AutoClear = RemoveSection:Toggle({
 RemoveSection:Divider()
 
 -- === BOOTH CONTROL SECTION ===
--- === BOOTH CONTROL SECTION ===
-local BoothSection = MainTab:Section({ 
-    Title = "Booth Control", 
-    Icon = "xzne:store",
-    Box = true,
-    BoxBorder = true,
-    Opened = true
-})
+local BoothSection = MainTab:Section({ Title = "Booth Control", Icon = "xzne:store" })
 
 UIElements.AutoClaim = BoothSection:Toggle({
     Title = "Auto Claim Booth", Desc = "Automatically claim booth", Default = false,
