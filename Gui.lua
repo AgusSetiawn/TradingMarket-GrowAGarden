@@ -328,17 +328,8 @@ task.defer(function()
     task.wait(0.05)
     SafeUpdate(UIElements.TargetItem, ItemDatabase)
     
-    -- Set default selection if empty
-    if not Controller.Config.BuyTarget or Controller.Config.BuyTarget == "" then
-        if #ItemDatabase > 0 then
-            pcall(function() UIElements.TargetItem:Select(ItemDatabase[1]) end)
-            Controller.Config.BuyTarget = ItemDatabase[1]
-            Controller.Config.BuyCategory = "Item"
-        end
-    end
-    
-    -- Apply saved selections
-    if Controller.Config.BuyTarget and Controller.Config.BuyTarget ~= "— None —" then
+    -- Apply saved selections (only if valid and not None)
+    if Controller.Config.BuyTarget and Controller.Config.BuyTarget ~= "" and Controller.Config.BuyTarget ~= "— None —" then
         local db = Controller.Config.BuyCategory == "Pet" and UIElements.TargetPet or UIElements.TargetItem
         if db and db.Select then 
             task.defer(function()
