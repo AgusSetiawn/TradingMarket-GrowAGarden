@@ -49,24 +49,9 @@ do
     end
 end
 
--- [3] REGISTER ICONS
-task.defer(function()
-    WindUI.Creator.AddIcons("xzne", {
-        ["logo"] = "rbxassetid://110223904365911",  -- Custom Logo
-        ["target"] = "rbxassetid://10734884548",      -- Crosshair → Target (Sniper)
-        ["shopping-cart"] = "rbxassetid://10747372992", -- Shopping Cart (Buy)
-        ["package"] = "rbxassetid://10723434711",    -- Package (Inventory/Sell)
-        ["trash-2"] = "rbxassetid://10747838902",    -- Trash (Remove)
-        ["store"] = "rbxassetid://10747372167",      -- Store (Booth)
-        ["settings"] = "rbxassetid://10734950309",   -- Settings
-        ["zap"] = "rbxassetid://10747374308",        -- Lightning
-        ["check-circle"] = "rbxassetid://10734896206", -- Success
-        ["alert-circle"] = "rbxassetid://10702779645", -- Warning
-        ["x-circle"] = "rbxassetid://10747384394",  -- Error
-        ["info"] = "rbxassetid://10723407389",       -- Info
-        ["chart"] = "rbxassetid://10723346959"       -- Stats
-    })
-end)
+-- [3] ICONS
+-- Using WindUI Native Lucide Icons for better consistency and "Geist" feel.
+-- No custom registration needed.
 
 -- [4] LOAD DATABASES (DEFERRED for faster GUI appearance)
 local HttpService = game:GetService("HttpService")
@@ -196,21 +181,10 @@ end)
 
 local UIElements = {}
 
--- [HELPER] Add Spacer for better layout
-local function AddSpacer(section)
-    if section and section.Paragraph then
-        section:Paragraph({
-            Title = " ",
-            Desc = " ", -- Forces height
-            BackgroundTransparency = 1 -- Attempt to make it invisible
-        })
-    end
-end
-
 -- [MAIN TAB with Premium Icon]
 local MainTab = Window:Tab({ 
     Title = "Trading", 
-    Icon = "target",  -- Target/Crosshair icon
+    Icon = "arrow-left-right",  -- Logical icon for "Trading" (Swapping)
     IconColor = Color3.fromRGB(99, 102, 241),  -- Indigo
     IconShape = "Square",  -- Colored square wrapper
 })
@@ -233,9 +207,7 @@ TargetSection:Paragraph({
     Title = "💡 Quick Guide",
     Desc = "Select your target Pet or Item below. Then enable which function you want to use (Buy/List/Remove)."
 })
-AddSpacer(TargetSection)
 TargetSection:Divider()
-AddSpacer(TargetSection)
 
 -- SHARED Pet Dropdown (used by ALL functions)
 UIElements.TargetPet = TargetSection:Dropdown({
@@ -273,12 +245,10 @@ UIElements.TargetItem = TargetSection:Dropdown({
     end
 })
 
-AddSpacer(TargetSection)
 TargetSection:Divider()
-AddSpacer(TargetSection)
 
 -- === AUTO BUY SECTION ===
-local BuySection = MainTab:Section({ Title = "Auto Buy (Sniper)", Icon = "zap" })
+local BuySection = MainTab:Section({ Title = "Auto Buy (Sniper)", Icon = "shopping-bag" })
 
 UIElements.MaxPrice = BuySection:Input({
     Title = "Max Price", Desc = "Maximum price to pay", Default = tostring(Controller.Config.MaxPrice), Numeric = true,
@@ -298,12 +268,10 @@ UIElements.AutoBuy = BuySection:Toggle({
     end
 })
 
-AddSpacer(BuySection)
 BuySection:Divider()
-AddSpacer(BuySection)
 
 -- === AUTO LIST SECTION ===
-local ListSection = MainTab:Section({ Title = "Auto List", Icon = "xzne:package" })
+local ListSection = MainTab:Section({ Title = "Auto List", Icon = "tag" })
 
 UIElements.Price = ListSection:Input({
     Title = "Listing Price", Desc = "Price per item", Default = tostring(Controller.Config.Price), Numeric = true,
@@ -323,12 +291,10 @@ UIElements.AutoList = ListSection:Toggle({
     end
 })
 
-AddSpacer(ListSection)
 ListSection:Divider()
-AddSpacer(ListSection)
 
 -- === AUTO REMOVE SECTION ===
-local RemoveSection = MainTab:Section({ Title = "Auto Remove", Icon = "xzne:trash-2" })
+local RemoveSection = MainTab:Section({ Title = "Auto Remove", Icon = "trash-2" })
 
 UIElements.AutoClear = RemoveSection:Toggle({
     Title = "Enable Auto Remove", Desc = "Remove selected target", Default = false,
@@ -343,12 +309,10 @@ UIElements.AutoClear = RemoveSection:Toggle({
     end
 })
 
-AddSpacer(RemoveSection)
 RemoveSection:Divider()
-AddSpacer(RemoveSection)
 
 -- === BOOTH CONTROL SECTION ===
-local BoothSection = MainTab:Section({ Title = "Booth Control", Icon = "xzne:store" })
+local BoothSection = MainTab:Section({ Title = "Booth Control", Icon = "store" })
 
 UIElements.AutoClaim = BoothSection:Toggle({
     Title = "Auto Claim Booth", Desc = "Automatically claim booth", Default = false,
@@ -359,7 +323,7 @@ UIElements.AutoClaim = BoothSection:Toggle({
 })
 
 BoothSection:Button({
-    Title = "Unclaim Booth", Desc = "Release booth ownership", Icon = "xzne:log-out",
+    Title = "Unclaim Booth", Desc = "Release booth ownership", Icon = "log-out",
     Callback = function() Controller.UnclaimBooth() end
 })
 
@@ -447,7 +411,7 @@ print("✅ [XZNE] GUI Loaded Successfully!")
 WindUI:Notify({
     Title = "XZNE ScriptHub Loaded",
     Content = "Welcome, " .. game.Players.LocalPlayer.Name,
-    Icon = "xzne:target",
+    Icon = "check-circle-2",
     Duration = 5
 })
 
