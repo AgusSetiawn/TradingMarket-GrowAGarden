@@ -476,3 +476,6 @@ task.defer(function()
         end
     end
 end)
+
+-- Return success to Loader
+return true

@@ -358,3 +358,6 @@ WindUI:Notify({
     Icon = "xzne:target",
     Duration = 5
 })
+
+-- Return success to Loader
+return true
