@@ -225,11 +225,13 @@ TargetSection:Paragraph({
 TargetSection:Divider()
 
 -- SHARED Pet Dropdown (used by ALL functions)
-UIElements.TargetPet = TargetSection:Dropdown({
+-- GROUP: Wraps dropdowns to merge them visually (Flat corners between them)
+local DropdownGroup = TargetSection:Group()
+
+UIElements.TargetPet = DropdownGroup:Dropdown({
     Title = "Target Pet", 
     Desc = "🔍 Search pets...",
     Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
-    FullWidth = true,
     Callback = function(val) 
         -- Update ALL configs to use this pet
         Controller.Config.BuyTarget = val
@@ -244,11 +246,10 @@ UIElements.TargetPet = TargetSection:Dropdown({
 })
 
 -- SHARED Item Dropdown (used by ALL functions)
-UIElements.TargetItem = TargetSection:Dropdown({
+UIElements.TargetItem = DropdownGroup:Dropdown({
     Title = "Target Item", 
     Desc = "🔍 Search items...",
     Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
-    FullWidth = true,
     Callback = function(val) 
         -- Update ALL configs to use this item
         Controller.Config.BuyTarget = val
