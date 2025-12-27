@@ -1,7 +1,7 @@
 --[[
     💠 XZNE SCRIPTHUB v0.0.01 [Beta] - LOADER
     
-    🚀 Usage: loadstring(game:HttpGet("https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/src/Loader.lua"))()
+    🚀 Usage: loadstring(game:HttpGet("https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/Loader.lua"))()
 ]]
 
 -- IMPORTANT: Official Main Branch
@@ -48,7 +48,7 @@ local function LoadScript(Script)
 end
 
 -- 1. Load Logic
-local mainLoaded = LoadScript("src/Main.lua")
+local mainLoaded = LoadScript("Main.lua")
 
 if not mainLoaded then
     warn("❌ [XZNE] Failed to load Main.lua! Check GitHub repo structure.")
@@ -70,7 +70,7 @@ if not _G.XZNE_Controller then
 end
 
 -- 3. Load GUI (Clean Modular Load)
-LoadScript("src/Gui.lua")
+LoadScript("Gui.lua")
 
 -- [CRITICAL] Release execution lock after successful load
 task.defer(function()

@@ -108,7 +108,7 @@ task.defer(function()
     
     -- Try JSON first (50% faster than Lua)
     local success, content = pcall(function()
-        return game:HttpGet(Repo .. "data/Database.json")
+        return game:HttpGet(Repo .. "Database.json")
     end)
     
     if success and content and #content > 100 then
@@ -134,7 +134,7 @@ task.defer(function()
     
     -- Last resort: Try Lua format (backward compatibility)
     local luaSuccess, luaResult = pcall(function()
-        return loadstring(game:HttpGet(Repo .. "data/Database.lua"))()
+        return loadstring(game:HttpGet(Repo .. "Database.lua"))()
     end)
     
     if luaSuccess and luaResult then
