@@ -138,7 +138,7 @@ end)
 -- [5] CREATE WINDOW (Premium Mac-Style Design)
 local Window = WindUI:CreateWindow({
     Title = "XZNE ScriptHub",
-    Icon = "zap",  -- Lightning bolt icon (from Lucide library)
+    Icon = "rbxassetid://110223904365911",  -- Custom Logo (Fixed)
     Author = "By. Xzero One",
     Size = UDim2.fromOffset(580, 460),  -- Optimal size
     
