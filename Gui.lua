@@ -76,91 +76,88 @@ task.defer(function()
     print("✅ [XZNE] Icons registered")
 end)
 
--- [3] LOAD DATABASES (Hybrid: Game Server → HTTP Fallback)
-print("🔍 [XZNE DEBUG] 5. Loading Databases (Hybrid Mode)")
-
--- Declare at module level (accessible throughout Gui.lua)
-local PetDatabase = {}
-local ItemDatabase = {}
+-- [4] LOAD DATABASES (DEFERRED for faster GUI appearance)
+print("🔍 [XZNE DEBUG] 6. Deferring Database Load")
+local PetDatabase, ItemDatabase = {}, {}
 local DatabaseReady = false
 
-local function LoadDatabasesFromGame()
-    local pets = {}
-    local items = {}
-    local loadTime = tick()
-    
-    -- Try load Pets from PetRegistry.PetList
-    local success1, PetRegistry = pcall(function()
-        return require(game.ReplicatedStorage.Data.PetRegistry)
-    end)
-    
-    if success1 and PetRegistry and PetRegistry.PetList then
-        for petName, petData in pairs(PetRegistry.PetList) do
-            table.insert(pets, petName)
-        end
-        table.sort(pets)
-        print("✅ [XZNE] Loaded", #pets, "pets from game server")
-    else
-        print("⚠️ [XZNE] Game server pet loading not available (executor limitation)")
-    end
-    
-    -- Try load Items from SeedData
-    local success2, SeedData = pcall(function()
-        return require(game.ReplicatedStorage.Data.SeedData)
-    end)
-    
-    if success2 and SeedData then
-        for cropName, itemData in pairs(SeedData) do
-            table.insert(items, cropName)
-        end
-        table.sort(items)
-        print("✅ [XZNE] Loaded", #items, "items from game server")
-    else
-        print("⚠️ [XZNE] Game server item loading not available (executor limitation)")
-    end
-    
-    local elapsed = (tick() - loadTime) * 1000
-    print(string.format("⚡ [XZNE] Game server attempt: %.2fms", elapsed))
-    
-    return pets, items
-end
+-- ✅ OPTIMIZATION: JSON Database with Local Caching
+local CachedDBFile = "XZNE_Database.json"
 
-local function LoadDatabasesFromHTTP()
-    local pets = {}
-    local items = {}
-    local loadTime = tick()
+task.defer(function()
+    task.wait(0.3)  -- Let GUI render first
     
-    print("🌐 [XZNE] Falling back to HTTP Database.lua...")
+    -- Try loading from local cache first (INSTANT if cached)
+    if isfile and isfile(CachedDBFile) then
+        local success, content = pcall(function()
+            return readfile(CachedDBFile)
+        end)
+        
+        if success and content and #content > 100 then
+            local decodeSuccess, decoded = pcall(function()
+                return HttpService:JSONDecode(content)
+            end)
+            
+            if decodeSuccess and decoded then
+                PetDatabase = decoded.Pets or {}
+                ItemDatabase = decoded.Items or {}
+                DatabaseReady = true
+                print("✅ [XZNE] Database loaded from cache (INSTANT! "..#PetDatabase.." pets, "..#ItemDatabase.." items)")
+                return  -- ✅ INSTANT LOAD - DONE!
+            end
+        end
+    end
+    
+    -- Fallback: Download from GitHub (first run or cache failed)
+    print("🔄 [XZNE] Downloading database from GitHub...")
     local Repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/"
     
-    local success, result = pcall(function()
+    -- Try JSON first (50% faster than Lua)
+    local success, content = pcall(function()
+        return game:HttpGet(Repo .. "Database.json")
+    end)
+    
+    if success and content and #content > 100 then
+        local decodeSuccess, decoded = pcall(function()
+            return HttpService:JSONDecode(content)
+        end)
+        
+        if decodeSuccess and decoded then
+            PetDatabase = decoded.Pets or {}
+            ItemDatabase = decoded.Items or {}
+            
+            -- Save to local cache for next time
+            if writefile then
+                pcall(function() 
+                    writefile(CachedDBFile, content) 
+                    print("💾 [XZNE] Database cached locally for instant future loads")
+                end)
+            end
+            
+            DatabaseReady = true
+            print("✅ [XZNE] Database downloaded ("..#PetDatabase.." pets, "..#ItemDatabase.." items)")
+            return
+        end
+    end
+    
+    -- Last resort: Try Lua format (backward compatibility)
+    warn("⚠️ [XZNE] JSON failed, trying Lua format...")
+    local luaSuccess, luaResult = pcall(function()
         return loadstring(game:HttpGet(Repo .. "Database.lua"))()
     end)
     
-    if success and result then
-        pets = result.Pets or {}
-        items = result.Items or {}
-        local elapsed = (tick() - loadTime) * 1000
-        print(string.format("✅ [XZNE] HTTP Database loaded: %d pets, %d items (%.0fms)", #pets, #items, elapsed))
+    if luaSuccess and luaResult then
+        PetDatabase = luaResult.Pets or {}
+        ItemDatabase = luaResult.Items or {}
+        DatabaseReady = true
+        print("✅ [XZNE] Database loaded from Lua fallback")
     else
-        warn("❌ [XZNE] HTTP Database ALSO failed:", result)
+        warn("❌ [XZNE] Failed to load database from all sources")
+        PetDatabase = {}
+        ItemDatabase = {}
+        DatabaseReady = true
     end
-    
-    return pets, items
-end
-
--- HYBRID LOADING: Try game first, fallback to HTTP
-print("🔄 [XZNE] Attempting game server loading...")
-PetDatabase, ItemDatabase = LoadDatabasesFromGame()
-
--- If game loading failed or returned empty, fallback to HTTP
-if #PetDatabase == 0 or #ItemDatabase == 0 then
-    print("⚠️ [XZNE] Game server loading failed/incomplete - using HTTP fallback")
-    PetDatabase, ItemDatabase = LoadDatabasesFromHTTP()
-end
-
-DatabaseReady = true
-print("🔍 [XZNE DEBUG] 6. Database Ready: " .. #PetDatabase .. " Pets, " .. #ItemDatabase .. " Items")
+end)
 
 -- [5] CREATE WINDOW (Premium Glassmorphism Style)
 print("🔍 [XZNE DEBUG] 7. Creating Window")
@@ -168,12 +165,11 @@ local Window = WindUI:CreateWindow({
     Title = "XZNE ScriptHub",
     Icon = "xzne:target",
     Author = "By. Xzero One",
-    -- Folder removed to prevent dual state (committed fix)
+    -- Folder = "XZNE_Config",  -- ❌ REMOVED: Caused dual state system (WindUI state vs our JSON)
     Transparency = 0.45,       -- 0.45 = Ideal Glass Effect
     Acrylic = true,           -- Enable Glassmorphism Blur
     Theme = "Dark",           -- Dark Mode for contrast
     NewElements = true,       -- Enable modern UI elements
-    KeyCode = Enum.KeyCode.RightShift,  -- ✅ Toggle with RightShift
     
     -- Window Controls on RIGHT (Default/Windows Style)
     -- ButtonsType = "Mac",   <-- DISABLED (Places buttons on Left)
@@ -204,14 +200,14 @@ print("🔍 [XZNE DEBUG] 10. Creating Dropdowns")
 UIElements.BuyTargetPet = SniperSection:Dropdown({
     Title = "Target Pet", 
     Desc = "🔍 Search pets...",
-    Values = {}, Default = 1, SearchBarEnabled = true,
+    Values = {}, Default = 1, Search = true,
     Callback = function(val) Controller.Config.BuyTarget = val; Controller.Config.BuyCategory = "Pet"; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
 UIElements.BuyTargetItem = SniperSection:Dropdown({
     Title = "Target Item", 
     Desc = "🔍 Search items...",
-    Values = {}, Default = 1, SearchBarEnabled = true,
+    Values = {}, Default = 1, Search = true,
     Callback = function(val) Controller.Config.BuyTarget = val; Controller.Config.BuyCategory = "Item"; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
@@ -239,12 +235,12 @@ ListSection:Paragraph({
 ListSection:Divider()
 
 UIElements.ListTargetPet = ListSection:Dropdown({
-    Title = "Pet to List", Desc = "🔍 Search...", Values = {}, Default = 1, SearchBarEnabled = true,
+    Title = "Pet to List", Desc = "🔍 Search...", Values = {}, Default = 1, Search = true,
     Callback = function(val) Controller.Config.ListTarget = val; Controller.Config.ListCategory = "Pet"; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
 UIElements.ListTargetItem = ListSection:Dropdown({
-    Title = "Item to List", Desc = "🔍 Search...", Values = {}, Default = 1, SearchBarEnabled = true,
+    Title = "Item to List", Desc = "🔍 Search...", Values = {}, Default = 1, Search = true,
     Callback = function(val) Controller.Config.ListTarget = val; Controller.Config.ListCategory = "Item"; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
@@ -268,12 +264,12 @@ ClearSection:Paragraph({
 ClearSection:Divider()
 
 UIElements.RemoveTargetPet = ClearSection:Dropdown({
-    Title = "Pet to Remove", Desc = "🔍 Search...", Values = {}, Default = 1, SearchBarEnabled = true,
+    Title = "Pet to Remove", Desc = "🔍 Search...", Values = {}, Default = 1, Search = true,
     Callback = function(val) Controller.Config.RemoveTarget = val; Controller.Config.RemoveCategory = "Pet"; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
 UIElements.RemoveTargetItem = ClearSection:Dropdown({
-    Title = "Item to Remove", Desc = "🔍 Search...", Values = {}, Default = 1, SearchBarEnabled = true,
+    Title = "Item to Remove", Desc = "🔍 Search...", Values = {}, Default = 1, Search = true,
     Callback = function(val) Controller.Config.RemoveTarget = val; Controller.Config.RemoveCategory = "Item"; Controller.RequestUpdate(); Controller.SaveConfig() end
 })
 
@@ -327,23 +323,24 @@ end)
 -- [GUI POPULATION]
 print("🔍 [XZNE DEBUG] 15. Pre-rendering Dropdowns")
 task.defer(function()
+    -- ✅ OPTIMIZATION: Removed arbitrary 0.7s delay (saves 700ms)
     while not DatabaseReady do task.wait(0.1) end
     
-    -- ✅ FULL DATABASE: All items searchable (progressive loading prevents freeze)
-    print("🔄 [XZNE] Loading full database to dropdowns (progressive to prevent freeze)...")
+    -- ✅ LAZY LOADING: Wait 2s after GUI ready, then populate slowly
+    task.wait(2)
+    print("🔄 [XZNE] Populating dropdowns in background...")
 
     local function SafeUpdate(element, db)
         if element then
             element.Values = db
-            element.Desc = "🔍 Search all "..#db.." items..."
+            element.Desc = "🔍 Search "..#db.." items..."
             if element.Refresh then pcall(function() element:Refresh(db) end) end
         end
     end
     
-    -- ✅ PROGRESSIVE LOADING: 1s delay between each to prevent freeze
-    -- Total: 640 items per dropdown, but loaded smoothly
+    -- ✅ PROGRESSIVE LOADING: Populate in background, 1s between each
     SafeUpdate(UIElements.BuyTargetPet, PetDatabase)
-    task.wait(1)  -- Let UI render before next
+    task.wait(1)  -- Progressive: 1s delay (user can interact with GUI)
     
     SafeUpdate(UIElements.BuyTargetItem, ItemDatabase)
     task.wait(1)
@@ -358,6 +355,7 @@ task.defer(function()
     task.wait(1)
     
     SafeUpdate(UIElements.RemoveTargetItem, ItemDatabase)
+    task.wait(0.5)  -- Final dropdown
     
     -- Default Selections (Fix empty targets)
     if not Controller.Config.BuyTarget or Controller.Config.BuyTarget == "" then
@@ -373,7 +371,7 @@ task.defer(function()
          if db and db.Select then pcall(function() db:Select(Controller.Config.BuyTarget) end) end
     end
     
-    print("✅ [XZNE] All dropdowns populated with full database!")
+    print("✅ [XZNE] All dropdowns populated!")
 end)
 
 -- Notify User
