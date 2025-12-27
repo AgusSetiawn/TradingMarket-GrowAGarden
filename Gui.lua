@@ -225,7 +225,7 @@ TargetSection:Paragraph({
     Title = "💡 Quick Guide",
     Desc = "Select your target Pet or Item below. Then enable which function you want to use (Buy/List/Remove)."
 })
-TargetSection:Divider()
+TargetSection:Space() -- Separate Guide from Dropdowns
 
 -- SHARED Pet Dropdown (used by ALL functions)
 UIElements.TargetPet = TargetSection:Dropdown({
@@ -245,6 +245,8 @@ UIElements.TargetPet = TargetSection:Dropdown({
     end
 })
 
+TargetSection:Space() -- Break merge
+
 -- SHARED Item Dropdown (used by ALL functions)
 UIElements.TargetItem = TargetSection:Dropdown({
     Title = "Target Item", 
@@ -263,6 +265,8 @@ UIElements.TargetItem = TargetSection:Dropdown({
     end
 })
 
+TargetSection:Space() -- Break merge
+
 UIElements.DelaySlider = TargetSection:Slider({
     Title = "Action Delay",
     Desc = "Wait time between actions (0-10s)",
@@ -278,7 +282,7 @@ UIElements.DelaySlider = TargetSection:Slider({
     end
 })
 
-TargetSection:Divider()
+TargetSection:Space() -- Final space before next section divider/end
 
 -- === AUTO BUY SECTION ===
 local BuySection = MainTab:Section({ Title = "Auto Buy (Sniper)", Icon = "shopping-bag" })
