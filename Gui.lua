@@ -184,7 +184,7 @@ local Window = WindUI:CreateWindow({
     Size = UDim2.fromOffset(580, 460),  -- Optimal size
     
     -- Premium Settings
-    Transparency = 1,       -- Higher transparency for glassmorphism effect
+    Transparency = 0.5,       -- Higher transparency for glassmorphism effect
     Acrylic = true,           -- Glassmorphism
     Theme = "Dark",
     NewElements = true,
