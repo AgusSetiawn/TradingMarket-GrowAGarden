@@ -51,44 +51,13 @@ do
     end
 end
 
--- [3] CONFIGURATION SYSTEM (Custom Path)
--- Satisfies request: "XZNE ScriptHub/Config.json"
-local HttpService = game:GetService("HttpService")
-local ConfigFile = "XZNE ScriptHub/Config.json"
-
-local function SaveToJSON()
-    if not isfolder("XZNE ScriptHub") then makefolder("XZNE ScriptHub") end
-    
-    local success, json = pcall(function()
-        return HttpService:JSONEncode(Controller.Config)
-    end)
-    
-    if success then
-        writefile(ConfigFile, json)
-    end
-end
+-- [3] CONFIGURATION SYSTEM (WindUI Native)
+local ConfigManager = WindUI.ConfigManager
+local myConfig = ConfigManager:CreateConfig("XZNE_Config")
 
 local function AutoSave()
-    pcall(SaveToJSON)
+    pcall(function() myConfig:Save() end)
     pcall(function() Controller.UpdateCache() end)
-end
-
--- Load Logic (Passive)
-local function LoadFromJSON()
-    if isfile(ConfigFile) then
-        local success, result = pcall(readfile, ConfigFile)
-        if success and result then
-            local decoded = HttpService:JSONDecode(result)
-            if decoded then
-                for k,v in pairs(decoded) do
-                    Controller.Config[k] = v
-                end
-                Controller.UpdateCache()
-                return true
-            end
-        end
-    end
-    return false
 end
 
 -- [3] ICONS
@@ -429,62 +398,14 @@ task.defer(function()
     SafeUpdate(UIElements.TargetItem, ItemDatabase)
     
     -- Apply saved selections (only if valid and not None)
-    -- LOAD CONFIG NOW (After dropdowns are populated)
-    task.wait(0.2)
-    -- LOAD CONFIG NOW (After dropdowns are populated)
-    task.wait(0.2)
+    -- LOAD CONFIG NOW (After dropdowns    
+    -- LOAD CONFIG (WindUI Native Method)
+    -- The library automatically restores all UI elements with their Flag values
+    task.wait(0.3)  -- Small delay for GUI stability after database load
     pcall(function()
-        if LoadFromJSON() then
-            print("✅ [XZNE] Config Loaded from Custom Path!")
-            
-            -- [CONFIG LOAD VISUALS]
-            print("✅ [XZNE] Applying Config to UI...")
-            
-            -- 1. Sliders (Signature: Set(self, value, tween, input_event))
-            if Controller.Config.Speed and UIElements.DelaySlider then 
-                local speedVal = tonumber(Controller.Config.Speed) or 1
-                pcall(function() 
-                    UIElements.DelaySlider:Set(speedVal, nil, nil)  -- value, no tween, no input event
-                end) 
-            end
-
-            -- 2. Toggles (Signature: Set(self, state, tween, should_callback))
-            local toggles = {
-                AutoBuy = UIElements.AutoBuy,
-                AutoList = UIElements.AutoList,
-                AutoClear = UIElements.AutoClear,
-                AutoClaim = UIElements.AutoClaim
-            }
-            for key, toggle in pairs(toggles) do
-                if Controller.Config[key] ~= nil then
-                    local state = (Controller.Config[key] == true)
-                    pcall(function() 
-                        toggle:Set(state, true, false)  -- state, with tween, no callback
-                    end)
-                end
-            end
-
-            -- 3. Inputs (Working correctly)
-            if Controller.Config.MaxPrice then 
-                pcall(function() UIElements.MaxPrice:Set(tostring(Controller.Config.MaxPrice)) end)
-            end
-            if Controller.Config.Price then 
-                 pcall(function() UIElements.Price:Set(tostring(Controller.Config.Price)) end)
-            end
-            
-            -- 4. Dropdowns (Signature: Select(self, value))
-            local savedTarget = Controller.Config.BuyTarget
-            if savedTarget and savedTarget ~= "— None —" then
-                task.defer(function()
-                    -- Try selecting in BOTH (One will succeed if item exists)
-                    pcall(function() UIElements.TargetPet:Select(savedTarget) end)
-                    pcall(function() UIElements.TargetItem:Select(savedTarget) end)
-                end)
-            end
-            
-        else
-             warn("⚠️ [XZNE] No config file found or load failed.")
-        end
+        myConfig:Load()
+        print("✅ [XZNE] Config Loaded via WindUI ConfigManager!")
+        Controller.UpdateCache()  -- Sync to Main.lua
     end)
     
 end)
