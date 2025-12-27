@@ -74,14 +74,14 @@ local PetDatabase, ItemDatabase = {}, {}
 local DatabaseReady = false
 
 -- ✅ OPTIMIZATION: JSON Database with Local Caching
-local CachedDBFile = ".xzne/XZNE_Database.json"
+local CachedDBFile = "XZNE ScriptHub/Database.json"
 
 task.defer(function()
     task.wait(0.3)  -- Let GUI render first
     
     -- Create config folder if not exists
-    if makefolder and not isfolder(".xzne") then
-        makefolder(".xzne")
+    if makefolder and not isfolder("XZNE ScriptHub") then
+        makefolder("XZNE ScriptHub")
     end
     
     -- Try loading from local cache first (INSTANT if cached)
@@ -156,7 +156,7 @@ local Window = WindUI:CreateWindow({
     Icon = "xzne:logo",  -- Use registered custom logo
     Author = "By. Xzero One",
     -- Folder = "XZNE_Config",  -- ❌ REMOVED: Caused dual state system (WindUI state vs our JSON)
-    Transparency = 0.45,       -- 0.45 = Ideal Glass Effect
+    Transparency = 0.35,       -- 0.35 = More transparent for better glass effect
     Acrylic = true,           -- Enable Glassmorphism Blur
     Theme = "Dark",           -- Dark Mode for contrast
     NewElements = true,       -- Enable modern UI elements
@@ -171,6 +171,18 @@ local Window = WindUI:CreateWindow({
 })
 -- Store window reference for cleanup
 Controller.Window = Window
+
+-- Add minimize toggle keybind (RightControl)
+local UserInputService = game:GetService("UserInputService")
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.RightControl then
+        pcall(function()
+            if Window and Window.Enabled ~= nil then
+                Window.Enabled = not Window.Enabled
+            end
+        end)
+    end
+end)
 
 local UIElements = {}
 
