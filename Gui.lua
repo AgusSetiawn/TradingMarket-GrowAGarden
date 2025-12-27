@@ -440,15 +440,15 @@ task.defer(function()
             -- [CONFIG LOAD VISUALS]
             print("✅ [XZNE] Applying Config to UI...")
             
-            -- [CONFIG LOAD VISUALS]
-            print("✅ [XZNE] Applying Config to UI...")
-            
-            -- 1. Sliders (Use :Set, verified in WindUI source)
+            -- 1. Sliders (Signature: Set(self, value, tween, input_event))
             if Controller.Config.Speed and UIElements.DelaySlider then 
-                pcall(function() UIElements.DelaySlider:Set(tonumber(Controller.Config.Speed) or 1) end) 
+                local speedVal = tonumber(Controller.Config.Speed) or 1
+                pcall(function() 
+                    UIElements.DelaySlider:Set(speedVal, nil, nil)  -- value, no tween, no input event
+                end) 
             end
 
-            -- 2. Toggles (Use :Set, verified in WindUI source)
+            -- 2. Toggles (Signature: Set(self, state, tween, should_callback))
             local toggles = {
                 AutoBuy = UIElements.AutoBuy,
                 AutoList = UIElements.AutoList,
@@ -457,13 +457,14 @@ task.defer(function()
             }
             for key, toggle in pairs(toggles) do
                 if Controller.Config[key] ~= nil then
-                    -- Force boolean
                     local state = (Controller.Config[key] == true)
-                    pcall(function() toggle:Set(state) end)
+                    pcall(function() 
+                        toggle:Set(state, true, false)  -- state, with tween, no callback
+                    end)
                 end
             end
 
-            -- 3. Inputs (Use :Set, known working)
+            -- 3. Inputs (Working correctly)
             if Controller.Config.MaxPrice then 
                 pcall(function() UIElements.MaxPrice:Set(tostring(Controller.Config.MaxPrice)) end)
             end
@@ -471,7 +472,7 @@ task.defer(function()
                  pcall(function() UIElements.Price:Set(tostring(Controller.Config.Price)) end)
             end
             
-            -- 4. Dropdowns (Use :Select, verified in WindUI source)
+            -- 4. Dropdowns (Signature: Select(self, value))
             local savedTarget = Controller.Config.BuyTarget
             if savedTarget and savedTarget ~= "— None —" then
                 task.defer(function()
