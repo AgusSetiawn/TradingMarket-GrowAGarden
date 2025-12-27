@@ -1,108 +1,124 @@
-# 💠 XZNE ScriptHub - TradingMarket Bot
+# 🎮 XZNE ScriptHub - Auto Trading Bot
 
-**Version:** 0.0.01 Beta  
-**Game:** Trading Market (Grow A Garden)
-
----
-
-## 📁 Project Structure
-
-```
-TradingMarket/
-├── src/                    # Source Code
-│   ├── Loader.lua         # Entry point & execution lock
-│   ├── Main.lua           # Core logic & controller
-│   └── Gui.lua            # WindUI interface
-│
-├── data/                   # Static Data
-│   ├── Database.json      # Item/Pet database (640 entries)
-│   └── Database.lua       # Lua format fallback
-│
-└── README.md              # This file
-
-Executor Workspace:
-└── .xzne/                 # Config Folder (auto-created)
-    ├── XZNE_Config.json   # User settings
-    └── XZNE_Database.json # Cached database
-```
+**Game:** Trading Market (Grow A Garden)  
+**Version:** Beta v0.0.01
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Cara Pakai (Super Mudah!)
+
+### Step 1: Buka Executor
+Buka executor favorit kamu (Synapse, KRNL, Fluxus, dll)
+
+### Step 2: Copy & Paste
+Copy code ini, paste ke executor:
 
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/src/Loader.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/Loader.lua"))()
 ```
 
----
-
-## ✨ Features
-
-- **Auto Buy (Sniper)** - Instantly snipe listings below max price
-- **Auto List** - Automatically list items/pets for sale
-- **Auto Remove** - Clear specific items from your booth
-- **Auto Claim** - Auto-claim available booths
-- **Tab-Based Lazy Loading** - 67% faster GUI with on-demand dropdown loading
-- **JSON Database Caching** - 99% faster subsequent loads
-- **Silent Production Mode** - Clean console, no debug spam
+### Step 3: Execute!
+Klik tombol Execute/Inject - **DONE!** ✅
 
 ---
 
-## 🎨 GUI Features
+## ✨ Fitur-Fitur
 
-- Glassmorphism design
-- Search in all dropdowns (640 items)
-- Live stats display
-- Config auto-save
-- Tab-based lazy loading (instant GUI)
+### 💰 Auto Buy (Sniper)
+Otomatis beli item/pet murah dari booth orang lain!
 
----
-
-## 📦 Configuration
-
-All configs stored in `.xzne/` folder in executor workspace:
-
-- **XZNE_Config.json** - User settings (auto-saves)
-- **XZNE_Database.json** - Cached database (instant loads)
-
-To reset: Delete `.xzne/` folder
+**Cara pakai:**
+1. Pilih item/pet yang mau dibeli
+2. Set harga maksimal
+3. Toggle ON "Enable Auto Buy"
+4. Bot akan auto snipe! 🎯
 
 ---
 
-## 🔧 Development
+### 📦 Auto List (Jual Otomatis)
+Otomatis jual item/pet dari inventory kamu!
 
-**Folder Purpose:**
-- `src/` - All Lua source code
-- `data/` - Static databases
-- `.xzne/` - Runtime configs (executor workspace)
-
-**File Roles:**
-- `Loader.lua` - Entry point, prevents double execution
-- `Main.lua` - Core bot logic, controller, auto functions
-- `Gui.lua` - WindUI interface, tab-based lazy loading
+**Cara pakai:**
+1. Pilih item/pet yang mau dijual
+2. Set harga jual
+3. Toggle ON "Enable Auto List"
+4. Bot akan auto list! 💵
 
 ---
 
-## 📝 Changelog
+### 🗑️ Auto Remove
+Hapus listing dari booth secara otomatis!
 
-### Latest (v0.0.01 Beta)
-- ✅ Tab-based lazy loading (67% performance boost)
-- ✅ Silent production mode (clean console)
-- ✅ JSON database caching (99% faster 2nd load)
-- ✅ Workspace restructure (src/, data/, .xzne/)
-- ✅ Execution lock (prevents triple-run bug)
-- ✅ Global function caching (30-40% runtime boost)
+**Cara pakai:**
+1. Pilih item/pet yang mau di-remove
+2. Toggle ON "Enable Auto Remove"
+3. Done!
 
----
-
-## ⚠️ Notes
-
-- First load: ~2s (downloads database)
-- Second+ load: <100ms (uses cache)
-- GUI appears: ~100ms (instant)
-- Dropdowns load on-demand per tab
-- Console is clean (production mode)
+**ATAU** hapus SEMUA listing sekaligus:
+- Toggle ON "Remove ALL Listings" ⚡
 
 ---
 
-**Made with ❤️ by Xzero One**
+### 🏪 Auto Claim Booth
+Otomatis claim booth kosong!
+
+**Cara pakai:**
+- Toggle ON "Auto Claim Booth"
+- Bot akan auto claim booth yang available! 🏃‍♂️
+
+---
+
+## 🎯 Tips & Trik
+
+### Sniper Tips:
+- Set harga max rendah untuk dapat deals terbaik
+- Pilih item populer untuk snipe lebih cepat
+- Bot berjalan 24/7 selama toggle ON
+
+### Listing Tips:
+- Cek harga market sebelum list
+- Jangan set harga terlalu mahal
+- Bot akan auto-list semua yang match
+
+### Safety:
+- Jangan spam toggle ON/OFF
+- Tunggu beberapa detik antara actions
+- Script aman - no ban risk! ✅
+
+---
+
+## ❓ FAQ (Pertanyaan Sering Ditanya)
+
+**Q: Script tidak jalan?**  
+A: Pastikan kamu pakai URL yang benar! Copy paste dari README ini.
+
+**Q: GUI tidak muncul?**  
+A: Tunggu 2-3 detik setelah execute. Kalau masih tidak muncul, execute ulang.
+
+**Q: Bisa ke-ban?**  
+A: Tidak! Script ini aman dan tidak terdeteksi.
+
+**Q: Bisa pakai di mobile?**  
+A: Tergantung executor mobile kamu. Kebanyakan bisa!
+
+**Q: Script gratis?**  
+A: 100% GRATIS! No premium, no key! 🎉
+
+---
+
+## 📱 Support
+
+Ada masalah? Join Discord kami atau buka issue di GitHub!
+
+**Developer:** Xzero One  
+**Version:** Beta 0.0.01
+
+---
+
+## ⚠️ Disclaimer
+
+Script ini untuk **educational purposes** only. Use at your own risk!
+
+---
+
+**Enjoy & Happy Trading! 🎊**
