@@ -143,8 +143,8 @@ local Window = WindUI:CreateWindow({
     Size = UDim2.fromOffset(580, 460),  -- Optimal size
     
     -- Premium Settings
-    Transparency = 0.3,       -- Dark Glassy look
-    Acrylic = false,          -- Disabled (Broken/Unsupported)
+    Transparency = 0.5,       -- Semi-transparent for Glass effect
+    Acrylic = true,           -- Attempting to use Library's built-in blur
     Theme = "Dark",
     NewElements = true,
     
@@ -165,17 +165,9 @@ local Window = WindUI:CreateWindow({
 -- Store window reference for cleanup
 Controller.Window = Window
 
--- [CUSTOM BLUR FIX]
--- Since WindUI Acrylic is broken, we use native Lighting Blur
-local Blur = Instance.new("BlurEffect")
-Blur.Name = "XZNE_Blur"
-Blur.Size = 24 -- Medium blur for premium feel
-Blur.Parent = game:GetService("Lighting")
-Blur.Enabled = true -- Default on
-
--- Cleanup blur on script end
-if _G.XZNE_Blur and _G.XZNE_Blur ~= Blur then _G.XZNE_Blur:Destroy() end
-_G.XZNE_Blur = Blur -- Store global to clear later if needed
+-- [7] CONFIG MANAGER SETUP
+local ConfigManager = Window.ConfigManager
+local MyConfig = ConfigManager:CreateConfig("XZNE_Config")
 
 -- [6] CONFIGURE OPEN BUTTON (Minimize State)
 -- Matches the "Premium" aesthetic requested
@@ -200,13 +192,8 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         pcall(function()
             if Window and Window.ToggleVisibility then
                 Window:ToggleVisibility()
-                -- Toggle Blur with Window
-                if Window.Visible ~= nil then
-                    Blur.Enabled = Window.Visible
-                end
             elseif Window and Window.Visible ~= nil then
                 Window.Visible = not Window.Visible
-                Blur.Enabled = Window.Visible
             end
         end)
     end
@@ -249,6 +236,7 @@ UIElements.TargetPet = TargetSection:Dropdown({
     Title = "Target Pet", 
     Desc = "🔍 Search pets...",
     Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
+    Flag = "TargetPet",
     Callback = function(val) 
         -- Update ALL configs to use this pet
         Controller.Config.BuyTarget = val
@@ -269,6 +257,7 @@ UIElements.TargetItem = TargetSection:Dropdown({
     Title = "Target Item", 
     Desc = "🔍 Search items...",
     Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
+    Flag = "TargetItem",
     Callback = function(val) 
         -- Update ALL configs to use this item
         Controller.Config.BuyTarget = val
@@ -286,16 +275,17 @@ TargetSection:Space() -- Break merge
 
 UIElements.DelaySlider = TargetSection:Slider({
     Title = "Action Delay",
-    Desc = "Wait time between actions (0-10s)",
+    Desc = "Action Delay (0–10s)",
     Step = 0.1,
     Value = {
         Min = 0,
         Max = 10,
         Default = Controller.Config.Speed or 1,
     },
+    Flag = "ActionDelay",
     Callback = function(val)
         Controller.Config.Speed = val
-        Controller.SaveConfig()
+        MyConfig:Save()
     end
 })
 
@@ -306,11 +296,13 @@ local BuySection = MainTab:Section({ Title = "Auto Buy (Sniper)", Icon = "shoppi
 
 UIElements.MaxPrice = BuySection:Input({
     Title = "Max Price", Desc = "Maximum price to pay", Default = tostring(Controller.Config.MaxPrice), Numeric = true,
-    Callback = function(txt) Controller.Config.MaxPrice = tonumber(txt) or 5; Controller.SaveConfig() end
+    Flag = "MaxPrice",
+    Callback = function(txt) Controller.Config.MaxPrice = tonumber(txt) or 5; MyConfig:Save() end
 })
 
 UIElements.AutoBuy = BuySection:Toggle({
     Title = "Enable Auto Buy", Desc = "Snipe selected target", Default = false,
+    Flag = "AutoBuy",
     Callback = function(val)
         if val and (not Controller.Config.BuyTarget or Controller.Config.BuyTarget == "" or Controller.Config.BuyTarget == "— None —") then
             UIElements.AutoBuy:Set(false)
@@ -318,7 +310,7 @@ UIElements.AutoBuy = BuySection:Toggle({
             return
         end
         Controller.Config.AutoBuy = val
-        Controller.SaveConfig()
+        MyConfig:Save()
     end
 })
 
@@ -329,11 +321,13 @@ local ListSection = MainTab:Section({ Title = "Auto List", Icon = "tag" })
 
 UIElements.Price = ListSection:Input({
     Title = "Listing Price", Desc = "Price per item", Default = tostring(Controller.Config.Price), Numeric = true,
-    Callback = function(txt) Controller.Config.Price = tonumber(txt) or 5; Controller.SaveConfig() end
+    Flag = "ListPrice",
+    Callback = function(txt) Controller.Config.Price = tonumber(txt) or 5; MyConfig:Save() end
 })
 
 UIElements.AutoList = ListSection:Toggle({
     Title = "Enable Auto List", Desc = "List selected target", Default = false,
+    Flag = "AutoList",
     Callback = function(val)
         if val and (not Controller.Config.ListTarget or Controller.Config.ListTarget == "" or Controller.Config.ListTarget == "— None —") then
             UIElements.AutoList:Set(false)
@@ -341,7 +335,7 @@ UIElements.AutoList = ListSection:Toggle({
             return
         end
         Controller.Config.AutoList = val
-        Controller.SaveConfig()
+        MyConfig:Save()
     end
 })
 
@@ -352,6 +346,7 @@ local RemoveSection = MainTab:Section({ Title = "Auto Remove", Icon = "trash-2" 
 
 UIElements.AutoClear = RemoveSection:Toggle({
     Title = "Enable Auto Remove", Desc = "Remove selected target", Default = false,
+    Flag = "AutoClear",
     Callback = function(val)
         if val and (not Controller.Config.RemoveTarget or Controller.Config.RemoveTarget == "" or Controller.Config.RemoveTarget == "— None —") then
             UIElements.AutoClear:Set(false)
@@ -359,7 +354,7 @@ UIElements.AutoClear = RemoveSection:Toggle({
             return
         end
         Controller.Config.AutoClear = val
-        Controller.SaveConfig()
+        MyConfig:Save()
     end
 })
 
@@ -370,9 +365,10 @@ local BoothSection = MainTab:Section({ Title = "Booth Control", Icon = "store" }
 
 UIElements.AutoClaim = BoothSection:Toggle({
     Title = "Auto Claim Booth", Desc = "Automatically claim booth", Default = false,
+    Flag = "AutoClaim",
     Callback = function(val)
         Controller.Config.AutoClaim = val
-        Controller.SaveConfig()
+        MyConfig:Save()
     end
 })
 
@@ -416,23 +412,41 @@ task.defer(function()
         end
     end
     
-    -- Restore toggle states AFTER GUI ready (prevent auto-activation)
+    -- [8] AUTO LOAD CONFIG
+    -- Must be done after dropdowns are populated to valid values
     task.wait(0.2)
     pcall(function()
-        if Controller.Config.AutoBuy and Controller.Config.BuyTarget and Controller.Config.BuyTarget ~= "— None —" then
-            UIElements.AutoBuy:Set(true)
-        end
-        if Controller.Config.AutoList and Controller.Config.ListTarget and Controller.Config.ListTarget ~= "— None —" then
-            UIElements.AutoList:Set(true)
-        end
-        if Controller.Config.AutoClear and Controller.Config.RemoveTarget and Controller.Config.RemoveTarget ~= "— None —" then
-            UIElements.AutoClear:Set(true)
-        end
-        if Controller.Config.AutoClaim then
-            UIElements.AutoClaim:Set(true)
-        end
+        MyConfig:Load() 
+        print("✅ [XZNE] Config Loaded via ConfigManager")
     end)
 end)
+
+-- === UI SETTINGS SECTION ===
+local UISection = SettingsTab:Section({ Title = "UI Customization", Icon = "palette" })
+
+UISection:Slider({
+    Title = "Window Transparency",
+    Desc = "Adjust background opacity (0.1 - 1)",
+    Step = 0.05,
+    Value = {
+        Min = 0.1,
+        Max = 1,
+        Default = Controller.Config.Transparency or 0.5,
+    },
+    Flag = "Transparency",
+    Callback = function(val)
+        Controller.Config.Transparency = val
+        MyConfig:Save()
+        -- Attempt to apply dynamically
+        if Window and Window.SetTransparency then
+            Window:SetTransparency(val)
+        elseif Window and Window.Frame then
+            Window.Frame.BackgroundTransparency = val
+        end
+    end
+})
+
+UISection:Space()
 
 -- Stats Section (in Settings Tab)
 local StatsSection = SettingsTab:Section({ Title = "📊 Session Statistics" })
