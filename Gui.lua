@@ -196,6 +196,17 @@ end)
 
 local UIElements = {}
 
+-- [HELPER] Add Spacer for better layout
+local function AddSpacer(section)
+    if section and section.Paragraph then
+        section:Paragraph({
+            Title = " ",
+            Desc = " ", -- Forces height
+            BackgroundTransparency = 1 -- Attempt to make it invisible
+        })
+    end
+end
+
 -- [MAIN TAB with Premium Icon]
 local MainTab = Window:Tab({ 
     Title = "Trading", 
@@ -222,13 +233,12 @@ TargetSection:Paragraph({
     Title = "💡 Quick Guide",
     Desc = "Select your target Pet or Item below. Then enable which function you want to use (Buy/List/Remove)."
 })
+AddSpacer(TargetSection)
 TargetSection:Divider()
+AddSpacer(TargetSection)
 
 -- SHARED Pet Dropdown (used by ALL functions)
--- GROUP: Wraps dropdowns to merge them visually (Flat corners between them)
-local DropdownGroup = TargetSection:Group()
-
-UIElements.TargetPet = DropdownGroup:Dropdown({
+UIElements.TargetPet = TargetSection:Dropdown({
     Title = "Target Pet", 
     Desc = "🔍 Search pets...",
     Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
@@ -246,7 +256,7 @@ UIElements.TargetPet = DropdownGroup:Dropdown({
 })
 
 -- SHARED Item Dropdown (used by ALL functions)
-UIElements.TargetItem = DropdownGroup:Dropdown({
+UIElements.TargetItem = TargetSection:Dropdown({
     Title = "Target Item", 
     Desc = "🔍 Search items...",
     Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
@@ -263,7 +273,9 @@ UIElements.TargetItem = DropdownGroup:Dropdown({
     end
 })
 
+AddSpacer(TargetSection)
 TargetSection:Divider()
+AddSpacer(TargetSection)
 
 -- === AUTO BUY SECTION ===
 local BuySection = MainTab:Section({ Title = "Auto Buy (Sniper)", Icon = "zap" })
@@ -286,7 +298,9 @@ UIElements.AutoBuy = BuySection:Toggle({
     end
 })
 
+AddSpacer(BuySection)
 BuySection:Divider()
+AddSpacer(BuySection)
 
 -- === AUTO LIST SECTION ===
 local ListSection = MainTab:Section({ Title = "Auto List", Icon = "xzne:package" })
@@ -309,7 +323,9 @@ UIElements.AutoList = ListSection:Toggle({
     end
 })
 
+AddSpacer(ListSection)
 ListSection:Divider()
+AddSpacer(ListSection)
 
 -- === AUTO REMOVE SECTION ===
 local RemoveSection = MainTab:Section({ Title = "Auto Remove", Icon = "xzne:trash-2" })
@@ -327,7 +343,9 @@ UIElements.AutoClear = RemoveSection:Toggle({
     end
 })
 
+AddSpacer(RemoveSection)
 RemoveSection:Divider()
+AddSpacer(RemoveSection)
 
 -- === BOOTH CONTROL SECTION ===
 local BoothSection = MainTab:Section({ Title = "Booth Control", Icon = "xzne:store" })
