@@ -150,23 +150,31 @@ task.defer(function()
     end
 end)
 
--- [5] CREATE WINDOW (Premium Glassmorphism Style)
+-- [5] CREATE WINDOW (Premium Mac-Style Design)
 local Window = WindUI:CreateWindow({
     Title = "XZNE ScriptHub",
-    Icon = "xzne:logo",  -- Use registered custom logo
+    Icon = "rbxassetid://110223904365911",  -- Custom logo (direct asset)
     Author = "By. Xzero One",
-    -- Folder = "XZNE_Config",  -- ❌ REMOVED: Caused dual state system (WindUI state vs our JSON)
-    Transparency = 0.35,       -- 0.35 = More transparent for better glass effect
-    Acrylic = true,           -- Enable Glassmorphism Blur
-    Theme = "Dark",           -- Dark Mode for contrast
-    NewElements = true,       -- Enable modern UI elements
+    Size = UDim2.fromOffset(580, 460),  -- Optimal size
     
-    -- Window Controls on RIGHT (Default/Windows Style)
-    -- ButtonsType = "Mac",   <-- DISABLED (Places buttons on Left)
+    -- Premium Settings
+    Transparency = 0.25,       -- Very transparent for glass
+    Acrylic = true,           -- Glassmorphism
+    Theme = "Dark",
+    NewElements = true,
+    
+    -- Mac Style Buttons (like screenshot!)
+    ButtonsType = "Mac",  -- Red, Yellow, Green dots!
     
     Topbar = {
-        Height = 44,
-        ButtonsType = "Default" -- Force Windows Style (Right side)
+        Height = 50,
+        CornerRadius = UDim.new(0, 8),
+        Transparency = 0.1  -- Very transparent topbar
+    },
+    
+    Sidebar = {
+        Width = 180,
+        Transparency = 0.15
     }
 })
 -- Store window reference for cleanup
@@ -186,11 +194,25 @@ end)
 
 local UIElements = {}
 
--- [SINGLE MAIN TAB - ULTRA SIMPLIFIED]
-local MainTab = Window:Tab({ Title = "Main", Icon = "xzne:target" })
+-- [MAIN TAB with Premium Icon]
+local MainTab = Window:Tab({ 
+    Title = "Trading", 
+    Icon = "rbxassetid://10734884548",  -- Target icon
+    Color = Color3.fromRGB(99, 102, 241)  -- Indigo
+})
 
--- === SHARED TARGET SELECTION ===
-local TargetSection = MainTab:Section({ Title = "🎯 Target Selection", Icon = "crosshair" })
+-- [SETTINGS TAB with Premium Icon]
+local SettingsTab = Window:Tab({ 
+    Title = "Settings", 
+    Icon = "rbxassetid://10734950309",  -- Settings icon
+    Color = Color3.fromRGB(251, 146, 60)  -- Orange
+})
+
+-- === TARGET SELECTION SECTION ===
+local TargetSection = MainTab:Section({ 
+    Title = "🎯 Target Selection", 
+    Icon = "crosshair"
+})
 
 TargetSection:Paragraph({
     Title = "💡 Quick Guide",
