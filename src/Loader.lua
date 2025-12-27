@@ -1,7 +1,7 @@
 --[[
     💠 XZNE SCRIPTHUB v0.0.01 [Beta] - LOADER
     
-    🚀 Usage: loadstring(game:HttpGet("https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/perf-v28.1/Loader.lua"))()
+    🚀 Usage: loadstring(game:HttpGet("https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/src/Loader.lua"))()
 ]]
 
 -- IMPORTANT: Official Main Branch
