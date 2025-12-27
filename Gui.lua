@@ -52,6 +52,7 @@ end
 -- [3] REGISTER ICONS
 task.defer(function()
     WindUI.Creator.AddIcons("xzne", {
+        ["logo"] = "rbxassetid://110223904365911",  -- Custom Logo
         ["target"] = "rbxassetid://10734884548",      -- Crosshair → Target (Sniper)
         ["shopping-cart"] = "rbxassetid://10747372992", -- Shopping Cart (Buy)
         ["package"] = "rbxassetid://10723434711",    -- Package (Inventory/Sell)
@@ -152,7 +153,7 @@ end)
 -- [5] CREATE WINDOW (Premium Glassmorphism Style)
 local Window = WindUI:CreateWindow({
     Title = "XZNE ScriptHub",
-    Icon = "rbxassetid://110223904365911",
+    Icon = "xzne:logo",  -- Use registered custom logo
     Author = "By. Xzero One",
     -- Folder = "XZNE_Config",  -- ❌ REMOVED: Caused dual state system (WindUI state vs our JSON)
     Transparency = 0.45,       -- 0.45 = Ideal Glass Effect
