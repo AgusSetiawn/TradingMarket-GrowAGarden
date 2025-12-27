@@ -153,18 +153,20 @@ end)
 -- [5] CREATE WINDOW (Premium Mac-Style Design)
 local Window = WindUI:CreateWindow({
     Title = "XZNE ScriptHub",
-    Icon = "rbxassetid://110223904365911",  -- Custom logo restored
     Author = "By. Xzero One",
-    Size = UDim2.fromOffset(580, 460),  -- Optimal size
+    Size = UDim2.fromOffset(580, 460),
     
     -- Premium Settings
-    Transparency = 0.5,       -- Higher transparency for glassmorphism effect
-    Acrylic = true,           -- Glassmorphism
+    Transparency = 0.5,
+    Acrylic = true,
     Theme = "Dark",
     NewElements = true,
+
+    -- Windows Style Buttons (Right Side)
+    ButtonsType = "Default",
     
-    -- Windows Style Buttons (right side)
-    ButtonsType = "Default",  -- Default = Right side like Windows!
+    -- Restore User's Custom Logo (Note: Ensure this ID is correct!)
+    Icon = "rbxassetid://110223904365911",
     
     Topbar = {
         Height = 50,
@@ -212,12 +214,23 @@ local SettingsTab = Window:Tab({
     IconShape = "Square",  -- Colored square wrapper
 })
 
+-- === TARGET SELECTION SECTION ===
+local TargetSection = MainTab:Section({ 
+    Title = "Target Selection", 
+    Icon = "crosshair",
+    Box = true,
+    BoxBorder = true,
+    Opened = true
+})
 
--- === AUTO BUY SECTION ===
-local BuySection = MainTab:Section({ Title = "Auto Buy (Sniper)", Icon = "zap" })
+TargetSection:Paragraph({
+    Title = "💡 Quick Guide",
+    Desc = "Select your target Pet or Item below. Then enable which function you want to use (Buy/List/Remove)."
+})
+TargetSection:Divider()
 
--- SHARED Target Pet Dropdown (for ALL functions)
-UIElements.TargetPet = BuySection:Dropdown({
+-- SHARED Pet Dropdown (used by ALL functions)
+UIElements.TargetPet = TargetSection:Dropdown({
     Title = "Target Pet", 
     Desc = "🔍 Search pets...",
     Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
@@ -234,8 +247,8 @@ UIElements.TargetPet = BuySection:Dropdown({
     end
 })
 
--- SHARED Target Item Dropdown (for ALL functions)
-UIElements.TargetItem = BuySection:Dropdown({
+-- SHARED Item Dropdown (used by ALL functions)
+UIElements.TargetItem = TargetSection:Dropdown({
     Title = "Target Item", 
     Desc = "🔍 Search items...",
     Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
@@ -250,6 +263,18 @@ UIElements.TargetItem = BuySection:Dropdown({
         Controller.RequestUpdate()
         Controller.SaveConfig()
     end
+})
+
+TargetSection:Divider()
+
+-- === AUTO BUY SECTION ===
+-- === AUTO BUY SECTION ===
+local BuySection = MainTab:Section({ 
+    Title = "Auto Buy (Sniper)", 
+    Icon = "zap",
+    Box = true,
+    BoxBorder = true,
+    Opened = true
 })
 
 UIElements.MaxPrice = BuySection:Input({
@@ -273,7 +298,14 @@ UIElements.AutoBuy = BuySection:Toggle({
 BuySection:Divider()
 
 -- === AUTO LIST SECTION ===
-local ListSection = MainTab:Section({ Title = "Auto List", Icon = "xzne:package" })
+-- === AUTO LIST SECTION ===
+local ListSection = MainTab:Section({ 
+    Title = "Auto List", 
+    Icon = "xzne:package",
+    Box = true,
+    BoxBorder = true,
+    Opened = true
+})
 
 UIElements.Price = ListSection:Input({
     Title = "Listing Price", Desc = "Price per item", Default = tostring(Controller.Config.Price), Numeric = true,
@@ -296,7 +328,14 @@ UIElements.AutoList = ListSection:Toggle({
 ListSection:Divider()
 
 -- === AUTO REMOVE SECTION ===
-local RemoveSection = MainTab:Section({ Title = "Auto Remove", Icon = "xzne:trash-2" })
+-- === AUTO REMOVE SECTION ===
+local RemoveSection = MainTab:Section({ 
+    Title = "Auto Remove", 
+    Icon = "xzne:trash-2",
+    Box = true,
+    BoxBorder = true,
+    Opened = true
+})
 
 UIElements.AutoClear = RemoveSection:Toggle({
     Title = "Enable Auto Remove", Desc = "Remove selected target", Default = false,
@@ -314,7 +353,14 @@ UIElements.AutoClear = RemoveSection:Toggle({
 RemoveSection:Divider()
 
 -- === BOOTH CONTROL SECTION ===
-local BoothSection = MainTab:Section({ Title = "Booth Control", Icon = "xzne:store" })
+-- === BOOTH CONTROL SECTION ===
+local BoothSection = MainTab:Section({ 
+    Title = "Booth Control", 
+    Icon = "xzne:store",
+    Box = true,
+    BoxBorder = true,
+    Opened = true
+})
 
 UIElements.AutoClaim = BoothSection:Toggle({
     Title = "Auto Claim Booth", Desc = "Automatically claim booth", Default = false,
