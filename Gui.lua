@@ -188,8 +188,8 @@ TargetSection:Divider()
 -- SHARED Pet Dropdown (used by ALL functions)
 UIElements.TargetPet = TargetSection:Dropdown({
     Title = "Target Pet", 
-    Desc = "🔍 Search 277 pets...",
-    Values = {}, Default = 1, Search = true,
+    Desc = "🔍 Search pets...",
+    Values = {"— None —"}, Default = 1, Search = true,
     Callback = function(val) 
         -- Update ALL configs to use this pet
         Controller.Config.BuyTarget = val
@@ -206,8 +206,8 @@ UIElements.TargetPet = TargetSection:Dropdown({
 -- SHARED Item Dropdown (used by ALL functions)
 UIElements.TargetItem = TargetSection:Dropdown({
     Title = "Target Item", 
-    Desc = "🔍 Search 363 items...",
-    Values = {}, Default = 1, Search = true,
+    Desc = "🔍 Search items...",
+    Values = {"— None —"}, Default = 1, Search = true,
     Callback = function(val) 
         -- Update ALL configs to use this item
         Controller.Config.BuyTarget = val
@@ -232,8 +232,16 @@ UIElements.MaxPrice = BuySection:Input({
 })
 
 UIElements.AutoBuy = BuySection:Toggle({
-    Title = "Enable Auto Buy", Desc = "Snipe selected target", Default = Controller.Config.AutoBuy,
-    Callback = function(val) Controller.Config.AutoBuy = val; Controller.SaveConfig() end
+    Title = "Enable Auto Buy", Desc = "Snipe selected target", Default = false,
+    Callback = function(val)
+        if val and (not Controller.Config.BuyTarget or Controller.Config.BuyTarget == "" or Controller.Config.BuyTarget == "— None —") then
+            UIElements.AutoBuy:Set(false)
+            warn("⚠️ [XZNE] Select a target first!")
+            return
+        end
+        Controller.Config.AutoBuy = val
+        Controller.SaveConfig()
+    end
 })
 
 BuySection:Divider()
@@ -247,8 +255,16 @@ UIElements.Price = ListSection:Input({
 })
 
 UIElements.AutoList = ListSection:Toggle({
-    Title = "Enable Auto List", Desc = "List selected target", Default = Controller.Config.AutoList,
-    Callback = function(val) Controller.Config.AutoList = val; Controller.SaveConfig() end
+    Title = "Enable Auto List", Desc = "List selected target", Default = false,
+    Callback = function(val)
+        if val and (not Controller.Config.ListTarget or Controller.Config.ListTarget == "" or Controller.Config.ListTarget == "— None —") then
+            UIElements.AutoList:Set(false)
+            warn("⚠️ [XZNE] Select a target first!")
+            return
+        end
+        Controller.Config.AutoList = val
+        Controller.SaveConfig()
+    end
 })
 
 ListSection:Divider()
@@ -257,13 +273,16 @@ ListSection:Divider()
 local RemoveSection = MainTab:Section({ Title = "🗑️ Auto Remove", Icon = "xzne:trash-2" })
 
 UIElements.AutoClear = RemoveSection:Toggle({
-    Title = "Enable Auto Remove", Desc = "Remove selected target", Default = Controller.Config.AutoClear,
-    Callback = function(val) Controller.Config.AutoClear = val; Controller.SaveConfig() end
-})
-
-UIElements.DeleteAll = RemoveSection:Toggle({
-    Title = "Remove ALL Listings", Desc = "Clear entire booth", Default = Controller.Config.DeleteAll,
-    Callback = function(val) Controller.Config.DeleteAll = val; Controller.SaveConfig() end
+    Title = "Enable Auto Remove", Desc = "Remove selected target", Default = false,
+    Callback = function(val)
+        if val and (not Controller.Config.RemoveTarget or Controller.Config.RemoveTarget == "" or Controller.Config.RemoveTarget == "— None —") then
+            UIElements.AutoClear:Set(false)
+            warn("⚠️ [XZNE] Select a target first!")
+            return
+        end
+        Controller.Config.AutoClear = val
+        Controller.SaveConfig()
+    end
 })
 
 RemoveSection:Divider()
@@ -272,8 +291,11 @@ RemoveSection:Divider()
 local BoothSection = MainTab:Section({ Title = "🏪 Booth Control", Icon = "xzne:store" })
 
 UIElements.AutoClaim = BoothSection:Toggle({
-    Title = "Auto Claim Booth", Desc = "Automatically claim booth", Default = Controller.Config.AutoClaim,
-    Callback = function(val) Controller.Config.AutoClaim = val; Controller.SaveConfig() end
+    Title = "Auto Claim Booth", Desc = "Automatically claim booth", Default = false,
+    Callback = function(val)
+        Controller.Config.AutoClaim = val
+        Controller.SaveConfig()
+    end
 })
 
 BoothSection:Button({
@@ -290,9 +312,14 @@ task.defer(function()
     -- Helper function to populate dropdowns  
     local function SafeUpdate(element, db)
         if element then
-            element.Values = db
+            -- Add database entries after "— None —"
+            local values = {"— None —"}
+            for _, item in ipairs(db) do
+                table.insert(values, item)
+            end
+            element.Values = values
             element.Desc = "🔍 Search "..#db.." items..."
-            if element.Refresh then pcall(function() element:Refresh(db) end) end
+            if element.Refresh then pcall(function() element:Refresh(values) end) end
         end
     end
     
@@ -311,7 +338,7 @@ task.defer(function()
     end
     
     -- Apply saved selections
-    if Controller.Config.BuyTarget then
+    if Controller.Config.BuyTarget and Controller.Config.BuyTarget ~= "— None —" then
         local db = Controller.Config.BuyCategory == "Pet" and UIElements.TargetPet or UIElements.TargetItem
         if db and db.Select then 
             task.defer(function()
@@ -319,6 +346,23 @@ task.defer(function()
             end)
         end
     end
+    
+    -- Restore toggle states AFTER GUI ready (prevent auto-activation)
+    task.wait(0.2)
+    pcall(function()
+        if Controller.Config.AutoBuy and Controller.Config.BuyTarget and Controller.Config.BuyTarget ~= "— None —" then
+            UIElements.AutoBuy:Set(true)
+        end
+        if Controller.Config.AutoList and Controller.Config.ListTarget and Controller.Config.ListTarget ~= "— None —" then
+            UIElements.AutoList:Set(true)
+        end
+        if Controller.Config.AutoClear and Controller.Config.RemoveTarget and Controller.Config.RemoveTarget ~= "— None —" then
+            UIElements.AutoClear:Set(true)
+        end
+        if Controller.Config.AutoClaim then
+            UIElements.AutoClaim:Set(true)
+        end
+    end)
 end)
 
 -- Settings Tab

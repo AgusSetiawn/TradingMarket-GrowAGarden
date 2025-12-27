@@ -95,9 +95,15 @@ local CachedTargets = { Buy = "", List = "", Remove = "" }
 
 -- [CONFIG PERSISTENCE]
 local FileName = ".xzne/XZNE_Config.json"
+local lastSaveTime = 0
 
 function Controller.SaveConfig()
     if not HttpService then return end
+    
+    -- Debounce: Max 1 save per 2 seconds
+    local now = tick()
+    if now - lastSaveTime < 2 then return end
+    lastSaveTime = now
     
     -- Create config folder if not exists
     if makefolder and not isfolder(".xzne") then
