@@ -307,6 +307,7 @@ local function RunAutoBuy()
         if not Config.Running then break end
         if playerKey ~= MyPlayerKey and playerData.Listings then
             for listingUUID, listingInfo in pairs(playerData.Listings) do
+                if not Config.AutoBuy then break end -- FIX: Check toggle inside loop
                 -- Optimization: Check Price & Type FIRST
                 if listingInfo.Price <= maxPrice and listingInfo.ItemType == targetType then
                     local itemData = playerData.Items[listingInfo.ItemId]
@@ -376,6 +377,7 @@ local function RunAutoList()
         local backpack = LocalPlayer:FindFirstChild("Backpack")
         if backpack then
             for _, item in pairs(backpack:GetChildren()) do
+                if not Config.AutoList then break end -- FIX: Check toggle inside loop
                 if not Config.Running or not Config.AutoList then break end
                 
                 if item:IsA("Tool") then

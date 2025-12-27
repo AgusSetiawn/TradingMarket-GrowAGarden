@@ -204,6 +204,7 @@ local MainTab = Window:Tab({
     IconColor = Color3.fromRGB(99, 102, 241),  -- Indigo
     IconShape = "Square",  -- Colored square wrapper
 })
+MainTab:Space() -- Spacing for better UI
 
 -- [SETTINGS TAB with Premium Icon]
 local SettingsTab = Window:Tab({ 
@@ -212,6 +213,7 @@ local SettingsTab = Window:Tab({
     IconColor = Color3.fromRGB(251, 146, 60),  -- Orange
     IconShape = "Square",  -- Colored square wrapper
 })
+SettingsTab:Space() -- Spacing for better UI
 
 -- === TARGET SELECTION SECTION ===
 local TargetSection = MainTab:Section({ 
