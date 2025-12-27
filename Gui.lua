@@ -153,7 +153,7 @@ end)
 -- [5] CREATE WINDOW (Premium Mac-Style Design)
 local Window = WindUI:CreateWindow({
     Title = "XZNE ScriptHub",
-    Icon = "zap",  -- Lightning bolt icon (from Lucide library)
+    Icon = "rbxassetid://110223904365911",  -- Custom logo restored
     Author = "By. Xzero One",
     Size = UDim2.fromOffset(580, 460),  -- Optimal size
     
@@ -163,8 +163,8 @@ local Window = WindUI:CreateWindow({
     Theme = "Dark",
     NewElements = true,
     
-    -- Mac Style Buttons (like screenshot!)
-    ButtonsType = "Mac",  -- Red, Yellow, Green dots!
+    -- Windows Style Buttons (right side)
+    ButtonsType = "Default",  -- Default = Right side like Windows!
     
     Topbar = {
         Height = 50,
@@ -212,20 +212,12 @@ local SettingsTab = Window:Tab({
     IconShape = "Square",  -- Colored square wrapper
 })
 
--- === TARGET SELECTION SECTION ===
-local TargetSection = MainTab:Section({ 
-    Title = "🎯 Target Selection", 
-    Icon = "crosshair"
-})
 
-TargetSection:Paragraph({
-    Title = "💡 Quick Guide",
-    Desc = "Select your target Pet or Item below. Then enable which function you want to use (Buy/List/Remove)."
-})
-TargetSection:Divider()
+-- === AUTO BUY SECTION ===
+local BuySection = MainTab:Section({ Title = "Auto Buy (Sniper)", Icon = "zap" })
 
--- SHARED Pet Dropdown (used by ALL functions)
-UIElements.TargetPet = TargetSection:Dropdown({
+-- SHARED Target Pet Dropdown (for ALL functions)
+UIElements.TargetPet = BuySection:Dropdown({
     Title = "Target Pet", 
     Desc = "🔍 Search pets...",
     Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
@@ -242,8 +234,8 @@ UIElements.TargetPet = TargetSection:Dropdown({
     end
 })
 
--- SHARED Item Dropdown (used by ALL functions)
-UIElements.TargetItem = TargetSection:Dropdown({
+-- SHARED Target Item Dropdown (for ALL functions)
+UIElements.TargetItem = BuySection:Dropdown({
     Title = "Target Item", 
     Desc = "🔍 Search items...",
     Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
@@ -259,11 +251,6 @@ UIElements.TargetItem = TargetSection:Dropdown({
         Controller.SaveConfig()
     end
 })
-
-TargetSection:Divider()
-
--- === AUTO BUY SECTION ===
-local BuySection = MainTab:Section({ Title = "💰 Auto Buy (Sniper)", Icon = "zap" })
 
 UIElements.MaxPrice = BuySection:Input({
     Title = "Max Price", Desc = "Maximum price to pay", Default = tostring(Controller.Config.MaxPrice), Numeric = true,
@@ -286,7 +273,7 @@ UIElements.AutoBuy = BuySection:Toggle({
 BuySection:Divider()
 
 -- === AUTO LIST SECTION ===
-local ListSection = MainTab:Section({ Title = "📦 Auto List (Sell)", Icon = "xzne:package" })
+local ListSection = MainTab:Section({ Title = "Auto List", Icon = "xzne:package" })
 
 UIElements.Price = ListSection:Input({
     Title = "Listing Price", Desc = "Price per item", Default = tostring(Controller.Config.Price), Numeric = true,
@@ -309,7 +296,7 @@ UIElements.AutoList = ListSection:Toggle({
 ListSection:Divider()
 
 -- === AUTO REMOVE SECTION ===
-local RemoveSection = MainTab:Section({ Title = "🗑️ Auto Remove", Icon = "xzne:trash-2" })
+local RemoveSection = MainTab:Section({ Title = "Auto Remove", Icon = "xzne:trash-2" })
 
 UIElements.AutoClear = RemoveSection:Toggle({
     Title = "Enable Auto Remove", Desc = "Remove selected target", Default = false,
@@ -327,7 +314,7 @@ UIElements.AutoClear = RemoveSection:Toggle({
 RemoveSection:Divider()
 
 -- === BOOTH CONTROL SECTION ===
-local BoothSection = MainTab:Section({ Title = "🏪 Booth Control", Icon = "xzne:store" })
+local BoothSection = MainTab:Section({ Title = "Booth Control", Icon = "xzne:store" })
 
 UIElements.AutoClaim = BoothSection:Toggle({
     Title = "Auto Claim Booth", Desc = "Automatically claim booth", Default = false,
