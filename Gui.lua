@@ -51,15 +51,17 @@ do
     end
 end
 
--- [3] CONFIGURATION SYSTEM -> Moved to after Window creation
-
+-- [3] CONFIGURATION SYSTEM (Native WindUI)
+-- Setup moved to after Window creation
+local function AutoSave() 
+    -- Placeholder until init
+end
 
 -- [3] ICONS
 -- Using WindUI Native Lucide Icons for better consistency and "Geist" feel.
 -- No custom registration needed.
 
 -- [4] LOAD DATABASES (DEFERRED for faster GUI appearance)
-local HttpService = game:GetService("HttpService")  -- Needed for JSON decode
 local PetDatabase, ItemDatabase = {}, {}
 local DatabaseReady = false
 
@@ -143,12 +145,12 @@ end)
 -- [5] CREATE WINDOW (Premium Mac-Style Design)
 local Window = WindUI:CreateWindow({
     Title = "XZNE ScriptHub",
-    Icon = "rbxassetid://123378346805284", -- Lightning bolt icon (from Lucide library)
+    Icon = "rbxassetid://123378346805284",  -- Lightning bolt icon (from Lucide library)
     Author = "By. Xzero One",
     Size = UDim2.fromOffset(580, 460),  -- Optimal size
     
     -- Premium Settings
-    Transparency = 0.5,       -- Higher transparency for glassmorphism effect
+    Transparency = 1,       -- Higher transparency for glassmorphism effect
     Acrylic = true,           -- Glassmorphism
     Theme = "Dark",
     NewElements = true,
@@ -173,29 +175,18 @@ Controller.Window = Window
 -- [6] CONFIGURE OPEN BUTTON (Minimize State)
 -- Matches the "Premium" aesthetic requested
 Window:EditOpenButton({
-    Title = "Open Script",
-    Icon = "zap",
-    CornerRadius = UDim.new(0, 10),
-    Stroke = {
-        Thickness = 2,
-        Color = Color3.fromRGB(100, 100, 255),
-        Transparency = 0.5
-    },
-    Color = {
-        Color3.fromRGB(20, 20, 30),
-        Color3.fromRGB(40, 40, 60) 
-    },
-    Shadow = true
+    Title = "Open Hub",
+    Icon = "zap",  -- Matches the Window Icon
+    CornerRadius = UDim.new(0, 16),
+    StrokeThickness = 2,
+    Color = ColorSequence.new( -- Indigo to Purple Gradient matching theme
+        Color3.fromRGB(99, 102, 241), 
+        Color3.fromRGB(168, 85, 247) 
+    ),
+    OnlyMobile = false,
+    Enabled = true,
+    Draggable = true,
 })
-
--- [3] CONFIGURATION SYSTEM (Correctly placed after Window creation)
-local ConfigManager = Window.ConfigManager -- Accessed from the Window instance!
-local myConfig = ConfigManager:CreateConfig("XZNE_Config")
-
-local function AutoSave()
-    pcall(function() myConfig:Save() end)
-    pcall(function() Controller.UpdateCache() end)
-end
 
 -- Add minimize toggle keybind (RightControl)
 local UserInputService = game:GetService("UserInputService")
@@ -210,6 +201,16 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         end)
     end
 end)
+
+-- [6] CONFIGURATION SETUP (After Window)
+local ConfigManager = Window.ConfigManager
+local myConfig = ConfigManager:CreateConfig("XZNE_Config")
+
+-- Update AutoSave Function
+AutoSave = function()
+    pcall(function() myConfig:Save() end)
+    pcall(function() Controller.UpdateCache() end)
+end
 
 local UIElements = {}
 
@@ -404,14 +405,27 @@ task.defer(function()
     SafeUpdate(UIElements.TargetItem, ItemDatabase)
     
     -- Apply saved selections (only if valid and not None)
-    -- LOAD CONFIG NOW (After dropdowns    
-    -- LOAD CONFIG (WindUI Native Method)
-    -- The library automatically restores all UI elements with their Flag values
-    task.wait(0.3)  -- Small delay for GUI stability after database load
+    -- [NATIVE CONFIG LOAD]
+    -- The library handles visuals automatically via Flags.
+    task.wait(0.2)
     pcall(function()
-        myConfig:Load()
-        print("✅ [XZNE] Config Loaded via WindUI ConfigManager!")
-        Controller.UpdateCache()  -- Sync to Main.lua
+        print("✅ [XZNE] Loading Native Config...")
+        
+        -- This single line visually updates ALL elements with Flags
+        myConfig:Load() 
+        
+        -- Sync Cache
+        Controller.UpdateCache()
+        
+        -- Special Logic for Dropdowns target consistency
+        local savedTarget = Controller.Config.BuyTarget
+        if savedTarget and savedTarget ~= "— None —" then
+             -- No extra visual logic needed as Flag handles it.
+             -- Just ensure Controller state is valid.
+        end
+    end)
+    
+end)
     end)
     
 end)
