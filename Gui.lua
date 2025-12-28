@@ -424,16 +424,6 @@ task.defer(function()
     
     -- Apply saved selections (only if valid and not None)
     -- LOAD CONFIG NOW (After dropdowns are populated)
-    task.wait(0.2)
-    -- LOAD CONFIG NOW (After dropdowns are populated)
-    task.wait(0.2)
-    pcall(function()
-        if LoadFromJSON() then
-            print("✅ [XZNE] Config Loaded from Custom Path!")
-            
-            -- [CONFIG LOAD VISUALS]
-            print("✅ [XZNE] Applying Config to UI...")
-            
     -- Apply saved selections (only if valid and not None)
     -- DROPWOWN ONLY (Late Update because dependent on DB)
     task.wait(0.2)
@@ -447,7 +437,6 @@ task.defer(function()
                 pcall(function() UIElements.TargetItem:Select(savedTarget) end)
              end)
         end
-    end)
     end)
     
 end)
