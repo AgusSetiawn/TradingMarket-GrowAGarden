@@ -701,6 +701,7 @@ function Controller.SmartHop()
         end
         
         -- Iterasi server di page ini
+        if not Site.data then return false end
         for _, v in pairs(Site.data) do
             local ID = tostring(v.id)
             local maxPlayers = tonumber(v.maxPlayers) or 0
