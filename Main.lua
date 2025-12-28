@@ -711,14 +711,26 @@ function Controller.SmartHop()
             if maxPlayers > playing then -- Server tidak penuh
                 -- Cek apakah server ini server kita saat ini?
                 if ID ~= tostring(currentJobId) then
-                    -- Cek Visited (Blacklist)
-                    if not VisitedServers[ID] then
-                        
-                        -- Cek Config Min/Max Players (Dibuat lebih longgar jika desperate)
+                    -- Cek Visited (Blacklist) dengan pengecualian Desperate Mode
+                    local isVisited = VisitedServers[ID]
+                    local isDesperate = attempts > 5
+                    
+                    -- Filter Logic:
+                    -- 1. Tidak visited OR (Desperate Mode AND visited > 30 mins ago)
+                    -- 2. Config Min/Max Players OR Desperate Mode
+                    
+                    local allowVisit = not isVisited
+                    if isDesperate and isVisited then
+                        -- Allow revisit old servers (> 20 mins) in desperate mode
+                        if tick() - isVisited > 1200 then allowVisit = true end
+                    end
+                    
+                    if allowVisit then
+                        -- Cek Config Min/Max Players
                         local matchesConfig = (playing >= Config.HopMinPlayers and playing <= Config.HopMaxPlayers)
                         
-                        -- Jika sudah mencari > 5 halaman, abaikan config min/max (Desperate Mode otomatis)
-                        if attempts > 5 then matchesConfig = true end
+                        -- Desperate Mode: Ignore config
+                        if isDesperate then matchesConfig = true end
                         
                         if matchesConfig then
                             -- FOUND! Teleport immediately
@@ -760,10 +772,9 @@ function Controller.SmartHop()
             end
             
             -- Jika cursor habis (sudah cek semua server), reset cursor untuk ulang dari awal
-            -- Tapi kali ini mungkin server list sudah update
-            if foundAnything == "" and attempts > 1 then
-                task.wait(2) -- Delay dikit sebelum retry dari awal
-                attempts = 0 -- Reset counter
+            if foundAnything == "" then
+                -- Jangan reset attempts supaya desperate mode tetap jalan
+                task.wait(1) 
             end
         end
     end)
