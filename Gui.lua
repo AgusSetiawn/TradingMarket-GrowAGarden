@@ -292,10 +292,15 @@ UIElements.TargetPet = TargetSection:Dropdown({
     Flag = "BuyTarget", -- Binds to Config
     Callback = function(val) 
         if _G.XZNE_Restoring then return end
+        
+        -- Logic Key (Active Target)
         Controller.Config.BuyTarget = val
-        -- Sync other keys for logic compatibility
         Controller.Config.ListTarget = val
         Controller.Config.RemoveTarget = val
+        
+        -- UI Restoration Key (Unique to this dropdown)
+        Controller.Config.BuyTargetPet = val 
+        
         AutoSave()
     end
 })
@@ -310,10 +315,15 @@ UIElements.TargetItem = TargetSection:Dropdown({
     Flag = "BuyTargetItem", -- Separate flag for Item dropdown
     Callback = function(val) 
         if _G.XZNE_Restoring then return end
+        
+        -- Logic Key (Active Target)
         Controller.Config.BuyTarget = val
-        -- Sync other keys
         Controller.Config.ListTarget = val
         Controller.Config.RemoveTarget = val
+        
+        -- UI Restoration Key (Unique to this dropdown)
+        Controller.Config.BuyTargetItem = val
+        
         AutoSave()
     end
 })
@@ -564,9 +574,12 @@ task.defer(function()
     Sync(UIElements.Price, C.Price, "Input")
     
     -- Sync Dropdowns (Now that DB is ready)
-    if C.BuyTarget and C.BuyTarget ~= "— None —" then
-        Sync(UIElements.TargetPet, C.BuyTarget, "Dropdown")
-        Sync(UIElements.TargetItem, C.BuyTarget, "Dropdown") -- Sync Item too if applicable
+    if C.BuyTargetPet and C.BuyTargetPet ~= "— None —" then
+         Sync(UIElements.TargetPet, C.BuyTargetPet, "Dropdown")
+    end
+    
+    if C.BuyTargetItem and C.BuyTargetItem ~= "— None —" then
+         Sync(UIElements.TargetItem, C.BuyTargetItem, "Dropdown")
     end
     
     print("✅ [XZNE DEBUG] Visual Sync Complete")
