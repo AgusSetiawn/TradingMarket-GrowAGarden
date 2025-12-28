@@ -616,47 +616,11 @@ UIElements.HopInterval = HopSection:Slider({
     end
 })
 
--- SLIDER: Min Players
-UIElements.HopMinPlayers = HopSection:Slider({
-    Title = "Min Players",
-    Desc = "Server minimal player count",
-    Step = 1,
-    Value = {
-        Min = 1,
-        Max = 30,
-        Default = Controller.Config.HopMinPlayers or 5,
-    },
-    Flag = "HopMinPlayers",
-    Callback = function(val)
-        if _G.XZNE_Restoring then return end
-        Controller.Config.HopMinPlayers = val
-        AutoSave()
-    end
-})
-
--- SLIDER: Max Players
-UIElements.HopMaxPlayers = HopSection:Slider({
-    Title = "Max Players",
-    Desc = "Server maksimal player count",
-    Step = 1,
-    Value = {
-        Min = 10,
-        Max = 50,
-        Default = Controller.Config.HopMaxPlayers or 25,
-    },
-    Flag = "HopMaxPlayers",
-    Callback = function(val)
-        if _G.XZNE_Restoring then return end
-        Controller.Config.HopMaxPlayers = val
-        AutoSave()
-    end
-})
-
--- BUTTON: Hop Now
+-- BUTTON: Instant Hop
 HopSection:Button({
-    Title = "Hop Now!",
-    Desc = "Force hop ke server terbaik sekarang",
-    Icon = "zap",
+    Title = "Force Hop Now",
+    Desc = "Pindah server sekarang juga",
+    Icon = "plane",
     Callback = function()
         Controller.SmartHop()
     end
