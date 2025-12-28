@@ -14,6 +14,9 @@ if not Controller then
 end
 print("✅ [XZNE DEBUG] Controller check passed")
 
+-- [0] SAVE LOCK (Prevent overwrites during init)
+if _G.XZNE_Restoring == nil then _G.XZNE_Restoring = true end
+
 
 -- [1] CONFIGURATION SYSTEM (Moved to TOP for FORCE INIT)
 -- Satisfies request: "XZNE ScriptHub/Config.json"
@@ -33,6 +36,10 @@ local function SaveToJSON()
 end
 
 local function AutoSave()
+    if _G.XZNE_Restoring then 
+        warn("⚠️ [XZNE DEBUG] AutoSave blocked (Restoring Phase)")
+        return 
+    end
     pcall(SaveToJSON)
     pcall(function() Controller.UpdateCache() end)
 end
@@ -57,6 +64,7 @@ end
 
 -- ⚡ FORCE LOAD CONFIG NOW (Before UI Creation)
 -- This ensures 'Default' values in UI are correct from birth!
+_G.XZNE_Restoring = true -- LOCK
 LoadFromJSON()
 print("✅ [XZNE DEBUG] Configuration Loaded (Force Init)")
 
@@ -474,6 +482,8 @@ WindUI:Notify({
 -- [7] EXPLICIT VISUAL SYNC (The "Double-Tap")
 -- Force UI to match Config after creation
 task.defer(function()
+    _G.XZNE_Restoring = true -- LOCK (Just in case)
+    
     -- Wait for UI to render AND Database to be ready (for Dropdowns)
     task.wait(1.5) 
     
@@ -530,6 +540,10 @@ task.defer(function()
     end
     
     print("✅ [XZNE DEBUG] Visual Sync Complete")
+    
+    task.wait(0.5)
+    _G.XZNE_Restoring = false -- UNLOCK
+    print("🔓 [XZNE DEBUG] Save Lock Released (Ready to Save)")
 end)
 
 -- Return success to Loader
