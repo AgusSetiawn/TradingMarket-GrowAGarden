@@ -208,7 +208,7 @@ print("✅ [XZNE DEBUG] Window Created")
 -- Matches the "Premium" aesthetic requested
 Window:EditOpenButton({
     Title = "Open Hub",
-    Icon = "zap",  -- Matches the Window Icon
+    Icon = "rbxassetid://123378346805284",  -- Matches the Window Icon
     CornerRadius = UDim.new(0, 16),
     StrokeThickness = 2,
     Color = ColorSequence.new( -- Indigo to Purple Gradient matching theme
@@ -479,6 +479,45 @@ WindUI:Notify({
     Icon = "check-circle-2",
     Duration = 5
 })
+
+
+-- [7] EXPLICIT VISUAL SYNC (The "Double-Tap")
+-- Force UI to match Config after creation
+task.defer(function()
+    task.wait(1.5) -- Wait for UI to fully render/animate
+    print("🔄 [XZNE DEBUG] Starting Visual Sync...")
+    
+    local C = Controller.Config
+    
+    -- Helper for safe updates
+    local function Sync(element, value, elementType)
+        if element and value ~= nil then 
+            pcall(function()
+                if elementType == "Dropdown" and element.Select then
+                    element:Select(value)
+                elseif elementType == "Input" and element.Set then
+                     -- Input needs string conversion
+                    element:Set(tostring(value))
+                else -- Toggle, Slider use :Set()
+                    if element.Set then element:Set(value) end
+                end
+            end)
+        end
+    end
+
+    -- Sync Toggles
+    Sync(UIElements.AutoBuy, C.AutoBuy, "Toggle")
+    Sync(UIElements.AutoList, C.AutoList, "Toggle")
+    Sync(UIElements.AutoClear, C.AutoClear, "Toggle")
+    Sync(UIElements.AutoClaim, C.AutoClaim, "Toggle")
+    
+    -- Sync Sliders & Inputs
+    Sync(UIElements.DelaySlider, C.Speed, "Slider")
+    Sync(UIElements.MaxPrice, C.MaxPrice, "Input")
+    Sync(UIElements.Price, C.Price, "Input")
+    
+    print("✅ [XZNE DEBUG] Visual Sync Complete")
+end)
 
 -- Return success to Loader
 print("✅ [XZNE DEBUG] Reached End of Script, returning true")
