@@ -661,115 +661,111 @@ function Controller.DoRejoin()
 end
 
 -- [FUNGSI] Smart Auto Hop ADVANCED (Server hopping cerdas dengan multi-strategy)
--- [FUNGSI] Smart Auto Hop ADVANCED (Server hopping cerdas dengan multi-strategy)
+-- [FUNGSI] Smart Auto Hop (Robust Infinite-Search Version)
+-- Diadaptasi dari kode referensi user untuk keandalan maksimal
 function Controller.SmartHop()
-    local placeId = game.PlaceId
+    -- Flag untuk mencegah double execution
+    if _G.XZNE_Hopping then return end
+    _G.XZNE_Hopping = true
+    
+    if WindUI then
+        WindUI:Notify({
+            Title = "Searching Server...",
+            Content = "Mencari server yang cocok...",
+            Icon = "globe",
+            Duration = 3
+        })
+    end
+
+    local PlaceID = game.PlaceId
     local currentJobId = game.JobId
-    local currentTime = tick()
+    local foundAnything = ""
+    local attempts = 0
     
-    -- Pastikan server saat ini sudah di-blacklist sebelum mencari
-    MarkCurrentServer()
-    
-    -- MULTI-TIER STRATEGY: 
-    -- 1. Desc + Strict: Server baru, filter ketat (5-25 player, not visited)
-    -- 2. Asc + Strict: Server lama, filter ketat
-    -- 3. Desc + Relaxed: Server baru, allow old visit (>30m), ignore min/max
-    -- 4. Asc + Relaxed: Server lama, allow old visit (>30m), ignore min/max
-    -- 5. DESPERATE MODE: ANY server that is NOT current server (ignore visited, ignore min/max)
-    local strategies = {
-        {sortOrder = "Desc", strict = true, name = "Newest Strict"},
-        {sortOrder = "Asc", strict = true, name = "Oldest Strict"},
-        {sortOrder = "Desc", strict = false, name = "Newest Relaxed"},
-        {sortOrder = "Asc", strict = false, name = "Oldest Relaxed"},
-        {sortOrder = "Desc", desperate = true, name = "Desperate Mode"} -- New Tier 5
-    }
-    
-    for strategyIndex, strategy in ipairs(strategies) do
-        local servers = {}
-        local cursor = ""
-        local attempts = 0
-        -- Pagination lebih dalam untuk Desperate Mode
-        local maxAttempts = strategy.desperate and 5 or 3 
+    -- Fungsi pencari server (Recursive/Looping)
+    local function SearchAndTeleport()
+        local url = 'https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Asc&limit=100'
+        if foundAnything ~= "" then
+            url = url .. '&cursor=' .. foundAnything
+        end
         
-        -- PAGINATION LOOP
-        repeat
-            attempts = attempts + 1
-            local url = string.format(
-                "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=%s&limit=100%s",
-                placeId, strategy.sortOrder, cursor ~= "" and "&cursor="..cursor or ""
-            )
+        local success, result = pcall(function() return game:HttpGet(url) end)
+        if not success or not result then return false end
+        
+        local Site = HttpService:JSONDecode(result)
+        if not Site then return false end
+        
+        -- Set cursor untuk page berikutnya
+        if Site.nextPageCursor and Site.nextPageCursor ~= "null" and Site.nextPageCursor ~= nil then
+            foundAnything = Site.nextPageCursor
+        end
+        
+        -- Iterasi server di page ini
+        for _, v in pairs(Site.data) do
+            local ID = tostring(v.id)
+            local maxPlayers = tonumber(v.maxPlayers) or 0
+            local playing = tonumber(v.playing) or 0
             
-            local success, result = pcall(function() return game:HttpGet(url) end)
-            if not success or not result then break end
-            
-            local decodeSuccess, decoded = pcall(function() return HttpService:JSONDecode(result) end)
-            if not decodeSuccess or not decoded or not decoded.data then break end
-            
-            -- FILTERING
-            for _, server in ipairs(decoded.data) do
-                local jobId = server.id
-                local players = server.playing
-                local max = server.maxPlayers
-                
-                -- CRITICAL: Jangan pernah join server saat ini
-                if jobId ~= currentJobId and players > 0 then
-                    local pass = false
-                    
-                    if strategy.desperate then
-                        -- Tier 5: Terima server APAPUN asal bukan yang sekarang
-                        -- Prioritas: Prefer not visited, but accept visited if needed
-                        pass = true 
-                    elseif strategy.strict then
-                        -- Tier 1-2: Strict Blacklist & Player Count
-                        pass = not VisitedServers[jobId] 
-                           and players >= Config.HopMinPlayers 
-                           and players <= Config.HopMaxPlayers
-                    else
-                        -- Tier 3-4: Relaxed blacklist (>30m old OK)
-                        local visitedTime = VisitedServers[jobId]
-                        local isOld = visitedTime and (currentTime - visitedTime > 1800)
-                        pass = (not visitedTime or isOld)
-                    end
-                    
-                    if pass then
-                        -- Scoring Logic
-                        local score = 0
-                        if strategy.desperate then
-                            -- Di desperate mode, prioritas server yang BELUM visited
-                            score = VisitedServers[jobId] and 0 or 100
-                        else
-                            -- Health score (balanced players)
-                            score = 100 - math.abs((players/max*100) - 50)
-                        end
+            -- Filter Logic
+            if maxPlayers > playing then -- Server tidak penuh
+                -- Cek apakah server ini server kita saat ini?
+                if ID ~= tostring(currentJobId) then
+                    -- Cek Visited (Blacklist)
+                    if not VisitedServers[ID] then
                         
-                        table.insert(servers, {id = jobId, score = score})
+                        -- Cek Config Min/Max Players (Dibuat lebih longgar jika desperate)
+                        local matchesConfig = (playing >= Config.HopMinPlayers and playing <= Config.HopMaxPlayers)
+                        
+                        -- Jika sudah mencari > 5 halaman, abaikan config min/max (Desperate Mode otomatis)
+                        if attempts > 5 then matchesConfig = true end
+                        
+                        if matchesConfig then
+                            -- FOUND! Teleport immediately
+                            -- Mark server ini visited supaya tidak balik lagi kalau gagal/crash
+                            VisitedServers[ID] = tick()
+                            SaveVisitedServers()
+                            
+                            if WindUI then
+                                WindUI:Notify({
+                                    Title = "Hopping...",
+                                    Content = "Server ditemukan! Teleporting...",
+                                    Icon = "plane",
+                                    Duration = 5
+                                })
+                            end
+                            
+                            pcall(function()
+                                TeleportService:TeleportToPlaceInstance(PlaceID, ID, LocalPlayer)
+                            end)
+                            
+                            return true -- Stop searching
+                        end
                     end
                 end
             end
-            
-            cursor = decoded.nextPageCursor or ""
-        until cursor == "" or attempts >= maxAttempts or #servers >= 20
-        
-        -- EXECUTE HOP
-        if #servers > 0 then
-            table.sort(servers, function(a,b) return a.score > b.score end)
-            local target = servers[1]
-            
-            -- Final safe: Mark current again
-            MarkCurrentServer()
-            
-            pcall(function()
-                TeleportService:TeleportToPlaceInstance(placeId, target.id, LocalPlayer)
-            end)
-            return -- Success!
         end
-        
-        task.wait(0.2)
+        return false -- Lanjut ke page berikutnya
     end
     
-    -- Note: Removed "Ultimate Fallback" (Direct Teleport) 
-    -- karena itu penyebab rejoining server yang sama.
-    -- Jika Tier 5 gagal, kita diam saja dan tunggu cycle berikutnya.
+    -- Loop Pencarian (Infinite Scroll sampai dapat)
+    task.spawn(function()
+        while task.wait(0.5) do
+            attempts = attempts + 1
+            
+            -- Coba cari
+            local success = SearchAndTeleport()
+            if success then 
+                break -- Berhenti loop jika sudah teleport
+            end
+            
+            -- Jika cursor habis (sudah cek semua server), reset cursor untuk ulang dari awal
+            -- Tapi kali ini mungkin server list sudah update
+            if foundAnything == "" and attempts > 1 then
+                task.wait(2) -- Delay dikit sebelum retry dari awal
+                attempts = 0 -- Reset counter
+            end
+        end
+    end)
 end
 
 -- Inisialisasi: Load visited servers dan cleanup
@@ -782,8 +778,15 @@ task.spawn(function()
     while true do
         if Config.AutoHop and Config.HopInterval > 0 then
             local currentTime = tick()
-            -- Cek apakah sudah waktunya hop
+            -- Default fallback lebih aman (bisa disesuaikan user jika perlu)
+            -- if currentTime - LastHopTime >= Config.HopInterval then
+            --     Controller.SmartHop()
+            --     LastHopTime = currentTime
+            -- end
+            
             if currentTime - LastHopTime >= Config.HopInterval then
+                -- Reset hopping flag jika sudah lewat interval jauh (safety)
+                _G.XZNE_Hopping = false 
                 Controller.SmartHop()
                 LastHopTime = currentTime
             end
