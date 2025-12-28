@@ -325,6 +325,7 @@ local function RunAutoBuy()
             end
         end
     end
+    end
 end
 
 -- >> AUTO LIST (Item & Pet)
