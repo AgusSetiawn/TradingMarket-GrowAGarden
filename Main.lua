@@ -704,19 +704,55 @@ function Controller.SmartHop()
                 end
                 
                 if #candidates > 0 then
-                    -- LANGSUNG PILIH RANDOM
-                    local targetID = candidates[math.random(1, #candidates)]
+                    -- Acak urutan candidate
+                    local function shuffle(tbl)
+                        for i = #tbl, 2, -1 do
+                            local j = math.random(i)
+                            tbl[i], tbl[j] = tbl[j], tbl[i]
+                        end
+                        return tbl
+                    end
+                    shuffle(candidates)
                     
-                    -- Teleport
-                    pcall(function()
-                        TeleportService:TeleportToPlaceInstance(PlaceID, targetID, LocalPlayer)
-                    end)
-                    return 
+                    -- Coba teleport satu per satu sampai berhasil
+                    for _, targetID in ipairs(candidates) do
+                        local success, err = pcall(function()
+                            TeleportService:TeleportToPlaceInstance(PlaceID, targetID, LocalPlayer)
+                        end)
+                        
+                        if success then
+                            -- Jika call berhasil, Roblox akan mulai proses pindah server.
+                            -- Kita stop loop dan biarkan script mati alami saat pindah.
+                            if WindUI then
+                                WindUI:Notify({
+                                    Title = "Teleporting...",
+                                    Content = "Menuju server: " .. targetID,
+                                    Icon = "plane",
+                                    Duration = 5
+                                })
+                            end
+                            return -- Stop function, wait for teleport
+                        else
+                            warn("Failed to teleport to " .. targetID .. ": " .. tostring(err))
+                            -- Lanjut ke candidate berikutnya jika gagal
+                        end
+                        task.wait(0.2)
+                    end
+                    
+                    -- Jika loop selesai tapi belum pindah (semua gagal)
+                     if WindUI then
+                        WindUI:Notify({
+                            Title = "Hop Failed",
+                            Content = "Gagal teleport ke " .. #candidates .. " server.",
+                            Icon = "alert-circle",
+                            Duration = 3
+                        })
+                    end
                 else
                     if WindUI then
                         WindUI:Notify({
                             Title = "No Servers",
-                            Content = "Tidak menemukan server lain di page 1.",
+                            Content = "Tidak menemukan server kosong di page ini.",
                             Icon = "x-circle",
                             Duration = 3
                         })
@@ -727,7 +763,7 @@ function Controller.SmartHop()
             warn("Failed to fetch servers")
         end
         
-        -- Reset flag jika gagal
+        -- Reset flag jika gagal total
         task.wait(1)
         _G.XZNE_Hopping = false
     end)

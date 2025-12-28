@@ -573,16 +573,16 @@ RejoinSection:Button({
 
 RejoinSection:Divider()
 
--- === SECTION: SMART AUTO HOP ===
+-- === SECTION: INSTANT RANDOM HOP ===
 -- Fitur untuk server hopping otomatis
 local HopSection = SettingsTab:Section({ 
-    Title = "Smart Auto Hop", 
-    Icon = "globe" 
+    Title = "Instant Random Hop", 
+    Icon = "shuffle" 
 })
 
 HopSection:Paragraph({
     Title = "Info",
-    Desc = "Server hopping cerdas: Pilih server sehat, hindari server yang pernah dikunjungi."
+    Desc = "Pindah server secara acak dan instan (menghindari server penuh & server saat ini)."
 })
 
 -- TOGGLE: Enable Auto Hop
@@ -698,8 +698,6 @@ task.defer(function()
     
     -- Sync NEW sliders (Auto Hop params)
     Sync(UIElements.HopInterval, C.HopInterval, "Slider")
-    Sync(UIElements.HopMinPlayers, C.HopMinPlayers, "Slider")
-    Sync(UIElements.HopMaxPlayers, C.HopMaxPlayers, "Slider")
     
     -- Sync Dropdown (INDEPENDENT - Bisa simultanlam)
     if C.BuyTargetPet and C.BuyTargetPet ~= "— None —" then
