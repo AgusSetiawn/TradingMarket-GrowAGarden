@@ -152,6 +152,14 @@ function Controller.UpdateCache()
     CachedTargets.Buy = string.lower(Config.BuyTarget or "")
     CachedTargets.List = string.lower(Config.ListTarget or "")
     CachedTargets.Remove = string.lower(Config.RemoveTarget or "")
+    
+    -- Multi-Target Caching (Pet/Item Simultaneous)
+    CachedTargets.BuyPet = string.lower(Config.BuyTargetPet or "")
+    CachedTargets.BuyItem = string.lower(Config.BuyTargetItem or "")
+    
+    -- Filter "none" to empty string for safety
+    if CachedTargets.BuyPet == "— none —" then CachedTargets.BuyPet = "" end
+    if CachedTargets.BuyItem == "— none —" then CachedTargets.BuyItem = "" end
 end
 Controller.UpdateCache() -- Init
 
@@ -262,11 +270,10 @@ local function RunAutoBuy()
         return 
     end
     
-    local targetType = Config.BuyCategory == "Pet" and "Pet" or "Holdable"
-    local targetLower = CachedTargets.Buy
-    if targetLower == "" then 
-        return 
-    end
+    -- Remove Single Target Logic
+    -- local targetType = Config.BuyCategory == "Pet" and "Pet" or "Holdable"
+    -- local targetLower = CachedTargets.Buy
+    -- if targetLower == "" then return end
     
     local maxPrice = Config.MaxPrice
     
@@ -275,14 +282,32 @@ local function RunAutoBuy()
         if playerKey ~= MyPlayerKey and playerData.Listings then
             for listingUUID, listingInfo in pairs(playerData.Listings) do
                 if not Config.AutoBuy then break end -- FIX: Check toggle inside loop
-                -- Optimization: Check Price & Type FIRST
-                if listingInfo.Price <= maxPrice and listingInfo.ItemType == targetType then
+                -- Optimization: Price Check FIRST (fastest fail)
+                if listingInfo.Price <= maxPrice then
+                     -- Multi-Target Check
+                     local targetMatch = false
+                     local listType = listingInfo.ItemType
+                     
+                     if listType == "Pet" and CachedTargets.BuyPet ~= "" then targetMatch = true 
+                     elseif listType == "Holdable" and CachedTargets.BuyItem ~= "" then targetMatch = true
+                     end
+                     
+                     if targetMatch then
                     local itemData = playerData.Items[listingInfo.ItemId]
                     if itemData then
                         local realName = itemData.Name or itemData.ItemName or itemData.PetType or (itemData.ItemData and itemData.ItemData.ItemName) or ""
+                        local lowerName = string_lower(tostring(realName))
+                        local isMatch = false
+                        
+                        -- Specific Name Check based on Type
+                        if listingInfo.ItemType == "Pet" then
+                            if string_find(lowerName, CachedTargets.BuyPet) then isMatch = true end
+                        elseif listingInfo.ItemType == "Holdable" then
+                             if string_find(lowerName, CachedTargets.BuyItem) then isMatch = true end
+                        end
                         
                         -- Optimized: Use cached string functions
-                        if string_find(string_lower(tostring(realName)), targetLower) then
+                        if isMatch then
                             -- Buy with cached player lookup!
                             local ownerId = tonumber(string_match(playerKey, "Player_(%d+)"))
                             local owner = GetCachedPlayer(ownerId)
@@ -306,8 +331,9 @@ end
 local function RunAutoList()
     if not Config.AutoList then return end
     
-    local targetLower = CachedTargets.List
-    if targetLower == "" then return end -- Early exit
+    -- Remove Early Exit
+    -- local targetLower = CachedTargets.List
+    -- if targetLower == "" then return end
     
     -- Check Active Listings (Avoid Duplicates)
     local data = GetBoothsData()
@@ -317,11 +343,18 @@ local function RunAutoList()
         for _, v in pairs(myData.Listings) do listedUUIDs[v.ItemId] = true end
     end
     
-    local targetType = Config.ListCategory == "Pet" and "Pet" or "Holdable"
+    -- Remove Single Target Logic
+    -- local targetType = Config.ListCategory == "Pet" and "Pet" or "Holdable"
     local price = Config.Price
     local currentTime = tick()
     
-    if targetType == "Pet" then
+    -- Dual Logic: Check both PET and ITEM lists sequentially
+    
+    -- 1. Pet Listing
+    if CachedTargets.List == "Pet" or CachedTargets.BuyPet ~= "" then
+        -- Pet Listing logic...
+        local petTarget = CachedTargets.BuyPet
+        if petTarget ~= "" then
         -- Pet Listing (requires DataService)
         local playerData = DataService and DataService:GetData()
         if playerData and playerData.PetsData and playerData.PetsData.PetInventory then
@@ -331,15 +364,22 @@ local function RunAutoList()
                 if not listedUUIDs[petUUID] and (not ListingDebounce[petUUID] or currentTime - ListingDebounce[petUUID] > 5) then
                     local petName = petData.PetType or petData.Name
                     -- Optimized: Use cached string functions
-                    if petName and string_find(string_lower(petName), targetLower) then
+                    if petName and string_find(string_lower(petName), petTarget) then
                         pcall(function() CreateListingRemote:InvokeServer("Pet", petUUID, price) end)
                         ListingDebounce[petUUID] = currentTime
                         task.wait(Config.Speed)
                     end
                 end
             end
+    -- End Dual Logic
         end
-    else
+    end
+
+    -- 2. Item Listing
+    if CachedTargets.List == "Holdable" or CachedTargets.BuyItem ~= "" then
+        local itemTarget = CachedTargets.BuyItem
+        if itemTarget ~= "" then
+        
         -- Item Listing (Backpack)
         local backpack = LocalPlayer:FindFirstChild("Backpack")
         if backpack then
@@ -353,7 +393,7 @@ local function RunAutoList()
                     
                     if realName and uuid and not listedUUIDs[uuid] and (not ListingDebounce[uuid] or currentTime - ListingDebounce[uuid] > 5) then
                          -- Optimized: Use cached string functions
-                         if string_find(string_lower(realName), targetLower) then
+                         if string_find(string_lower(realName), itemTarget) then
                              pcall(function() CreateListingRemote:InvokeServer("Holdable", uuid, price) end)
                              ListingDebounce[uuid] = currentTime
                              task.wait(Config.Speed)
@@ -369,14 +409,17 @@ end
 local function RunAutoClear()
     if not Config.AutoClear then return end
     
-    local targetLower = CachedTargets.Remove
-    if not Config.DeleteAll and targetLower == "" then return end -- Early exit
+    -- Dual Logic:
+    local targetLowerPet = CachedTargets.BuyPet
+    local targetLowerItem = CachedTargets.BuyItem
+    if not Config.DeleteAll and targetLowerPet == "" and targetLowerItem == "" then return end
     
     local data = GetBoothsData()
     if not data then return end
     local myData = data.Players[MyPlayerKey]
     
-    local targetType = Config.RemoveCategory == "Pet" and "Pet" or "Holdable"
+    -- Remove Single Target Type restriction
+    -- local targetType = Config.RemoveCategory == "Pet" and "Pet" or "Holdable"
     
     if myData and myData.Listings then
         for listingUUID, listingInfo in pairs(myData.Listings) do
@@ -390,8 +433,16 @@ local function RunAutoClear()
                 if itemData then
                     local realName = itemData.Name or itemData.ItemName or itemData.PetType or (itemData.ItemData and itemData.ItemData.ItemName) or ""
                     
+                    local lowerName = string_lower(tostring(realName))
+                    local shouldRemove = false
+                    
+                    if Config.DeleteAll then shouldRemove = true
+                    elseif listingInfo.ItemType == "Pet" and targetLowerPet ~= "" and string_find(lowerName, targetLowerPet) then shouldRemove = true
+                    elseif listingInfo.ItemType == "Holdable" and targetLowerItem ~= "" and string_find(lowerName, targetLowerItem) then shouldRemove = true
+                    end
+                    
                     -- Optimized: Use cached string functions
-                    if Config.DeleteAll or string_find(string_lower(tostring(realName)), targetLower) then
+                    if shouldRemove then
                          pcall(function() RemoveListingRemote:InvokeServer(listingUUID) end)
                          task.wait(Config.Speed)
                     end

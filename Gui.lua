@@ -304,7 +304,9 @@ UIElements.TargetPet = TargetSection:Dropdown({
         Controller.Config.RemoveCategory = "Pet"
         
         -- UI Restoration Key (Unique to this dropdown)
-        Controller.Config.BuyTargetPet = val 
+        Controller.Config.BuyTargetPet = val
+        
+        -- Logic: Don't clear Item! Allow both.
         
         AutoSave()
     end
@@ -333,6 +335,8 @@ UIElements.TargetItem = TargetSection:Dropdown({
         
         -- UI Restoration Key (Unique to this dropdown)
         Controller.Config.BuyTargetItem = val
+        
+        -- Logic: Don't clear Pet! Allow both.
         
         AutoSave()
     end
@@ -583,7 +587,7 @@ task.defer(function()
     Sync(UIElements.MaxPrice, C.MaxPrice, "Input")
     Sync(UIElements.Price, C.Price, "Input")
     
-    -- Sync Dropdowns (Now that DB is ready)
+    -- Sync Dropdowns (INDEPENDENT - Allow Simultaneous)
     if C.BuyTargetPet and C.BuyTargetPet ~= "— None —" then
          Sync(UIElements.TargetPet, C.BuyTargetPet, "Dropdown")
     end
@@ -596,7 +600,11 @@ task.defer(function()
     
     task.wait(0.5)
     _G.XZNE_Restoring = false -- UNLOCK
-    print("🔓 [XZNE DEBUG] Save Lock Released (Ready to Save)")
+    
+    -- CRITICAL: Force Logic Update in Main.lua using newly synced values
+    pcall(function() Controller.UpdateCache() end)
+    
+    print("🔓 [XZNE DEBUG] Save Lock Released & Cache Updated")
 end)
 
 -- Return success to Loader
