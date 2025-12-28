@@ -298,6 +298,11 @@ UIElements.TargetPet = TargetSection:Dropdown({
         Controller.Config.ListTarget = val
         Controller.Config.RemoveTarget = val
         
+        -- Logic Key (Category Enforcer)
+        Controller.Config.BuyCategory = "Pet"
+        Controller.Config.ListCategory = "Pet"
+        Controller.Config.RemoveCategory = "Pet"
+        
         -- UI Restoration Key (Unique to this dropdown)
         Controller.Config.BuyTargetPet = val 
         
@@ -320,6 +325,11 @@ UIElements.TargetItem = TargetSection:Dropdown({
         Controller.Config.BuyTarget = val
         Controller.Config.ListTarget = val
         Controller.Config.RemoveTarget = val
+        
+        -- Logic Key (Category Enforcer)
+        Controller.Config.BuyCategory = "Item"
+        Controller.Config.ListCategory = "Item"
+        Controller.Config.RemoveCategory = "Item"
         
         -- UI Restoration Key (Unique to this dropdown)
         Controller.Config.BuyTargetItem = val
