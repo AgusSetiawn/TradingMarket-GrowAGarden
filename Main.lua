@@ -374,6 +374,7 @@ local function RunAutoList()
     -- End Dual Logic
         end
     end
+    end
 
     -- 2. Item Listing
     if CachedTargets.List == "Holdable" or CachedTargets.BuyItem ~= "" then
@@ -426,7 +427,6 @@ local function RunAutoClear()
         for listingUUID, listingInfo in pairs(myData.Listings) do
             if not Config.Running or not Config.AutoClear then break end
             
-            -- Filter by Category first
             -- Filter by Category (Multi-Target Friendly)
             if Config.DeleteAll or (listingInfo.ItemType == "Pet" and targetLowerPet ~= "") or (listingInfo.ItemType == "Holdable" and targetLowerItem ~= "") then
                 local itemId = listingInfo.ItemId
