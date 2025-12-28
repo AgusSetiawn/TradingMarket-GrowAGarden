@@ -80,6 +80,13 @@ _G.XZNE_Controller = {
         
         -- Pengaturan Auto Claim
         AutoClaim = false,           -- Toggle fitur auto claim booth
+        
+        -- Pengaturan Auto Hop (NEW - Fitur Server Hopping)
+        AutoHop = false,             -- Toggle fitur auto hop
+        HopMinPlayers = 5,           -- Server minimum player count
+        HopMaxPlayers = 25,          -- Server maksimum player count
+        HopInterval = 300,           -- Interval hop dalam detik (default 5 menit)
+        RejoinBypassPrivate = true   -- Bypass private server saat rejoin (true = rejoin ke public)
     },
     Stats = {
         ListedCount = 0,             -- Jumlah item yang berhasil di-list
@@ -561,6 +568,193 @@ end
 function Controller.RequestUpdate()
     Controller.UpdateCache()
 end
+
+-- [NEW FEATURE] SERVER HOPPING & REJOIN SYSTEM
+-- Service untuk teleportasi antar server
+local TeleportService = game:GetService("TeleportService")
+
+-- Tracking server yang sudah dikunjungi (agar tidak hop ke server yang sama)
+local VisitedServers = {}
+local VisitedServersFile = "XZNE ScriptHub/VisitedServers.json"
+local LastHopTime = 0  -- Waktu terakhir hop
+
+-- Fungsi untuk load daftar server yang sudah dikunjungi dari file
+local function LoadVisitedServers()
+    if isfile and isfile(VisitedServersFile) then
+        local success, content = pcall(readfile, VisitedServersFile)
+        if success and content and #content > 10 then
+            local decodeSuccess, decoded = pcall(function() 
+                return HttpService:JSONDecode(content) 
+            end)
+            if decodeSuccess and decoded then 
+                VisitedServers = decoded 
+            end
+        end
+    end
+end
+
+-- Fungsi untuk save daftar visited servers ke file
+local function SaveVisitedServers()
+    if writefile then
+        pcall(function()
+            writefile(VisitedServersFile, HttpService:JSONEncode(VisitedServers))
+        end)
+    end
+end
+
+-- Fungsi untuk tandai server saat ini sebagai visited
+local function MarkCurrentServer()
+    local jobId = game.JobId
+    if jobId and jobId ~= "" then
+        VisitedServers[jobId] = tick()  -- Simpan dengan timestamp
+        SaveVisitedServers()
+    end
+end
+
+-- Fungsi untuk bersihkan server lama (lebih dari 24 jam)
+local function CleanOldVisitedServers()
+    local currentTime = tick()
+    local changed = false
+    for jobId, timestamp in pairs(VisitedServers) do
+        -- Hapus server yang sudah dikunjungi lebih dari 24 jam yang lalu
+        if currentTime - timestamp > 86400 then
+            VisitedServers[jobId] = nil
+            changed = true
+        end
+    end
+    if changed then SaveVisitedServers() end
+end
+
+-- [FUNGSI] Auto Rejoin (Manual button, bukan auto-detect)
+function Controller.DoRejoin()
+    local placeId = game.PlaceId
+    local privateServerId = game.PrivateServerId
+    
+    -- Jika bypass private server aktif DAN kita sedang di private server
+    if Config.RejoinBypassPrivate and privateServerId and privateServerId ~= "" then
+        -- Rejoin ke PUBLIC server (bypass private)
+        pcall(function()
+            TeleportService:Teleport(placeId, LocalPlayer)
+        end)
+    else
+        -- Rejoin ke server yang sama (termasuk private jika ada)
+        if privateServerId and privateServerId ~= "" then
+            -- Rejoin ke private server yang sama
+            pcall(function()
+                TeleportService:TeleportToPrivateServer(
+                    placeId, 
+                    privateServerId, 
+                    {LocalPlayer}
+                )
+            end)
+        else
+            -- Rejoin ke public server yang sama
+            pcall(function()
+                TeleportService:TeleportToPlaceInstance(
+                    placeId, 
+                    game.JobId, 
+                    LocalPlayer
+                )
+            end)
+        end
+    end
+end
+
+-- [FUNGSI] Smart Auto Hop (Server hopping cerdas)
+function Controller.SmartHop()
+    local placeId = game.PlaceId
+    local servers = {}
+    
+    -- Ambil daftar server dari Roblox API
+    local success, result = pcall(function()
+        return game:HttpGet(
+            string.format(
+                "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100",
+                placeId
+            )
+        )
+    end)
+    
+    if not success or not result then return end
+    
+    -- Parse JSON response
+    local decodeSuccess, decoded = pcall(function() 
+        return HttpService:JSONDecode(result) 
+    end)
+    if not decodeSuccess or not decoded or not decoded.data then return end
+    
+    -- Filter server berdasarkan kriteria
+    for _, server in ipairs(decoded.data) do
+        local players = server.playing
+        local maxPlayers = server.maxPlayers
+        local jobId = server.id
+        
+        -- Kriteria filter:
+        -- 1. Player count dalam range (Min-Max)
+        -- 2. Belum pernah dikunjungi (atau sudah lama)
+        -- 3. Bukan server saat ini
+        if players >= Config.HopMinPlayers 
+            and players <= Config.HopMaxPlayers
+            and not VisitedServers[jobId]
+            and jobId ~= game.JobId then
+            
+            -- Hitung health score: Prioritas server dengan player balanced
+            -- Rumus: 100 - |persentase_player - 50%|
+            -- Server dengan 50% kapasitas dapat score tertinggi
+            local playerPercent = (players / maxPlayers * 100)
+            local healthScore = 100 - math.abs(playerPercent - 50)
+            
+            table.insert(servers, {
+                id = jobId,
+                players = players,
+                maxPlayers = maxPlayers,
+                health = healthScore
+            })
+        end
+    end
+    
+    -- Sort server by health score (descending - tertinggi duluan)
+    table.sort(servers, function(a, b) 
+        return a.health > b.health 
+    end)
+    
+    -- Teleport ke server terbaik
+    if #servers > 0 then
+        local bestServer = servers[1]
+        -- Mark server saat ini sebelum pindah
+        MarkCurrentServer()
+        -- Teleport ke server terbaik
+        pcall(function()
+            TeleportService:TeleportToPlaceInstance(
+                placeId, 
+                bestServer.id, 
+                LocalPlayer
+            )
+        end)
+    end
+end
+
+-- Inisialisasi: Load visited servers dan cleanup
+LoadVisitedServers()
+CleanOldVisitedServers()
+MarkCurrentServer()
+
+-- Auto Hop Timer (jika toggle aktif)
+task.spawn(function()
+    while true do
+        if Config.AutoHop and Config.HopInterval > 0 then
+            local currentTime = tick()
+            -- Cek apakah sudah waktunya hop
+            if currentTime - LastHopTime >= Config.HopInterval then
+                Controller.SmartHop()
+                LastHopTime = currentTime
+            end
+            task.wait(10)  -- Check setiap 10 detik
+        else
+            task.wait(30)  -- Jika tidak aktif, check lebih jarang
+        end
+    end
+end)
 
 -- [7] MAIN LOOP (Loop utama yang menjalankan semua fitur)
 -- Defer start supaya GUI selesai loading terlebih dahulu

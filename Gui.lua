@@ -534,6 +534,134 @@ task.spawn(function()
     end
 end)
 
+StatsSection:Divider()
+
+-- === SECTION: AUTO REJOIN ===
+-- Fitur untuk rejoin server (manual button)
+local RejoinSection = SettingsTab:Section({ 
+    Title = "Auto Rejoin", 
+    Icon = "refresh-cw" 
+})
+
+RejoinSection:Paragraph({
+    Title = "Info",
+    Desc = "Rejoin server dengan 1 klik. Bisa bypass private server untuk join ke public server."
+})
+
+-- TOGGLE: Bypass Private Server
+UIElements.RejoinBypassPrivate = RejoinSection:Toggle({
+    Title = "Bypass Private Server",
+    Desc = "Jika ON: rejoin ke public | Jika OFF: rejoin ke server sama",
+    Default = Controller.Config.RejoinBypassPrivate or true,
+    Flag = "RejoinBypassPrivate",
+    Callback = function(val)
+        if _G.XZNE_Restoring then return end
+        Controller.Config.RejoinBypassPrivate = val
+        AutoSave()
+    end
+})
+
+-- BUTTON: Rejoin Now
+RejoinSection:Button({
+    Title = "Rejoin Now!",
+    Desc = "Klik untuk rejoin server sekarang",
+    Icon = "rotate-cw",
+    Callback = function()
+        Controller.DoRejoin()
+    end
+})
+
+RejoinSection:Divider()
+
+-- === SECTION: SMART AUTO HOP ===
+-- Fitur untuk server hopping otomatis
+local HopSection = SettingsTab:Section({ 
+    Title = "Smart Auto Hop", 
+    Icon = "globe" 
+})
+
+HopSection:Paragraph({
+    Title = "Info",
+    Desc = "Server hopping cerdas: Pilih server sehat, hindari server yang pernah dikunjungi."
+})
+
+-- TOGGLE: Enable Auto Hop
+UIElements.AutoHop = HopSection:Toggle({
+    Title = "Enable Auto Hop",
+    Desc = "Hop otomatis setiap interval waktu",
+    Default = Controller.Config.AutoHop or false,
+    Flag = "AutoHop",
+    Callback = function(val)
+        if _G.XZNE_Restoring then return end
+        Controller.Config.AutoHop = val
+        AutoSave()
+    end
+})
+
+-- SLIDER: Hop Interval
+UIElements.HopInterval = HopSection:Slider({
+    Title = "Hop Interval",
+    Desc = "Waktu antar hop (60-600 detik)",
+    Step = 30,
+    Value = {
+        Min = 60,
+        Max = 600,
+        Default = Controller.Config.HopInterval or 300,
+    },
+    Flag = "HopInterval",
+    Callback = function(val)
+        if _G.XZNE_Restoring then return end
+        Controller.Config.HopInterval = val
+        AutoSave()
+    end
+})
+
+-- SLIDER: Min Players
+UIElements.HopMinPlayers = HopSection:Slider({
+    Title = "Min Players",
+    Desc = "Server minimal player count",
+    Step = 1,
+    Value = {
+        Min = 1,
+        Max = 30,
+        Default = Controller.Config.HopMinPlayers or 5,
+    },
+    Flag = "HopMinPlayers",
+    Callback = function(val)
+        if _G.XZNE_Restoring then return end
+        Controller.Config.HopMinPlayers = val
+        AutoSave()
+    end
+})
+
+-- SLIDER: Max Players
+UIElements.HopMaxPlayers = HopSection:Slider({
+    Title = "Max Players",
+    Desc = "Server maksimal player count",
+    Step = 1,
+    Value = {
+        Min = 10,
+        Max = 50,
+        Default = Controller.Config.HopMaxPlayers or 25,
+    },
+    Flag = "HopMaxPlayers",
+    Callback = function(val)
+        if _G.XZNE_Restoring then return end
+        Controller.Config.HopMaxPlayers = val
+        AutoSave()
+    end
+})
+
+-- BUTTON: Hop Now
+HopSection:Button({
+    Title = "Hop Now!",
+    Desc = "Force hop ke server terbaik sekarang",
+    Icon = "zap",
+    Callback = function()
+        Controller.SmartHop()
+    end
+})
+
 -- Simpan referensi window dan notifikasi user
 Controller.Window = Window
 WindUI:Notify({
@@ -595,10 +723,19 @@ task.defer(function()
     Sync(UIElements.AutoClear, C.AutoClear, "Toggle")
     Sync(UIElements.AutoClaim, C.AutoClaim, "Toggle")
     
+    -- Sync NEW toggles (Auto Hop & Rejoin)
+    Sync(UIElements.AutoHop, C.AutoHop, "Toggle")
+    Sync(UIElements.RejoinBypassPrivate, C.RejoinBypassPrivate, "Toggle")
+    
     -- Sync Slider & Input
     Sync(UIElements.DelaySlider, C.Speed, "Slider")
     Sync(UIElements.MaxPrice, C.MaxPrice, "Input")
     Sync(UIElements.Price, C.Price, "Input")
+    
+    -- Sync NEW sliders (Auto Hop params)
+    Sync(UIElements.HopInterval, C.HopInterval, "Slider")
+    Sync(UIElements.HopMinPlayers, C.HopMinPlayers, "Slider")
+    Sync(UIElements.HopMaxPlayers, C.HopMaxPlayers, "Slider")
     
     -- Sync Dropdown (INDEPENDENT - Bisa simultanlam)
     if C.BuyTargetPet and C.BuyTargetPet ~= "— None —" then
