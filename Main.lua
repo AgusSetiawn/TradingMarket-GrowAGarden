@@ -708,98 +708,134 @@ end
 -- Start Cacher Immediately
 StartServerCacher()
 
--- [FUNGSI] INSTANT RANDOM HOP (CACHED)
--- Menggunakan sistem cache untuk 0-delay instant hop
+-- [FUNGSI UTAMA] Safe Teleport Logic
+-- Menangani kegagalan teleport secara live
+local function SafeTeleport(PlaceID, TargetID)
+    if WindUI then
+        WindUI:Notify({
+            Title = "Teleporting...",
+            Content = "Traveling to server...",
+            Icon = "plane",
+            Duration = 5
+        })
+    end
+    
+    -- Connection untuk menangani kegagalan teleport
+    local Connection
+    Connection = TeleportService.TeleportInitFailed:Connect(function(player, result, errorMessage)
+        if player == LocalPlayer then
+            warn("Teleport Failed: " .. tostring(errorMessage))
+            if WindUI then
+                WindUI:Notify({
+                    Title = "Teleport Failed",
+                    Content = "Retrying specific server...",
+                    Icon = "alert-triangle",
+                    Duration = 3
+                })
+            end
+            
+            -- Disconnect dan biarkan loop SmartHop mencoba server berikutnya
+            if Connection then Connection:Disconnect() end
+            _G.XZNE_TeleportFailed = true -- Signal failure to loop
+        end
+    end)
+    
+    -- Attempt Teleport
+    _G.XZNE_TeleportFailed = false
+    local success, err = pcall(function()
+        TeleportService:TeleportToPlaceInstance(PlaceID, TargetID, LocalPlayer)
+    end)
+    
+    if not success then
+        warn("Teleport API Error: " .. tostring(err))
+        _G.XZNE_TeleportFailed = true
+    end
+    
+    return Connection
+end
+
+-- [FUNGSI] INSTANT RANDOM HOP (CACHED & HARDENED)
 function Controller.SmartHop()
     if _G.XZNE_Hopping then return end
     _G.XZNE_Hopping = true
     
     local PlaceID = game.PlaceId
     
-    -- [STEP 1] Coba gunakan CACHE terlebih dahulu (Instant)
-    if #_G.XZNE_ServerCache > 0 then
-        if WindUI then
-            WindUI:Notify({
-                Title = "Instant Hop",
-                Content = "Server found in cache! Teleporting...",
-                Icon = "zap",
-                Duration = 3
-            })
+    task.spawn(function()
+        -- Strategy: Combine Cache + Manual Fetch into one list
+        local candidates = {}
+        
+        -- 1. Ambil dari Cache dulu
+        while #_G.XZNE_ServerCache > 0 do
+            table.insert(candidates, table.remove(_G.XZNE_ServerCache, 1))
         end
         
-        -- Ambil server pertama dari cache (sudah di-shuffle saat caching)
-        local targetID = table.remove(_G.XZNE_ServerCache, 1)
-        
-        local success, err = pcall(function()
-             TeleportService:TeleportToPlaceInstance(PlaceID, targetID, LocalPlayer)
-        end)
-        
-        if success then return end -- Berhasil trigger teleport
-        -- Jika gagal, lanjut ke manual fetch (fallback)
-    end
-
-    -- [STEP 2] Manual Fetch (Fallback jika cache kosong/gagal)
-    if WindUI then
-        WindUI:Notify({
-            Title = "Hopping...",
-            Content = "Fetching new server list...",
-            Icon = "shuffle",
-            Duration = 3
-        })
-    end
-    
-    local currentJobId = game.JobId
-    
-    task.spawn(function()
-        -- Fetch 100 Server Terbaru (Desc)
-        local url = 'https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Desc&limit=100'
-        local success, result = pcall(function() return game:HttpGet(url) end)
-        
-        if success and result then
-            local Site = HttpService:JSONDecode(result)
-            if Site and Site.data then
-                local candidates = {}
-                
-                for _, v in pairs(Site.data) do
-                    local ID = tostring(v.id)
-                    local maxPlayers = tonumber(v.maxPlayers) or 0
-                    local playing = tonumber(v.playing) or 0
-                    
-                    if ID ~= tostring(currentJobId) and maxPlayers > playing then
-                        table.insert(candidates, ID)
-                    end
-                end
-                
-                if #candidates > 0 then
-                    -- Shuffle & Retry Loop
-                    local function shuffle(tbl)
-                        for i = #tbl, 2, -1 do
-                            local j = math.random(i)
-                            tbl[i], tbl[j] = tbl[j], tbl[i]
+        -- 2. Jika kandidat sedikit (< 3), ambil manual fetch juga untuk nambah stok
+        if #candidates < 3 then
+            if WindUI then
+                 WindUI:Notify({Title = "Hopping...", Content = "Fetching server list...", Icon = "shuffle", Duration = 2})
+            end
+            
+            local url = 'https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Desc&limit=100'
+            local success, result = pcall(function() return game:HttpGet(url) end)
+            if success and result then
+                local Site = HttpService:JSONDecode(result)
+                if Site and Site.data then
+                     local currentJobId = game.JobId
+                     for _, v in pairs(Site.data) do
+                        local ID = tostring(v.id)
+                        local maxPlayers = tonumber(v.maxPlayers) or 0
+                        local playing = tonumber(v.playing) or 0
+                        if ID ~= tostring(currentJobId) and maxPlayers > playing then
+                            table.insert(candidates, ID)
                         end
-                        return tbl
                     end
-                    shuffle(candidates)
-                    
-                    for _, targetID in ipairs(candidates) do
-                        local tSuccess, _ = pcall(function()
-                            TeleportService:TeleportToPlaceInstance(PlaceID, targetID, LocalPlayer)
-                        end)
-                        if tSuccess then 
-                            if WindUI then
-                                WindUI:Notify({Title="Teleporting", Content="Teleporting...", Icon="plane"})
-                            end
-                            return 
-                        end
-                        task.wait(0.2)
-                    end
-                else
-                    if WindUI then WindUI:Notify({Title="No Servers", Content="Server list empty.", Icon="x-circle"}) end
                 end
             end
         end
         
-        task.wait(1)
+        -- 3. Shuffle (Randomize)
+        for i = #candidates, 2, -1 do
+            local j = math.random(i)
+            candidates[i], candidates[j] = candidates[j], candidates[i]
+        end
+        
+        -- 4. EXECUTE TELEPORT LOOP
+        if #candidates > 0 then
+            for i, targetID in ipairs(candidates) do
+                -- Reset failure flag
+                _G.XZNE_TeleportFailed = false
+                
+                -- Try Teleport
+                local conn = SafeTeleport(PlaceID, targetID)
+                
+                -- Tunggu sebentar untuk melihat apakah gagal (max 8 detik timeout)
+                local waited = 0
+                while waited < 8 do
+                    if _G.XZNE_TeleportFailed then
+                         break -- Gagal, lanjut loop server berikutnya
+                    end
+                    task.wait(1)
+                    waited = waited + 1
+                    -- Jika sukses, player seharusnya sudah leave game di titik ini
+                end
+                
+                if conn then conn:Disconnect() end
+                
+                -- Jika script masih berjalan sampai sini, berarti belum pindah
+                -- Lanjut ke kandidat berikutnya
+            end
+            
+            -- Jika habis kandidat
+             if WindUI then
+                WindUI:Notify({Title = "Hop Failed", Content = "All valid servers failed to join.", Icon = "alert-circle"})
+            end
+        else
+             if WindUI then
+                WindUI:Notify({Title = "No Servers", Content = "No valid servers found.", Icon = "x-circle"})
+            end
+        end
+        
         _G.XZNE_Hopping = false
     end)
 end
