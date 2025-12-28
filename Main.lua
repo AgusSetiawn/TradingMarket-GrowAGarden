@@ -427,7 +427,8 @@ local function RunAutoClear()
             if not Config.Running or not Config.AutoClear then break end
             
             -- Filter by Category first
-            if listingInfo.ItemType == targetType or Config.DeleteAll then
+            -- Filter by Category (Multi-Target Friendly)
+            if Config.DeleteAll or (listingInfo.ItemType == "Pet" and targetLowerPet ~= "") or (listingInfo.ItemType == "Holdable" and targetLowerItem ~= "") then
                 local itemId = listingInfo.ItemId
                 local itemData = myData.Items[itemId]
                 
