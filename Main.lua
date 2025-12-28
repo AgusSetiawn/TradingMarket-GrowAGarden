@@ -659,28 +659,99 @@ function Controller.DoRejoin()
 end
 
 -- [FUNGSI] Smart Auto Hop ADVANCED (Server hopping cerdas dengan multi-strategy)
--- [FUNGSI] INSTANT RANDOM HOP
--- Simple, Cepat, Random. Tanpa filter "Smart" yang ribet.
--- Hanya memastikan: Beda Server & Tidak Penuh.
+-- [NEW] BACKGROUND SERVER CACHER (Untuk True Instant Hop)
+-- Thread ini berjalan di background untuk menimbun server kosong
+_G.XZNE_ServerCache = {}
+local function StartServerCacher()
+    task.spawn(function()
+        local PlaceID = game.PlaceId
+        local currentJobId = game.JobId
+        
+        while true do
+            -- Hanya cache jika cache kosong/sedikit untuk hemat bandwidth
+            if #_G.XZNE_ServerCache < 5 then
+                local url = 'https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Desc&limit=100'
+                local success, result = pcall(function() return game:HttpGet(url) end)
+                
+                if success and result then
+                    local Site = HttpService:JSONDecode(result)
+                    if Site and Site.data then
+                        local tempCache = {}
+                        for _, v in pairs(Site.data) do
+                            local ID = tostring(v.id)
+                            local maxPlayers = tonumber(v.maxPlayers) or 0
+                            local playing = tonumber(v.playing) or 0
+                            
+                            -- Filter: Beda Server & Tidak Penuh
+                            if ID ~= tostring(currentJobId) and maxPlayers > playing then
+                                table.insert(tempCache, ID)
+                            end
+                        end
+                        
+                        -- Update Global Cache jika ada hasil
+                        if #tempCache > 0 then
+                            -- Shuffle results agar lebih random
+                            for i = #tempCache, 2, -1 do
+                                local j = math.random(i)
+                                tempCache[i], tempCache[j] = tempCache[j], tempCache[i]
+                            end
+                            _G.XZNE_ServerCache = tempCache
+                        end
+                    end
+                end
+            end
+            task.wait(15) -- Refresh cache setiap 15 detik
+        end
+    end)
+end
+
+-- Start Cacher Immediately
+StartServerCacher()
+
+-- [FUNGSI] INSTANT RANDOM HOP (CACHED)
+-- Menggunakan sistem cache untuk 0-delay instant hop
 function Controller.SmartHop()
     if _G.XZNE_Hopping then return end
     _G.XZNE_Hopping = true
     
+    local PlaceID = game.PlaceId
+    
+    -- [STEP 1] Coba gunakan CACHE terlebih dahulu (Instant)
+    if #_G.XZNE_ServerCache > 0 then
+        if WindUI then
+            WindUI:Notify({
+                Title = "Instant Hop",
+                Content = "Server found in cache! Teleporting...",
+                Icon = "zap",
+                Duration = 3
+            })
+        end
+        
+        -- Ambil server pertama dari cache (sudah di-shuffle saat caching)
+        local targetID = table.remove(_G.XZNE_ServerCache, 1)
+        
+        local success, err = pcall(function()
+             TeleportService:TeleportToPlaceInstance(PlaceID, targetID, LocalPlayer)
+        end)
+        
+        if success then return end -- Berhasil trigger teleport
+        -- Jika gagal, lanjut ke manual fetch (fallback)
+    end
+
+    -- [STEP 2] Manual Fetch (Fallback jika cache kosong/gagal)
     if WindUI then
         WindUI:Notify({
             Title = "Hopping...",
-            Content = "Finding random server...",
+            Content = "Fetching new server list...",
             Icon = "shuffle",
             Duration = 3
         })
     end
-
-    local PlaceID = game.PlaceId
+    
     local currentJobId = game.JobId
     
     task.spawn(function()
         -- Fetch 100 Server Terbaru (Desc)
-        -- Biasanya server baru lebih sepi/banyak slot kosong
         local url = 'https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Desc&limit=100'
         local success, result = pcall(function() return game:HttpGet(url) end)
         
@@ -689,22 +760,18 @@ function Controller.SmartHop()
             if Site and Site.data then
                 local candidates = {}
                 
-                -- Kumpulkan semua server yang valid
                 for _, v in pairs(Site.data) do
                     local ID = tostring(v.id)
                     local maxPlayers = tonumber(v.maxPlayers) or 0
                     local playing = tonumber(v.playing) or 0
                     
-                    -- SYARAT MUTLAK:
-                    -- 1. Beda Server (ID != Current)
-                    -- 2. Tidak Penuh (Playing < Max)
                     if ID ~= tostring(currentJobId) and maxPlayers > playing then
                         table.insert(candidates, ID)
                     end
                 end
                 
                 if #candidates > 0 then
-                    -- Acak urutan candidate
+                    -- Shuffle & Retry Loop
                     local function shuffle(tbl)
                         for i = #tbl, 2, -1 do
                             local j = math.random(i)
@@ -714,56 +781,24 @@ function Controller.SmartHop()
                     end
                     shuffle(candidates)
                     
-                    -- Coba teleport satu per satu sampai berhasil
                     for _, targetID in ipairs(candidates) do
-                        local success, err = pcall(function()
+                        local tSuccess, _ = pcall(function()
                             TeleportService:TeleportToPlaceInstance(PlaceID, targetID, LocalPlayer)
                         end)
-                        
-                        if success then
-                            -- Jika call berhasil, Roblox akan mulai proses pindah server.
-                            -- Kita stop loop dan biarkan script mati alami saat pindah.
+                        if tSuccess then 
                             if WindUI then
-                                WindUI:Notify({
-                                    Title = "Teleporting...",
-                                    Content = "Menuju server: " .. targetID,
-                                    Icon = "plane",
-                                    Duration = 5
-                                })
+                                WindUI:Notify({Title="Teleporting", Content="Teleporting...", Icon="plane"})
                             end
-                            return -- Stop function, wait for teleport
-                        else
-                            warn("Failed to teleport to " .. targetID .. ": " .. tostring(err))
-                            -- Lanjut ke candidate berikutnya jika gagal
+                            return 
                         end
                         task.wait(0.2)
                     end
-                    
-                    -- Jika loop selesai tapi belum pindah (semua gagal)
-                     if WindUI then
-                        WindUI:Notify({
-                            Title = "Hop Failed",
-                            Content = "Gagal teleport ke " .. #candidates .. " server.",
-                            Icon = "alert-circle",
-                            Duration = 3
-                        })
-                    end
                 else
-                    if WindUI then
-                        WindUI:Notify({
-                            Title = "No Servers",
-                            Content = "Tidak menemukan server kosong di page ini.",
-                            Icon = "x-circle",
-                            Duration = 3
-                        })
-                    end
+                    if WindUI then WindUI:Notify({Title="No Servers", Content="Server list empty.", Icon="x-circle"}) end
                 end
             end
-        else
-            warn("Failed to fetch servers")
         end
         
-        -- Reset flag jika gagal total
         task.wait(1)
         _G.XZNE_Hopping = false
     end)
