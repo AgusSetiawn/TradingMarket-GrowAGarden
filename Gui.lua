@@ -429,19 +429,7 @@ task.defer(function()
     -- Apply saved selections (only if valid and not None)
     -- LOAD CONFIG NOW (After dropdowns are populated)
     -- Apply saved selections (only if valid and not None)
-    -- DROPWOWN ONLY (Late Update because dependent on DB)
-    task.wait(0.2)
-    pcall(function()
-        local savedTarget = Controller.Config.BuyTarget
-        if savedTarget and savedTarget ~= "— None —" then
-             print("✅ [XZNE] Applying Saved Target: "..tostring(savedTarget))
-             task.defer(function()
-                -- Try selecting in BOTH (One will succeed if item exists)
-                pcall(function() UIElements.TargetPet:Select(savedTarget) end)
-                pcall(function() UIElements.TargetItem:Select(savedTarget) end)
-             end)
-        end
-    end)
+
     
 end)
 
@@ -483,8 +471,18 @@ WindUI:Notify({
 
 -- [7] EXPLICIT VISUAL SYNC (The "Double-Tap")
 -- Force UI to match Config after creation
+-- [7] EXPLICIT VISUAL SYNC (The "Double-Tap")
+-- Force UI to match Config after creation
 task.defer(function()
-    task.wait(1.5) -- Wait for UI to fully render/animate
+    -- Wait for UI to render AND Database to be ready (for Dropdowns)
+    task.wait(1.5) 
+    
+    local Timeout = 0
+    while not DatabaseReady and Timeout < 5 do
+        task.wait(0.5)
+        Timeout = Timeout + 0.5
+    end
+    
     print("🔄 [XZNE DEBUG] Starting Visual Sync...")
     
     local C = Controller.Config
@@ -493,11 +491,20 @@ task.defer(function()
     local function Sync(element, value, elementType)
         if element and value ~= nil then 
             pcall(function()
+                print("   > Syncing " .. tostring(elementType) .. ": " .. tostring(value))
+                
                 if elementType == "Dropdown" and element.Select then
+                    -- Dropdowns must use Select
                     element:Select(value)
-                elseif elementType == "Input" and element.Set then
-                     -- Input needs string conversion
-                    element:Set(tostring(value))
+                    
+                elseif elementType == "Input" then
+                     -- Input Strategy: Try SetText -> SetValue -> Set
+                    local sVal = tostring(value)
+                    if element.SetText then element:SetText(sVal)
+                    elseif element.SetValue then element:SetValue(sVal)
+                    elseif element.Set then element:Set(sVal)
+                    end
+                    
                 else -- Toggle, Slider use :Set()
                     if element.Set then element:Set(value) end
                 end
@@ -515,6 +522,12 @@ task.defer(function()
     Sync(UIElements.DelaySlider, C.Speed, "Slider")
     Sync(UIElements.MaxPrice, C.MaxPrice, "Input")
     Sync(UIElements.Price, C.Price, "Input")
+    
+    -- Sync Dropdowns (Now that DB is ready)
+    if C.BuyTarget and C.BuyTarget ~= "— None —" then
+        Sync(UIElements.TargetPet, C.BuyTarget, "Dropdown")
+        Sync(UIElements.TargetItem, C.BuyTarget, "Dropdown") -- Sync Item too if applicable
+    end
     
     print("✅ [XZNE DEBUG] Visual Sync Complete")
 end)
