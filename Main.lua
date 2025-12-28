@@ -660,78 +660,143 @@ function Controller.DoRejoin()
     end
 end
 
--- [FUNGSI] Smart Auto Hop (Server hopping cerdas)
+-- [FUNGSI] Smart Auto Hop ADVANCED (Server hopping cerdas dengan multi-strategy)
 function Controller.SmartHop()
     local placeId = game.PlaceId
-    local servers = {}
+    local currentJobId = game.JobId
+    local currentTime = tick()
     
-    -- Ambil daftar server dari Roblox API
-    local success, result = pcall(function()
-        return game:HttpGet(
-            string.format(
-                "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100",
-                placeId
-            )
-        )
-    end)
+    -- MULTI-TIER STRATEGY: Coba berbagai pendekatan sampai berhasil
+    -- Tier 1: Desc + Strict (server terbaru, filter ketat)
+    -- Tier 2: Asc + Strict (server terlama, filter ketat)
+    -- Tier 3: Desc + Relaxed (server terbaru, filter longgar)
+    -- Tier 4: Asc + Relaxed (server terlama, filter longgar)
+    local strategies = {
+        {sortOrder = "Desc", strict = true, name = "Newest Strict"},
+        {sortOrder = "Asc", strict = true, name = "Oldest Strict"},
+        {sortOrder = "Desc", strict = false, name = "Newest Relaxed"},
+        {sortOrder = "Asc", strict = false, name = "Oldest Relaxed"},
+    }
     
-    if not success or not result then return end
-    
-    -- Parse JSON response
-    local decodeSuccess, decoded = pcall(function() 
-        return HttpService:JSONDecode(result) 
-    end)
-    if not decodeSuccess or not decoded or not decoded.data then return end
-    
-    -- Filter server berdasarkan kriteria
-    for _, server in ipairs(decoded.data) do
-        local players = server.playing
-        local maxPlayers = server.maxPlayers
-        local jobId = server.id
+    -- Coba setiap strategy sampai dapat server
+    for strategyIndex, strategy in ipairs(strategies) do
+        local servers = {}
+        local cursor = ""
+        local attempts = 0
+        local maxAttempts = 3  -- Fetch hingga 3 halaman (300 server total)
         
-        -- Kriteria filter:
-        -- 1. Player count dalam range (Min-Max)
-        -- 2. Belum pernah dikunjungi (atau sudah lama)
-        -- 3. Bukan server saat ini
-        if players >= Config.HopMinPlayers 
-            and players <= Config.HopMaxPlayers
-            and not VisitedServers[jobId]
-            and jobId ~= game.JobId then
+        -- PAGINATION LOOP: Fetch multiple pages
+        repeat
+            attempts = attempts + 1
             
-            -- Hitung health score: Prioritas server dengan player balanced
-            -- Rumus: 100 - |persentase_player - 50%|
-            -- Server dengan 50% kapasitas dapat score tertinggi
-            local playerPercent = (players / maxPlayers * 100)
-            local healthScore = 100 - math.abs(playerPercent - 50)
-            
-            table.insert(servers, {
-                id = jobId,
-                players = players,
-                maxPlayers = maxPlayers,
-                health = healthScore
-            })
-        end
-    end
-    
-    -- Sort server by health score (descending - tertinggi duluan)
-    table.sort(servers, function(a, b) 
-        return a.health > b.health 
-    end)
-    
-    -- Teleport ke server terbaik
-    if #servers > 0 then
-        local bestServer = servers[1]
-        -- Mark server saat ini sebelum pindah
-        MarkCurrentServer()
-        -- Teleport ke server terbaik
-        pcall(function()
-            TeleportService:TeleportToPlaceInstance(
-                placeId, 
-                bestServer.id, 
-                LocalPlayer
+            -- Build URL dengan cursor untuk pagination
+            local url = string.format(
+                "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=%s&limit=100%s",
+                placeId,
+                strategy.sortOrder,
+                cursor ~= "" and ("&cursor=" .. cursor) or ""
             )
-        end)
+            
+            -- Fetch server list
+            local success, result = pcall(function()
+                return game:HttpGet(url)
+            end)
+            
+            if not success or not result then break end
+            
+            -- Parse JSON
+            local decodeSuccess, decoded = pcall(function() 
+                return HttpService:JSONDecode(result) 
+            end)
+            
+            if not decodeSuccess or not decoded or not decoded.data then break end
+            
+            -- FILTER SERVERS berdasarkan strategy
+            for _, server in ipairs(decoded.data) do
+                local players = server.playing
+                local maxPlayers = server.maxPlayers
+                local jobId = server.id
+                
+                local passFilter = false
+                
+                if strategy.strict then
+                    -- STRICT MODE: Filter ketat
+                    -- - Player count dalam range (Min-Max)
+                    -- - Belum pernah dikunjungi
+                    -- - Bukan server saat ini
+                    passFilter = players >= Config.HopMinPlayers 
+                        and players <= Config.HopMaxPlayers
+                        and not VisitedServers[jobId]
+                        and jobId ~= currentJobId
+                else
+                    -- RELAXED MODE: Filter longgar
+                    -- - Bukan server saat ini (wajib)
+                    -- - Boleh visited jika sudah lama (>30 menit)
+                    -- - Abaikan min/max players
+                    local visitedTimestamp = VisitedServers[jobId]
+                    local isOldVisit = visitedTimestamp and (currentTime - visitedTimestamp > 1800) -- 30 min
+                    
+                    passFilter = jobId ~= currentJobId 
+                        and (not visitedTimestamp or isOldVisit)
+                        and players > 0  -- Minimal ada 1 player
+                end
+                
+                if passFilter then
+                    -- Calculate health score
+                    local playerPercent = (players / maxPlayers * 100)
+                    local healthScore = 100 - math.abs(playerPercent - 50)
+                    
+                    table.insert(servers, {
+                        id = jobId,
+                        players = players,
+                        maxPlayers = maxPlayers,
+                        health = healthScore
+                    })
+                end
+            end
+            
+            -- Get next page cursor
+            cursor = decoded.nextPageCursor or ""
+            
+            -- Stop jika sudah dapat cukup server atau tidak ada cursor lagi
+        until cursor == "" or attempts >= maxAttempts or #servers >= 20
+        
+        -- Jika dapat server, pilih yang terbaik dan hop
+        if #servers > 0 then
+            -- Sort by health score (tertinggi duluan)
+            table.sort(servers, function(a, b) 
+                return a.health > b.health 
+            end)
+            
+            local bestServer = servers[1]
+            
+            -- Mark server saat ini sebelum pindah
+            MarkCurrentServer()
+            
+            -- TELEPORT ke server terbaik
+            local teleportSuccess = pcall(function()
+                TeleportService:TeleportToPlaceInstance(
+                    placeId, 
+                    bestServer.id, 
+                    LocalPlayer
+                )
+            end)
+            
+            if teleportSuccess then
+                return  -- SUCCESS! Hop berhasil
+            end
+        end
+        
+        -- Strategy ini gagal, lanjut ke strategy berikutnya
+        task.wait(0.5)  -- Small delay antara strategy
     end
+    
+    -- ULTIMATE FALLBACK: Semua strategy gagal, direct teleport ke public server random
+    -- Ini dijamin berhasil selama game masih online
+    pcall(function()
+        MarkCurrentServer()  -- Mark dulu sebelum pergi
+        TeleportService:Teleport(placeId, LocalPlayer)
+    end)
 end
 
 -- Inisialisasi: Load visited servers dan cleanup
