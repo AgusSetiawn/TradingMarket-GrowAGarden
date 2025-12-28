@@ -661,120 +661,122 @@ function Controller.DoRejoin()
 end
 
 -- [FUNGSI] Smart Auto Hop ADVANCED (Server hopping cerdas dengan multi-strategy)
--- [FUNGSI] Smart Auto Hop (GLOBAL SCAN VERSION)
--- Mencari ke semua public server list (bukan cuma target item)
--- Sesuai request: "cari semua server yang ada dari itu bukan cuma targeted"
+-- [FUNGSI] Smart Auto Hop (INSTANT RANDOM VERSION)
+-- Logic "Instant Hop" standar yang digunakan kebanyakan script (e.g. Infinite Yield)
+-- Prioritas: Kecepatan & Pindah Server (Bukan filter ketat)
 function Controller.SmartHop()
     if _G.XZNE_Hopping then return end
     _G.XZNE_Hopping = true
     
     if WindUI then
         WindUI:Notify({
-            Title = "Searching Server...",
-            Content = "Scanning server list...",
-            Icon = "globe",
+            Title = "Hopping...",
+            Content = "Looking for a server...",
+            Icon = "plane",
             Duration = 3
         })
     end
 
     local PlaceID = game.PlaceId
     local currentJobId = game.JobId
-    local foundAnything = ""
-    local pagesSearched = 0
+    local cursor = ""
     
-    -- Fungsi scanner
-    local function ScanPage()
-        pagesSearched = pagesSearched + 1
-        
-        -- Construct URL (Ascending = Oldest servers first = usually more stable)
-        local url = 'https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Asc&limit=100'
-        if foundAnything ~= "" then
-            url = url .. '&cursor=' .. foundAnything
+    -- Fungsi utilitas untuk mengacak table (Fisher-Yates Shuffle)
+    local function shuffle(tbl)
+        for i = #tbl, 2, -1 do
+            local j = math.random(i)
+            tbl[i], tbl[j] = tbl[j], tbl[i]
         end
-        
-        local success, result = pcall(function() return game:HttpGet(url) end)
-        if not success or not result then return false end
-        
-        local Site = HttpService:JSONDecode(result)
-        if not Site or not Site.data then return false end
-        
-        -- Update cursor
-        if Site.nextPageCursor and Site.nextPageCursor ~= "null" then
-            foundAnything = Site.nextPageCursor
-        end
-        
-        -- Iterate servers
-        for _, v in pairs(Site.data) do
-            local ID = tostring(v.id)
-            local maxPlayers = tonumber(v.maxPlayers) or 0
-            local playing = tonumber(v.playing) or 0
+        return tbl
+    end
+
+    task.spawn(function()
+        while task.wait() do
+            -- 1. Fetch Server List (Desc = Newest first = Usually more slots)
+            local url = 'https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Desc&limit=100'
+            if cursor ~= "" then
+                url = url .. '&cursor=' .. cursor
+            end
             
-            -- Filter Dasar: Server tidak penuh & bukan server ini
-            if ID ~= tostring(currentJobId) and maxPlayers > playing then
-                
-                -- Cek Blacklist (Visited)
-                -- Jika sudah cari > 5 halaman (500 server), abaikan blacklist lama (>10 menit)
-                local isVisited = VisitedServers[ID]
-                local isDesperate = pagesSearched > 5
-                
-                local pass = true
-                if isVisited then
-                    if isDesperate then
-                        -- Allow revisit jika sudah lama (10 menit)
-                        if tick() - isVisited < 600 then pass = false end
+            local success, result = pcall(function() return game:HttpGet(url) end)
+            
+            if success and result then
+                local Site = HttpService:JSONDecode(result)
+                if Site and Site.data then
+                    -- 2. Update Cursor for next loop if needed
+                    if Site.nextPageCursor and Site.nextPageCursor ~= "null" then
+                        cursor = Site.nextPageCursor
                     else
-                        pass = false
-                    end
-                end
-                
-                if pass then
-                    -- Cek Player Count Configuration
-                    -- Jika Desperate, abaikan config min/max
-                    local matchesConfig = true
-                    if not isDesperate then
-                        matchesConfig = (playing >= Config.HopMinPlayers and playing <= Config.HopMaxPlayers)
+                        cursor = "" -- Reset to start if end of list
                     end
                     
-                    if matchesConfig then
-                        -- KETEMU! Hop sekarang
-                        if WindUI then
-                            WindUI:Notify({
-                                Title = "Hopping...",
-                                Content = "Server found! ("..playing.."/"..maxPlayers..")",
-                                Icon = "plane",
-                                Duration = 5
-                            })
+                    -- 3. Collect Candidates
+                    local candidates = {}
+                    for _, v in pairs(Site.data) do
+                        local ID = tostring(v.id)
+                        local maxPlayers = tonumber(v.maxPlayers) or 0
+                        local playing = tonumber(v.playing) or 0
+                        
+                        -- CRITICAL: Beda Server & Tidak Penuh
+                        if ID ~= tostring(currentJobId) and maxPlayers > playing then
+                            -- Opsional: Cek Config (Min/Max) tapi soft check (preferensi)
+                            -- Agar "Instant", kita masukkan semua yg valid, nanti prioritize config
+                            local isPassConfig = (playing >= Config.HopMinPlayers and playing <= Config.HopMaxPlayers)
+                            
+                            -- Masukkan ke list
+                            table.insert(candidates, {id = ID, passConfig = isPassConfig})
+                        end
+                    end
+                    
+                    -- 4. Pick & Teleport
+                    if #candidates > 0 then
+                        -- Acak urutan biar gak selalu dapat server urutan pertama
+                        shuffle(candidates)
+                        
+                        -- Cari yang pass config dulu
+                        local targetID = nil
+                        for _, server in ipairs(candidates) do
+                            -- Priority 1: Config Match + Not Visited
+                            if server.passConfig and not VisitedServers[server.id] then
+                                targetID = server.id
+                                break
+                            end
                         end
                         
-                        -- Mark & Teleport
-                        VisitedServers[ID] = tick()
-                        SaveVisitedServers()
+                        -- Priority 2: Not Visited (walau config miss)
+                        if not targetID then
+                            for _, server in ipairs(candidates) do
+                                if not VisitedServers[server.id] then
+                                    targetID = server.id
+                                    break
+                                end
+                            end
+                        end
                         
-                        pcall(function()
-                            TeleportService:TeleportToPlaceInstance(PlaceID, ID, LocalPlayer)
-                        end)
-                        return true -- Stop scanning
+                        -- Priority 3: Any Different Server (Desperate Instant)
+                        if not targetID then
+                            targetID = candidates[1].id
+                        end
+                        
+                        if targetID then
+                            -- TELEPORT NOW
+                            VisitedServers[targetID] = tick()
+                            SaveVisitedServers()
+                            
+                            pcall(function()
+                                TeleportService:TeleportToPlaceInstance(PlaceID, targetID, LocalPlayer)
+                            end)
+                            
+                            -- Stop loop, we attempted teleport
+                            -- (Roblox will freeze/reconnect if successful)
+                            return 
+                        end
                     end
                 end
             end
-        end
-        return false -- Lanjut page berikutnya
-    end
-    
-    -- Infinite Loop Scanner
-    task.spawn(function()
-        while task.wait(0.5) do
-            local success = ScanPage()
-            if success then break end
             
-            -- Jika cursor habis (habis server list), reset dari awal
-            if foundAnything == "" then
-                if pagesSearched > 0 then
-                    -- Jika sudah putar balik tapi masih gak nemu, force desperate mode lebih agresif
-                    pagesSearched = 10 
-                    task.wait(1)
-                end
-            end
+            -- If loop reached here, we failed to find/teleport in this page.
+            -- Continue to next page smoothly
         end
     end)
 end
