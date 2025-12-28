@@ -661,17 +661,17 @@ function Controller.DoRejoin()
 end
 
 -- [FUNGSI] Smart Auto Hop ADVANCED (Server hopping cerdas dengan multi-strategy)
--- [FUNGSI] Smart Auto Hop (Robust Infinite-Search Version)
--- Diadaptasi dari kode referensi user untuk keandalan maksimal
+-- [FUNGSI] Smart Auto Hop (GLOBAL SCAN VERSION)
+-- Mencari ke semua public server list (bukan cuma target item)
+-- Sesuai request: "cari semua server yang ada dari itu bukan cuma targeted"
 function Controller.SmartHop()
-    -- Flag untuk mencegah double execution
     if _G.XZNE_Hopping then return end
     _G.XZNE_Hopping = true
     
     if WindUI then
         WindUI:Notify({
             Title = "Searching Server...",
-            Content = "Mencari server yang cocok...",
+            Content = "Scanning server list...",
             Icon = "globe",
             Duration = 3
         })
@@ -680,10 +680,13 @@ function Controller.SmartHop()
     local PlaceID = game.PlaceId
     local currentJobId = game.JobId
     local foundAnything = ""
-    local attempts = 0
+    local pagesSearched = 0
     
-    -- Fungsi pencari server (Recursive/Looping)
-    local function SearchAndTeleport()
+    -- Fungsi scanner
+    local function ScanPage()
+        pagesSearched = pagesSearched + 1
+        
+        -- Construct URL (Ascending = Oldest servers first = usually more stable)
         local url = 'https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Asc&limit=100'
         if foundAnything ~= "" then
             url = url .. '&cursor=' .. foundAnything
@@ -693,88 +696,84 @@ function Controller.SmartHop()
         if not success or not result then return false end
         
         local Site = HttpService:JSONDecode(result)
-        if not Site then return false end
+        if not Site or not Site.data then return false end
         
-        -- Set cursor untuk page berikutnya
-        if Site.nextPageCursor and Site.nextPageCursor ~= "null" and Site.nextPageCursor ~= nil then
+        -- Update cursor
+        if Site.nextPageCursor and Site.nextPageCursor ~= "null" then
             foundAnything = Site.nextPageCursor
         end
         
-        -- Iterasi server di page ini
-        if not Site.data then return false end
+        -- Iterate servers
         for _, v in pairs(Site.data) do
             local ID = tostring(v.id)
             local maxPlayers = tonumber(v.maxPlayers) or 0
             local playing = tonumber(v.playing) or 0
             
-            -- Filter Logic
-            if maxPlayers > playing then -- Server tidak penuh
-                -- Cek apakah server ini server kita saat ini?
-                if ID ~= tostring(currentJobId) then
-                    -- Cek Visited (Blacklist) dengan pengecualian Desperate Mode
-                    local isVisited = VisitedServers[ID]
-                    local isDesperate = attempts > 5
-                    
-                    -- Filter Logic:
-                    -- 1. Tidak visited OR (Desperate Mode AND visited > 30 mins ago)
-                    -- 2. Config Min/Max Players OR Desperate Mode
-                    
-                    local allowVisit = not isVisited
-                    if isDesperate and isVisited then
-                        -- Allow revisit old servers (> 20 mins) in desperate mode
-                        if tick() - isVisited > 1200 then allowVisit = true end
+            -- Filter Dasar: Server tidak penuh & bukan server ini
+            if ID ~= tostring(currentJobId) and maxPlayers > playing then
+                
+                -- Cek Blacklist (Visited)
+                -- Jika sudah cari > 5 halaman (500 server), abaikan blacklist lama (>10 menit)
+                local isVisited = VisitedServers[ID]
+                local isDesperate = pagesSearched > 5
+                
+                local pass = true
+                if isVisited then
+                    if isDesperate then
+                        -- Allow revisit jika sudah lama (10 menit)
+                        if tick() - isVisited < 600 then pass = false end
+                    else
+                        pass = false
+                    end
+                end
+                
+                if pass then
+                    -- Cek Player Count Configuration
+                    -- Jika Desperate, abaikan config min/max
+                    local matchesConfig = true
+                    if not isDesperate then
+                        matchesConfig = (playing >= Config.HopMinPlayers and playing <= Config.HopMaxPlayers)
                     end
                     
-                    if allowVisit then
-                        -- Cek Config Min/Max Players
-                        local matchesConfig = (playing >= Config.HopMinPlayers and playing <= Config.HopMaxPlayers)
-                        
-                        -- Desperate Mode: Ignore config
-                        if isDesperate then matchesConfig = true end
-                        
-                        if matchesConfig then
-                            -- FOUND! Teleport immediately
-                            -- Mark server ini visited supaya tidak balik lagi kalau gagal/crash
-                            VisitedServers[ID] = tick()
-                            SaveVisitedServers()
-                            
-                            if WindUI then
-                                WindUI:Notify({
-                                    Title = "Hopping...",
-                                    Content = "Server ditemukan! Teleporting...",
-                                    Icon = "plane",
-                                    Duration = 5
-                                })
-                            end
-                            
-                            pcall(function()
-                                TeleportService:TeleportToPlaceInstance(PlaceID, ID, LocalPlayer)
-                            end)
-                            
-                            return true -- Stop searching
+                    if matchesConfig then
+                        -- KETEMU! Hop sekarang
+                        if WindUI then
+                            WindUI:Notify({
+                                Title = "Hopping...",
+                                Content = "Server found! ("..playing.."/"..maxPlayers..")",
+                                Icon = "plane",
+                                Duration = 5
+                            })
                         end
+                        
+                        -- Mark & Teleport
+                        VisitedServers[ID] = tick()
+                        SaveVisitedServers()
+                        
+                        pcall(function()
+                            TeleportService:TeleportToPlaceInstance(PlaceID, ID, LocalPlayer)
+                        end)
+                        return true -- Stop scanning
                     end
                 end
             end
         end
-        return false -- Lanjut ke page berikutnya
+        return false -- Lanjut page berikutnya
     end
     
-    -- Loop Pencarian (Infinite Scroll sampai dapat)
+    -- Infinite Loop Scanner
     task.spawn(function()
         while task.wait(0.5) do
-            attempts = attempts + 1
+            local success = ScanPage()
+            if success then break end
             
-            -- Coba cari
-            local success = SearchAndTeleport()
-            if success then 
-                break -- Berhenti loop jika sudah teleport
-            end
-            
-            -- Jika cursor habis (sudah cek semua server), reset cursor untuk ulang dari awal
+            -- Jika cursor habis (habis server list), reset dari awal
             if foundAnything == "" then
-                -- Jangan reset attempts supaya desperate mode tetap jalan
-                task.wait(1) 
+                if pagesSearched > 0 then
+                    -- Jika sudah putar balik tapi masih gak nemu, force desperate mode lebih agresif
+                    pagesSearched = 10 
+                    task.wait(1)
+                end
             end
         end
     end)
