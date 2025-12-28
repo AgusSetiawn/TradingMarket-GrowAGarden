@@ -660,6 +660,27 @@ function Controller.DoRejoin()
     end
 end
 
+-- [FUNGSI] Reset Visited Servers (Clear blacklist)
+function Controller.ResetVisitedServers()
+    -- Clear semua visited servers dari memory
+    VisitedServers = {}
+    
+    -- Save file kosong
+    SaveVisitedServers()
+    
+    -- Notifikasi user (jika ada window)
+    if Controller.Window and Controller.Window.Notify then
+        pcall(function()
+            Controller.Window:Notify({
+                Title = "Visited Servers Reset",
+                Content = "Server blacklist telah direset. Anda bisa hop ke semua server lagi!",
+                Icon = "check-circle-2",
+                Duration = 5
+            })
+        end)
+    end
+end
+
 -- [FUNGSI] Smart Auto Hop ADVANCED (Server hopping cerdas dengan multi-strategy)
 function Controller.SmartHop()
     local placeId = game.PlaceId
@@ -669,8 +690,8 @@ function Controller.SmartHop()
     -- MULTI-TIER STRATEGY: Coba berbagai pendekatan sampai berhasil
     -- Tier 1: Desc + Strict (server terbaru, filter ketat)
     -- Tier 2: Asc + Strict (server terlama, filter ketat)
-    -- Tier 3: Desc + Relaxed (server terbaru, filter longgar)
-    -- Tier 4: Asc + Relaxed (server terlama, filter longgar)
+    -- Tier 3: Desc + Relaxed (server terbaru, filter longgar - TETAP BLACKLIST VISITED!)
+    -- Tier 4: Asc + Relaxed (server terlama, filter longgar - TETAP BLACKLIST VISITED!)
     local strategies = {
         {sortOrder = "Desc", strict = true, name = "Newest Strict"},
         {sortOrder = "Asc", strict = true, name = "Oldest Strict"},
@@ -683,7 +704,7 @@ function Controller.SmartHop()
         local servers = {}
         local cursor = ""
         local attempts = 0
-        local maxAttempts = 3  -- Fetch hingga 3 halaman (300 server total)
+        local maxAttempts = 5  -- Increase to 5 pages (500 servers!) for better coverage
         
         -- PAGINATION LOOP: Fetch multiple pages
         repeat
@@ -719,25 +740,27 @@ function Controller.SmartHop()
                 
                 local passFilter = false
                 
+                -- CRITICAL: SEMUA MODE WAJIB BLACKLIST VISITED SERVERS!
+                -- Tidak ada aging, sekali visited = permanent blacklist
+                local isVisited = VisitedServers[jobId] ~= nil
+                local isCurrent = jobId == currentJobId
+                
                 if strategy.strict then
                     -- STRICT MODE: Filter ketat
                     -- - Player count dalam range (Min-Max)
-                    -- - Belum pernah dikunjungi
+                    -- - BELUM PERNAH dikunjungi (PERMANENT BLACKLIST)
                     -- - Bukan server saat ini
                     passFilter = players >= Config.HopMinPlayers 
                         and players <= Config.HopMaxPlayers
-                        and not VisitedServers[jobId]
-                        and jobId ~= currentJobId
+                        and not isVisited  -- PERMANENT BLACKLIST
+                        and not isCurrent
                 else
                     -- RELAXED MODE: Filter longgar
-                    -- - Bukan server saat ini (wajib)
-                    -- - Boleh visited jika sudah lama (>30 menit)
-                    -- - Abaikan min/max players
-                    local visitedTimestamp = VisitedServers[jobId]
-                    local isOldVisit = visitedTimestamp and (currentTime - visitedTimestamp > 1800) -- 30 min
-                    
-                    passFilter = jobId ~= currentJobId 
-                        and (not visitedTimestamp or isOldVisit)
+                    -- - TETAP BLACKLIST visited servers (NO AGING!)
+                    -- - Bukan server saat ini
+                    -- - Abaikan min/max players (any player count OK)
+                    passFilter = not isCurrent 
+                        and not isVisited  -- PERMANENT BLACKLIST - NO EXCEPTIONS!
                         and players > 0  -- Minimal ada 1 player
                 end
                 
@@ -759,7 +782,7 @@ function Controller.SmartHop()
             cursor = decoded.nextPageCursor or ""
             
             -- Stop jika sudah dapat cukup server atau tidak ada cursor lagi
-        until cursor == "" or attempts >= maxAttempts or #servers >= 20
+        until cursor == "" or attempts >= maxAttempts or #servers >= 30  -- Collect more options
         
         -- Jika dapat server, pilih yang terbaik dan hop
         if #servers > 0 then
@@ -770,20 +793,40 @@ function Controller.SmartHop()
             
             local bestServer = servers[1]
             
-            -- Mark server saat ini sebelum pindah
-            MarkCurrentServer()
+            -- DOUBLE CHECK: Pastikan server ini benar-benar belum pernah dikunjungi
+            if VisitedServers[bestServer.id] or bestServer.id == currentJobId then
+                -- SKIP! Server ini ternyata sudah pernah dikunjungi (data race condition)
+                -- Lanjut ke server berikutnya
+                for i = 2, #servers do
+                    if not VisitedServers[servers[i].id] and servers[i].id ~= currentJobId then
+                        bestServer = servers[i]
+                        break
+                    end
+                end
+            end
             
-            -- TELEPORT ke server terbaik
-            local teleportSuccess = pcall(function()
-                TeleportService:TeleportToPlaceInstance(
-                    placeId, 
-                    bestServer.id, 
-                    LocalPlayer
-                )
-            end)
-            
-            if teleportSuccess then
-                return  -- SUCCESS! Hop berhasil
+            -- FINAL CHECK sebelum teleport
+            if not VisitedServers[bestServer.id] and bestServer.id ~= currentJobId then
+                -- Mark server saat ini sebelum pindah
+                MarkCurrentServer()
+                
+                -- Mark destination server sebagai visited SEBELUM teleport
+                -- Ini mencegah double-hop ke server yang sama
+                VisitedServers[bestServer.id] = tick()
+                SaveVisitedServers()
+                
+                -- TELEPORT ke server terbaik
+                local teleportSuccess = pcall(function()
+                    TeleportService:TeleportToPlaceInstance(
+                        placeId, 
+                        bestServer.id, 
+                        LocalPlayer
+                    )
+                end)
+                
+                if teleportSuccess then
+                    return  -- SUCCESS! Hop berhasil
+                end
             end
         end
         
@@ -791,12 +834,10 @@ function Controller.SmartHop()
         task.wait(0.5)  -- Small delay antara strategy
     end
     
-    -- ULTIMATE FALLBACK: Semua strategy gagal, direct teleport ke public server random
-    -- Ini dijamin berhasil selama game masih online
-    pcall(function()
-        MarkCurrentServer()  -- Mark dulu sebelum pergi
-        TeleportService:Teleport(placeId, LocalPlayer)
-    end)
+    -- TIDAK ADA FALLBACK!
+    -- Jika semua strategy gagal = berarti SEMUA server sudah pernah dikunjungi
+    -- User harus manual reset visited servers atau tunggu lama
+    -- Ini lebih baik daripada hop ke server yang sama berulang-ulang
 end
 
 -- Inisialisasi: Load visited servers dan cleanup
