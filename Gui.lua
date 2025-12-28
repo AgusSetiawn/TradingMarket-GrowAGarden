@@ -12,6 +12,7 @@ if not Controller then
     warn("[XZNE] Controller not found! Please run Main.lua first.")
     return
 end
+print("✅ [XZNE DEBUG] Controller check passed")
 
 
 -- [1] CONFIGURATION SYSTEM (Moved to TOP for FORCE INIT)
@@ -57,6 +58,7 @@ end
 -- ⚡ FORCE LOAD CONFIG NOW (Before UI Creation)
 -- This ensures 'Default' values in UI are correct from birth!
 LoadFromJSON()
+print("✅ [XZNE DEBUG] Configuration Loaded (Force Init)")
 
 
 
@@ -82,6 +84,7 @@ do
         return
     end
 end
+print("✅ [XZNE DEBUG] WindUI Library Loaded")
 
 -- [1] INSTANT LOADING FEEDBACK (Moved up)
 
@@ -199,6 +202,7 @@ local Window = WindUI:CreateWindow({
 })
 -- Store window reference for cleanup
 Controller.Window = Window
+print("✅ [XZNE DEBUG] Window Created")
 
 -- [6] CONFIGURE OPEN BUTTON (Minimize State)
 -- Matches the "Premium" aesthetic requested
@@ -477,4 +481,5 @@ WindUI:Notify({
 })
 
 -- Return success to Loader
+print("✅ [XZNE DEBUG] Reached End of Script, returning true")
 return true
