@@ -17,7 +17,7 @@ _G.XZNE_EXECUTING = true
 
 local function LoadScript(Script)
     -- Cache Busting: ?t=os.time() forces fresh download every execution
-    local Success, Result = pcall(function()
+    local Success, Result, ErrMsg = pcall(function()
         local Content = game:HttpGet(Repo .. Script .. "?t=" .. tostring(os.time()))
         
         -- CRITICAL: Validate content before loadstring
@@ -40,7 +40,10 @@ local function LoadScript(Script)
     end)
     
     if not Success or Result == nil then
-        warn("❌ [XZNE] Failed to load " .. Script .. ": " .. tostring(Result))
+        -- If pcall failed (Success=false), Result is the error.
+        -- If pcall succeeded but func failed (Result=nil), ErrMsg is the error.
+        local finalErr = not Success and Result or ErrMsg
+        warn("❌ [XZNE] Failed to load " .. Script .. ": " .. tostring(finalErr))
         return false
     end
     

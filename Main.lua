@@ -404,6 +404,7 @@ local function RunAutoList()
         end
     end
 end
+end
 
 -- >> AUTO CLEAR (Smart Remove)
 local function RunAutoClear()
