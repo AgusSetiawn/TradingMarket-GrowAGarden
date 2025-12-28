@@ -1,131 +1,136 @@
 --[[
     💠 XZNE SCRIPTHUB v0.0.01 Beta - UI LOADER
     
-    🎨 WindUI Interface
-    🔗 Connects to: Main.lua (_G.XZNE_Controller)
+    🎨 WindUI Interface - Antarmuka pengguna dengan desain premium
+    🔗 Terhubung ke: Main.lua (_G.XZNE_Controller)
+    📋 Fungsi: Membuat GUI, mengelola konfigurasi, dan bind ke logic controller
 ]]
 
 local WindUI
 local Controller = _G.XZNE_Controller
 
+-- Validasi: Controller harus sudah ada (dibuat oleh Main.lua)
 if not Controller then
-    warn("[XZNE] Controller not found! Please run Main.lua first.")
+    -- Controller tidak ditemukan, GUI tidak bisa dimuat
     return
 end
-print("✅ [XZNE DEBUG] Controller check passed")
 
--- [0] SAVE LOCK (Prevent overwrites during init)
+-- [0] KUNCI SAVE (Mencegah overwrite saat inisialisasi)
+-- Flag ini digunakan untuk mencegah autosave saat GUI sedang loading config
 if _G.XZNE_Restoring == nil then _G.XZNE_Restoring = true end
 
-
--- [1] CONFIGURATION SYSTEM (Moved to TOP for FORCE INIT)
--- Satisfies request: "XZNE ScriptHub/Config.json"
+-- [1] SISTEM KONFIGURASI (Dipindah ke atas untuk inisialisasi paksa)
+-- Menyimpan dan memuat konfigurasi dari file JSON lokal
 local HttpService = game:GetService("HttpService")
-local ConfigFile = "XZNE ScriptHub/Config.json"
+local ConfigFile = "XZNE ScriptHub/Config.json"  -- Path file konfigurasi
 
+-- Fungsi untuk menyimpan konfigurasi ke file JSON
 local function SaveToJSON()
+    -- Buat folder jika belum ada
     if not isfolder("XZNE ScriptHub") then makefolder("XZNE ScriptHub") end
     
     local success, json = pcall(function()
+        -- Encode tabel Config menjadi JSON string
         return HttpService:JSONEncode(Controller.Config)
     end)
     
     if success then
+        -- Tulis JSON ke file
         writefile(ConfigFile, json)
     end
 end
 
+-- Fungsi AutoSave (dipanggil setiap kali config berubah)
 local function AutoSave()
+    -- Jangan save jika sedang dalam fase restoring
     if _G.XZNE_Restoring then 
-        warn("⚠️ [XZNE DEBUG] AutoSave blocked (Restoring Phase)")
         return 
     end
+    -- Save ke JSON dan update cache di Main.lua
     pcall(SaveToJSON)
     pcall(function() Controller.UpdateCache() end)
 end
 
--- Load Logic (Passive)
+-- Fungsi untuk memuat konfigurasi dari file JSON (Pasif)
 local function LoadFromJSON()
-    print("📂 [XZNE DEBUG] Attempting to load config from: " .. ConfigFile)
+    -- Cek apakah file config ada
     if isfile(ConfigFile) then
         local success, result = pcall(readfile, ConfigFile)
         if success and result then
-            print("   > File Read Success. Bytes: " .. #result)
+            -- File berhasil dibaca, decode JSON
             local decoded = HttpService:JSONDecode(result)
             if decoded then
-                print("   > JSON Decode Success. Keys found: " .. table.getn(decoded) or "N/A")
+                -- Copy semua nilai dari decoded ke Controller.Config
                 for k,v in pairs(decoded) do
                     Controller.Config[k] = v
                 end
+                -- Update cache target di Main.lua
                 Controller.UpdateCache()
-                print("   > Config Updated. MaxPrice is now: " .. tostring(Controller.Config.MaxPrice))
                 return true
-            else
-                 warn("❌ [XZNE DEBUG] JSON Decode Failed!")
             end
-        else
-            warn("❌ [XZNE DEBUG] Readfile Failed!")
         end
-    else
-        warn("⚠️ [XZNE DEBUG] Config file not found (First run?)")
     end
     return false
 end
 
--- ⚡ FORCE LOAD CONFIG NOW (Before UI Creation)
--- This ensures 'Default' values in UI are correct from birth!
-_G.XZNE_Restoring = true -- LOCK
+-- MUAT KONFIGURASI SEKARANG (Sebelum UI dibuat)
+-- Ini memastikan nilai 'Default' di UI sudah benar sejak awal
+_G.XZNE_Restoring = true  -- KUNCI (Lock save)
 local loadStatus = LoadFromJSON()
-print("✅ [XZNE DEBUG] Config Init Done. Success: " .. tostring(loadStatus))
 
 
 
--- ❌ OPTIMIZATION: LoadConfig() already called in Main.lua (redundant)
--- Controller.LoadConfig() removed to save 50-100ms
-
--- [2] LOAD WINDUI
+-- [2] MUAT WINDUI LIBRARY
+-- Download dan load library WindUI dari GitHub
 do
     local success, result = pcall(function()
         local url = "https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"
         local content = game:HttpGet(url)
-        if #content < 100 then warn("⚠️ WindUI content suspicious!") end
         
+        -- Validasi: Pastikan konten tidak kosong
+        if #content < 100 then 
+            error("WindUI content terlalu kecil, kemungkinan gagal download") 
+        end
+        
+        -- Compile konten menjadi function
         local func, err = loadstring(content)
-        if not func then error("WindUI Loadstring Error: " .. tostring(err)) end
+        if not func then 
+            error("WindUI Loadstring Error: " .. tostring(err)) 
+        end
+        
+        -- Jalankan function dan return library
         return func()
     end)
     
     if success and result then
-        WindUI = result
+        WindUI = result  -- Library berhasil dimuat
     else
-        warn("[XZNE] Failed to load WindUI lib! Error: " .. tostring(result))
+        -- Gagal memuat WindUI, GUI tidak bisa dibuat
         return
     end
 end
-print("✅ [XZNE DEBUG] WindUI Library Loaded")
-
--- [1] INSTANT LOADING FEEDBACK (Moved up)
 
 -- [3] ICONS
--- Using WindUI Native Lucide Icons for better consistency and "Geist" feel.
--- No custom registration needed.
+-- Menggunakan icon bawaan WindUI (Lucide Icons) untuk konsistensi desain
+-- Tidak perlu registrasi custom icon
 
--- [4] LOAD DATABASES (DEFERRED for faster GUI appearance)
+-- [4] MUAT DATABASE (DEFERRED untuk GUI muncul lebih cepat)
+-- Database Pet dan Item diload secara asynchronous agar tidak menghalangi GUI
 local PetDatabase, ItemDatabase = {}, {}
 local DatabaseReady = false
 
--- ✅ OPTIMIZATION: JSON Database with Local Caching
+-- Optimasi: Cache database lokal untuk loading instant
 local CachedDBFile = "XZNE ScriptHub/Database.json"
 
 task.defer(function()
-    task.wait(0.3)  -- Let GUI render first
+    task.wait(0.3)  -- Tunggu GUI render terlebih dahulu
     
-    -- Create config folder if not exists
+    -- Buat folder config jika belum ada
     if makefolder and not isfolder("XZNE ScriptHub") then
         makefolder("XZNE ScriptHub")
     end
     
-    -- Try loading from local cache first (INSTANT if cached)
+    -- Coba load dari cache lokal dulu (INSTANT jika ada)
     if isfile and isfile(CachedDBFile) then
         local success, content = pcall(function()
             return readfile(CachedDBFile)
@@ -137,18 +142,19 @@ task.defer(function()
             end)
             
             if decodeSuccess and decoded then
+                -- Cache hit! Load instant
                 PetDatabase = decoded.Pets or {}
                 ItemDatabase = decoded.Items or {}
                 DatabaseReady = true
-                return  -- ✅ INSTANT LOAD - DONE!
+                return  -- Selesai, tidak perlu download
             end
         end
     end
     
-    -- Fallback: Download from GitHub (first run or cache failed)
+    -- Fallback: Download dari GitHub (first run atau cache gagal)
     local Repo = "https://raw.githubusercontent.com/AgusSetiawn/TradingMarket-GrowAGarden/main/"
     
-    -- Try JSON first (50% faster than Lua)
+    -- Coba JSON dulu (50% lebih cepat dari Lua)
     local success, content = pcall(function()
         return game:HttpGet(Repo .. "Database.json")
     end)
@@ -162,7 +168,7 @@ task.defer(function()
             PetDatabase = decoded.Pets or {}
             ItemDatabase = decoded.Items or {}
             
-            -- Save to local cache for next time
+            -- Save ke cache lokal untuk next time
             if writefile then
                 pcall(function() 
                     writefile(CachedDBFile, content) 
@@ -174,7 +180,7 @@ task.defer(function()
         end
     end
     
-    -- Last resort: Try Lua format (backward compatibility)
+    -- Last resort: Coba format Lua (backward compatibility)
     local luaSuccess, luaResult = pcall(function()
         return loadstring(game:HttpGet(Repo .. "Database.lua"))()
     end)
@@ -184,33 +190,34 @@ task.defer(function()
         ItemDatabase = luaResult.Items or {}
         DatabaseReady = true
     else
-        warn("❌ [XZNE] Failed to load database from all sources")
+        -- Gagal semua, gunakan database kosong
         PetDatabase = {}
         ItemDatabase = {}
         DatabaseReady = true
     end
 end)
 
--- [5] CREATE WINDOW (Premium Mac-Style Design)
+-- [5] BUAT WINDOW (Desain Premium Mac-Style)
+-- Konfigurasi window utama dengan tema gelap dan efek glassmorphism
 local Window = WindUI:CreateWindow({
     Title = "XZNE ScriptHub",
-    Icon = "rbxassetid://123378346805284",  -- Lightning bolt icon (from Lucide library)
+    Icon = "rbxassetid://123378346805284",  -- Icon petir dari Lucide library
     Author = "By. Xzero One",
-    Size = UDim2.fromOffset(580, 460),  -- Optimal size
+    Size = UDim2.fromOffset(580, 460),      -- Ukuran optimal
     
-    -- Premium Settings
-    Transparency = 0.5,       -- Higher transparency for glassmorphism effect
-    Acrylic = true,           -- Glassmorphism
-    Theme = "Dark",
-    NewElements = true,
+    -- Pengaturan Premium
+    Transparency = 0.5,       -- Transparansi tinggi untuk efek glassmorphism
+    Acrylic = true,           -- Efek glassmorphism (blur)
+    Theme = "Dark",           -- Tema gelap
+    NewElements = true,       -- Gunakan elemen UI terbaru
     
-    -- Mac Style Buttons (like screenshot!)
-    ButtonsType = "Mac",  -- Red, Yellow, Green dots!
+    -- Tombol Mac Style (titik merah, kuning, hijau seperti macOS)
+    ButtonsType = "Mac",
     
     Topbar = {
         Height = 50,
         CornerRadius = UDim.new(0, 8),
-        Transparency = 0.1  -- Very transparent topbar
+        Transparency = 0.1          -- Topbar sangat transparan
     },
     
     Sidebar = {
@@ -218,30 +225,30 @@ local Window = WindUI:CreateWindow({
         Transparency = 0.15
     }
 })
--- Store window reference for cleanup
+-- Simpan referensi window untuk cleanup
 Controller.Window = Window
-print("✅ [XZNE DEBUG] Window Created")
 
--- [6] CONFIGURE OPEN BUTTON (Minimize State)
--- Matches the "Premium" aesthetic requested
+-- [6] KONFIGURASITOMBOL OPEN (Minimize State)
+-- Tombol untuk membuka GUI kembali setelah di-minimize
 Window:EditOpenButton({
     Title = "Open Hub",
-    Icon = "rbxassetid://123378346805284",  -- Matches the Window Icon
+    Icon = "rbxassetid://123378346805284",  -- Sama dengan icon window
     CornerRadius = UDim.new(0, 16),
     StrokeThickness = 2,
-    Color = ColorSequence.new( -- Indigo to Purple Gradient matching theme
+    Color = ColorSequence.new( -- Gradient Indigo ke Purple (sesuai tema)
         Color3.fromRGB(99, 102, 241), 
         Color3.fromRGB(168, 85, 247) 
     ),
-    OnlyMobile = false,
+    OnlyMobile = false,  -- Aktif di semua platform
     Enabled = true,
-    Draggable = true,
+    Draggable = true,    -- Bisa di-drag
 })
 
--- Add minimize toggle keybind (RightControl)
+-- Tambah keybind untuk minimize/maximize (RightControl)
 local UserInputService = game:GetService("UserInputService")
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not gameProcessed and input.KeyCode == Enum.KeyCode.RightControl then
+        -- Toggle visibility window saat tekan RightControl
         pcall(function()
             if Window and Window.ToggleVisibility then
                 Window:ToggleVisibility()
@@ -252,27 +259,30 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
+-- Tabel untuk menyimpan semua elemen UI
 local UIElements = {}
 
--- [MAIN TAB with Premium Icon]
+-- [TAB UTAMA - Trading]
+-- Tab ini berisi semua fitur auto trading
 local MainTab = Window:Tab({ 
     Title = "Trading", 
-    Icon = "arrow-left-right",  -- Logical icon for "Trading" (Swapping)
-    IconColor = Color3.fromRGB(99, 102, 241),  -- Indigo
-    IconShape = "Square",  -- Colored square wrapper
+    Icon = "arrow-left-right",  -- Icon swap (logis untuk trading)
+    IconColor = Color3.fromRGB(99, 102, 241),  -- Warna Indigo
+    IconShape = "Square",  -- Wrapper kotak berwarna
 })
-MainTab:Space() -- Spacing for better UI
+MainTab:Space()  -- Spasi untuk UI lebih rapi
 
--- [SETTINGS TAB with Premium Icon]
+-- [TAB SETTINGS]
 local SettingsTab = Window:Tab({ 
     Title = "Settings", 
-    Icon = "settings",  -- Settings gear icon
-    IconColor = Color3.fromRGB(251, 146, 60),  -- Orange
-    IconShape = "Square",  -- Colored square wrapper
+    Icon = "settings",  -- Icon gear
+    IconColor = Color3.fromRGB(251, 146, 60),  -- Warna Orange
+    IconShape = "Square",
 })
-SettingsTab:Space() -- Spacing for better UI
+SettingsTab:Space()
 
--- === TARGET SELECTION SECTION ===
+-- === SECTION: TARGET SELECTION ===
+-- Bagian untuk memilih target Pet atau Item yang ingin di-trade
 local TargetSection = MainTab:Section({ 
     Title = "Target Selection", 
     Icon = "crosshair"
@@ -280,78 +290,76 @@ local TargetSection = MainTab:Section({
 
 TargetSection:Paragraph({
     Title = "💡 Quick Guide",
-    Desc = "Select your target Pet or Item below. Then enable which function you want to use (Buy/List/Remove)."
+    Desc = "Pilih target Pet atau Item di bawah ini. Lalu aktifkan fungsi yang ingin digunakan (Buy/List/Remove)."
 })
-TargetSection:Space() -- Separate Guide from Dropdowns
+TargetSection:Space()  -- Pisahkan Guide dari Dropdown
 
--- SHARED Pet Dropdown (used by ALL functions)
+-- DROPDOWN: Target Pet (digunakan oleh SEMUA fungsi)
 UIElements.TargetPet = TargetSection:Dropdown({
     Title = "Target Pet", 
-    Desc = "🔍 Search pets...",
+    Desc = "🔍 Cari pets...",
     Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
-    Flag = "BuyTarget", -- Binds to Config
+    Flag = "BuyTarget",  -- Bind ke Config
     Callback = function(val) 
+        -- Skip jika sedang dalam fase restoring
         if _G.XZNE_Restoring then return end
         
-        -- Logic Key (Active Target)
+        -- Set target untuk semua fungsi (Buy, List, Remove)
         Controller.Config.BuyTarget = val
         Controller.Config.ListTarget = val
         Controller.Config.RemoveTarget = val
         
-        -- Logic Key (Category Enforcer)
+        -- Set kategori menjadi Pet
         Controller.Config.BuyCategory = "Pet"
         Controller.Config.ListCategory = "Pet"
         Controller.Config.RemoveCategory = "Pet"
         
-        -- UI Restoration Key (Unique to this dropdown)
+        -- Simpan untuk restore UI
         Controller.Config.BuyTargetPet = val
         
-        -- Logic: Don't clear Item! Allow both.
-        
-        AutoSave()
+        AutoSave()  -- Simpan konfigurasi
     end
 })
 
-TargetSection:Space() -- Break merge
+TargetSection:Space()
 
--- SHARED Item Dropdown (used by ALL functions)
+-- DROPDOWN: Target Item (digunakan oleh SEMUA fungsi)
 UIElements.TargetItem = TargetSection:Dropdown({
     Title = "Target Item", 
-    Desc = "🔍 Search items...",
+    Desc = "🔍 Cari items...",
     Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
-    Flag = "BuyTargetItem", -- Separate flag for Item dropdown
+    Flag = "BuyTargetItem",  -- Flag terpisah untuk Item dropdown
     Callback = function(val) 
         if _G.XZNE_Restoring then return end
         
-        -- Logic Key (Active Target)
+        -- Set target untuk semua fungsi
         Controller.Config.BuyTarget = val
         Controller.Config.ListTarget = val
         Controller.Config.RemoveTarget = val
         
-        -- Logic Key (Category Enforcer)
+        -- Set kategori menjadi Item
         Controller.Config.BuyCategory = "Item"
         Controller.Config.ListCategory = "Item"
         Controller.Config.RemoveCategory = "Item"
         
-        -- UI Restoration Key (Unique to this dropdown)
+        -- Simpan untuk restore UI
         Controller.Config.BuyTargetItem = val
-        
-        -- Logic: Don't clear Pet! Allow both.
         
         AutoSave()
     end
 })
 
-TargetSection:Space() -- Break merge
+TargetSection:Space()
 
+-- SLIDER: Action Delay (delay antar aksi)
 UIElements.DelaySlider = TargetSection:Slider({
     Title = "Action Delay",
-    Desc = "Delay Interval (0–10s)",
+    Desc = "Interval Delay (0–10s)",
     Step = 0.1,
     Value = {
         Min = 0,
         Max = 10,
-        Default = Controller.Config.Speed or 1, -- Force load
+        Default = Controller.Config.Speed or 1,  -- Load dari config
     },
     Flag = "Speed",
     Callback = function(val)
@@ -361,13 +369,18 @@ UIElements.DelaySlider = TargetSection:Slider({
     end
 })
 
-TargetSection:Space() -- Final space before next section divider/end
+TargetSection:Space()
 
--- === AUTO BUY SECTION ===
+-- === SECTION: AUTO BUY (SNIPER) ===
+-- Fitur untuk otomatis membeli item/pet dengan harga murah
 local BuySection = MainTab:Section({ Title = "Auto Buy (Sniper)", Icon = "shopping-bag" })
 
+-- INPUT: Harga maksimal untuk membeli
 UIElements.MaxPrice = BuySection:Input({
-    Title = "Max Price", Desc = "Maximum price to pay", Default = tostring(Controller.Config.MaxPrice or 5), Numeric = true,
+    Title = "Max Price", 
+    Desc = "Harga maksimal untuk membeli", 
+    Default = tostring(Controller.Config.MaxPrice or 5), 
+    Numeric = true,
     Flag = "MaxPrice",
     Callback = function(txt) 
         if _G.XZNE_Restoring then return end
@@ -376,28 +389,31 @@ UIElements.MaxPrice = BuySection:Input({
     end
 })
 
+-- TOGGLE: Aktifkan Auto Buy
 UIElements.AutoBuy = BuySection:Toggle({
-    Title = "Enable Auto Buy", Desc = "Snipe selected target", Default = Controller.Config.AutoBuy or false,
+    Title = "Enable Auto Buy", 
+    Desc = "Snipe target yang dipilih", 
+    Default = Controller.Config.AutoBuy or false,
     Flag = "AutoBuy",
     Callback = function(val)
         if _G.XZNE_Restoring then return end
-        -- Validation
-        if val and (UIElements.TargetPet.Value == "— None —" and UIElements.TargetItem.Value == "— None —") then
-             -- No visual feedback needed
-             warn("⚠️ Select a target first!")
-        end
         Controller.Config.AutoBuy = val
         AutoSave()
     end
 })
 
-BuySection:Divider()
+BuySection:Divider()  -- Garis pemisah
 
--- === AUTO LIST SECTION ===
+-- === SECTION: AUTO LIST ===
+-- Fitur untuk otomatis list item/pet ke booth
 local ListSection = MainTab:Section({ Title = "Auto List", Icon = "tag" })
 
+-- INPUT: Harga jual per item
 UIElements.Price = ListSection:Input({
-    Title = "Listing Price", Desc = "Price per item", Default = tostring(Controller.Config.Price or 5), Numeric = true,
+    Title = "Listing Price", 
+    Desc = "Harga per item", 
+    Default = tostring(Controller.Config.Price or 5), 
+    Numeric = true,
     Flag = "Price",
     Callback = function(txt) 
         if _G.XZNE_Restoring then return end
@@ -406,23 +422,30 @@ UIElements.Price = ListSection:Input({
     end
 })
 
+-- TOGGLE: Aktifkan Auto List
 UIElements.AutoList = ListSection:Toggle({
-    Title = "Enable Auto List", Desc = "List selected target", Default = Controller.Config.AutoList or false,
+    Title = "Enable Auto List", 
+    Desc = "List target yang dipilih", 
+    Default = Controller.Config.AutoList or false,
     Flag = "AutoList",
     Callback = function(val)
         if _G.XZNE_Restoring then return end
         Controller.Config.AutoList = val
-        AutoSave()
+ AutoSave()
     end
 })
 
 ListSection:Divider()
 
--- === AUTO REMOVE SECTION ===
+-- === SECTION: AUTO REMOVE ===
+-- Fitur untuk otomatis hapus listing dari booth
 local RemoveSection = MainTab:Section({ Title = "Auto Remove", Icon = "trash-2" })
 
+-- TOGGLE: Aktifkan Auto Remove
 UIElements.AutoClear = RemoveSection:Toggle({
-    Title = "Enable Auto Remove", Desc = "Remove selected target", Default = Controller.Config.AutoClear or false,
+    Title = "Enable Auto Remove", 
+    Desc = "Hapus target yang dipilih", 
+    Default = Controller.Config.AutoClear or false,
     Flag = "AutoClear",
     Callback = function(val)
         if _G.XZNE_Restoring then return end
@@ -433,11 +456,15 @@ UIElements.AutoClear = RemoveSection:Toggle({
 
 RemoveSection:Divider()
 
--- === BOOTH CONTROL SECTION ===
+-- === SECTION: BOOTH CONTROL ===
+-- Control booth (claim/unclaim)
 local BoothSection = MainTab:Section({ Title = "Booth Control", Icon = "store" })
 
+-- TOGGLE: Auto Claim Booth
 UIElements.AutoClaim = BoothSection:Toggle({
-    Title = "Auto Claim Booth", Desc = "Automatically claim booth", Default = Controller.Config.AutoClaim or false,
+    Title = "Auto Claim Booth", 
+    Desc = "Otomatis claim booth", 
+    Default = Controller.Config.AutoClaim or false,
     Flag = "AutoClaim",
     Callback = function(val)
         if _G.XZNE_Restoring then return end
@@ -446,59 +473,60 @@ UIElements.AutoClaim = BoothSection:Toggle({
     end
 })
 
+-- BUTTON: Unclaim Booth
 BoothSection:Button({
-    Title = "Unclaim Booth", Desc = "Release booth ownership", Icon = "log-out",
+    Title = "Unclaim Booth", 
+    Desc = "Lepas kepemilikan booth", 
+    Icon = "log-out",
     Callback = function() Controller.UnclaimBooth() end
 })
 
--- [GUI POPULATION - 2 SHARED DROPDOWNS]
+-- [POPULASI GUI - 2 DROPDOWN YANG SHARED]
+-- Isi dropdown dengan data dari database setelah database selesai dimuat
 task.defer(function()
-    -- Wait for database
+    -- Tunggu database siap
     while not DatabaseReady do task.wait(0.1) end
-    task.wait(1) -- Small delay for GUI stability
+    task.wait(1)  -- Delay kecil untuk stabilitas GUI
     
-    -- Helper function to populate dropdowns  
+    -- Fungsi helper untuk update dropdown dengan aman
     local function SafeUpdate(element, db)
         if element then
-            -- Add database entries after "— None —"
+            -- Tambah entry database setelah "— None —"
             local values = {"— None —"}
             for _, item in ipairs(db) do
                 table.insert(values, item)
             end
             element.Values = values
-            element.Desc = "🔍 Search "..#db.." items..."
+            element.Desc = "🔍 Cari "..#db.." items..."
+            -- Refresh dropdown display
             if element.Refresh then pcall(function() element:Refresh(values) end) end
         end
     end
     
-    -- Populate only 2 dropdowns (shared across all functions)
+    -- Populate hanya 2 dropdown (shared untuk semua fungsi)
     SafeUpdate(UIElements.TargetPet, PetDatabase)
     task.wait(0.05)
     SafeUpdate(UIElements.TargetItem, ItemDatabase)
-    
-    -- Apply saved selections (only if valid and not None)
-    -- LOAD CONFIG NOW (After dropdowns are populated)
-    -- Apply saved selections (only if valid and not None)
-
-    
 end)
 
--- Stats Section (in Settings Tab)
-local StatsSection = SettingsTab:Section({ Title = "📊 Session Statistics" })
+-- [SECTION STATS - Di Tab Settings]
+-- Menampilkan statistik performa script
+local StatsSection = SettingsTab:Section({ Title = "📊 Statistik Sesi" })
 local StatsParagraph = StatsSection:Paragraph({
-    Title = "Performance Metrics",
+    Title = "Metrik Performa",
     Desc = "Sniped: 0 | Listed: 0 | Removed: 0 | Uptime: 0m"
 })
 
--- Stats Updater
+-- Updater statistik (berjalan setiap 10 detik)
 task.spawn(function()
-    local startTime = tick()
+    local startTime = tick()  -- Catat waktu mulai
     while true do
-        task.wait(10)
-        local uptime = math.floor((tick() - startTime) / 60)
+        task.wait(10)  -- Update setiap 10 detik
+        local uptime = math.floor((tick() - startTime) / 60)  -- Hitung uptime dalam menit
         pcall(function()
             if StatsParagraph and StatsParagraph.SetDesc then
                 local s = Controller.Stats
+                -- Format string statistik
                 StatsParagraph:SetDesc(string.format("Sniped: %d | Listed: %d | Removed: %d | Uptime: %dm", 
                     s.SnipeCount, s.ListedCount, s.RemovedCount, uptime))
             end
@@ -506,88 +534,73 @@ task.spawn(function()
     end
 end)
 
-
-
--- Notify User
+-- Simpan referensi window dan notifikasi user
 Controller.Window = Window
-print("✅ [XZNE] GUI Loaded Successfully!")
 WindUI:Notify({
     Title = "XZNE ScriptHub Loaded",
-    Content = "Welcome, " .. game.Players.LocalPlayer.Name,
+    Content = "Selamat datang, " .. game.Players.LocalPlayer.Name,
     Icon = "check-circle-2",
     Duration = 5
 })
 
 
--- [7] EXPLICIT VISUAL SYNC (The "Double-Tap")
--- Force UI to match Config after creation
--- [7] EXPLICIT VISUAL SYNC (The "Double-Tap")
--- Force UI to match Config after creation
+-- [7] SINKRONISASI VISUAL EKSPLISIT
+-- Paksa UI untuk match dengan Config setelah dibuat
+-- Ini memastikan semua toggle, slider, dan dropdown menampilkan nilai yang benar
 task.defer(function()
-    _G.XZNE_Restoring = true -- LOCK (Just in case)
+    _G.XZNE_Restoring = true  -- KUNCI (mencegah autosave saat sync)
     
-    -- Wait for UI to render AND Database to be ready (for Dropdowns)
+    -- Tunggu UI fully rendered DAN database siap (untuk Dropdown)
     task.wait(1.5) 
     
+    -- Timeout untuk menunggu database
     local Timeout = 0
     while not DatabaseReady and Timeout < 5 do
         task.wait(0.5)
         Timeout = Timeout + 0.5
     end
     
-    print("🔄 [XZNE DEBUG] Starting Visual Sync...")
-    
     local C = Controller.Config
     
-    -- Helper for safe updates
+    -- Fungsi helper untuk sync elemen UI dengan aman
     local function Sync(element, value, elementType)
         if element and value ~= nil then 
             pcall(function()
-                print("   > Syncing " .. tostring(elementType) .. ": " .. tostring(value))
-                
                 if elementType == "Dropdown" and element.Select then
-                    -- Dropdowns must use Select
+                    -- Dropdown menggunakan metode Select
                     element:Select(value)
                     
                 elseif elementType == "Input" then
-                     -- DEBUG: Inspect available methods if first time
-                     if element == UIElements.MaxPrice then
-                         print("   > [DEBUG] Input Methods: ")
-                         for key,val in pairs(getmetatable(element) or element) do
-                              if type(val) == "function" then print("     - " .. tostring(key)) end
-                         end
-                     end
-
-                     -- Input Strategy: Try SetText -> SetValue -> Set
+                    -- Input: Coba SetText -> SetValue -> Set (fallback cascade)
                     local sVal = tostring(value)
-                    local success = false
                     
-                    if element.SetText then element:SetText(sVal); success = true; print("     -> Used SetText")
-                    elseif element.SetValue then element:SetValue(sVal); success = true; print("     -> Used SetValue")
-                    elseif element.Set then element:Set(sVal); success = true; print("     -> Used Set")
+                    if element.SetText then 
+                        element:SetText(sVal)
+                    elseif element.SetValue then 
+                        element:SetValue(sVal)
+                    elseif element.Set then 
+                        element:Set(sVal)
                     end
                     
-                    if not success then warn("❌ [XZNE DEBUG] No suitable Set method found for Input!") end
-                    
-                else -- Toggle, Slider use :Set()
+                else  -- Toggle, Slider menggunakan :Set()
                     if element.Set then element:Set(value) end
                 end
             end)
         end
     end
 
-    -- Sync Toggles
+    -- Sync semua Toggle
     Sync(UIElements.AutoBuy, C.AutoBuy, "Toggle")
     Sync(UIElements.AutoList, C.AutoList, "Toggle")
     Sync(UIElements.AutoClear, C.AutoClear, "Toggle")
     Sync(UIElements.AutoClaim, C.AutoClaim, "Toggle")
     
-    -- Sync Sliders & Inputs
+    -- Sync Slider & Input
     Sync(UIElements.DelaySlider, C.Speed, "Slider")
     Sync(UIElements.MaxPrice, C.MaxPrice, "Input")
     Sync(UIElements.Price, C.Price, "Input")
     
-    -- Sync Dropdowns (INDEPENDENT - Allow Simultaneous)
+    -- Sync Dropdown (INDEPENDENT - Bisa simultanlam)
     if C.BuyTargetPet and C.BuyTargetPet ~= "— None —" then
          Sync(UIElements.TargetPet, C.BuyTargetPet, "Dropdown")
     end
@@ -596,17 +609,12 @@ task.defer(function()
          Sync(UIElements.TargetItem, C.BuyTargetItem, "Dropdown")
     end
     
-    print("✅ [XZNE DEBUG] Visual Sync Complete")
-    
     task.wait(0.5)
-    _G.XZNE_Restoring = false -- UNLOCK
+    _G.XZNE_Restoring = false  -- UNLOCK (autosave sekarang aktif)
     
-    -- CRITICAL: Force Logic Update in Main.lua using newly synced values
+    -- UPDATE: Force update cache di Main.lua dengan nilai yang baru di-sync
     pcall(function() Controller.UpdateCache() end)
-    
-    print("🔓 [XZNE DEBUG] Save Lock Released & Cache Updated")
 end)
 
--- Return success to Loader
-print("✅ [XZNE DEBUG] Reached End of Script, returning true")
+-- Return success ke Loader
 return true
