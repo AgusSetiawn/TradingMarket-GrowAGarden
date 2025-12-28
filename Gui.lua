@@ -13,45 +13,8 @@ if not Controller then
     return
 end
 
--- [1] INSTANT LOADING FEEDBACK (Moved up)
 
--- [2] INSTANT LOADING FEEDBACK
-local function ShowEarlyNotification()
-    local StarterGui = game:GetService("StarterGui")
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = "XZNE ScriptHub";
-            Text = "Initializing... Please wait";
-            Duration = 2;
-        })
-    end)
-end
-ShowEarlyNotification()
-
--- ❌ OPTIMIZATION: LoadConfig() already called in Main.lua (redundant)
--- Controller.LoadConfig() removed to save 50-100ms
-
--- [2] LOAD WINDUI
-do
-    local success, result = pcall(function()
-        local url = "https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"
-        local content = game:HttpGet(url)
-        if #content < 100 then warn("⚠️ WindUI content suspicious!") end
-        
-        local func, err = loadstring(content)
-        if not func then error("WindUI Loadstring Error: " .. tostring(err)) end
-        return func()
-    end)
-    
-    if success and result then
-        WindUI = result
-    else
-        warn("[XZNE] Failed to load WindUI lib! Error: " .. tostring(result))
-        return
-    end
-end
-
--- [3] CONFIGURATION SYSTEM (Custom Path)
+-- [1] CONFIGURATION SYSTEM (Moved to TOP for FORCE INIT)
 -- Satisfies request: "XZNE ScriptHub/Config.json"
 local HttpService = game:GetService("HttpService")
 local ConfigFile = "XZNE ScriptHub/Config.json"
@@ -90,6 +53,37 @@ local function LoadFromJSON()
     end
     return false
 end
+
+-- ⚡ FORCE LOAD CONFIG NOW (Before UI Creation)
+-- This ensures 'Default' values in UI are correct from birth!
+LoadFromJSON()
+
+
+
+-- ❌ OPTIMIZATION: LoadConfig() already called in Main.lua (redundant)
+-- Controller.LoadConfig() removed to save 50-100ms
+
+-- [2] LOAD WINDUI
+do
+    local success, result = pcall(function()
+        local url = "https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"
+        local content = game:HttpGet(url)
+        if #content < 100 then warn("⚠️ WindUI content suspicious!") end
+        
+        local func, err = loadstring(content)
+        if not func then error("WindUI Loadstring Error: " .. tostring(err)) end
+        return func()
+    end)
+    
+    if success and result then
+        WindUI = result
+    else
+        warn("[XZNE] Failed to load WindUI lib! Error: " .. tostring(result))
+        return
+    end
+end
+
+-- [1] INSTANT LOADING FEEDBACK (Moved up)
 
 -- [3] ICONS
 -- Using WindUI Native Lucide Icons for better consistency and "Geist" feel.
@@ -309,7 +303,7 @@ UIElements.DelaySlider = TargetSection:Slider({
     Value = {
         Min = 0,
         Max = 10,
-        Default = Controller.Config.Speed or 1,
+        Default = Controller.Config.Speed or 1, -- Force load
     },
     Flag = "Speed",
     Callback = function(val)
@@ -324,7 +318,7 @@ TargetSection:Space() -- Final space before next section divider/end
 local BuySection = MainTab:Section({ Title = "Auto Buy (Sniper)", Icon = "shopping-bag" })
 
 UIElements.MaxPrice = BuySection:Input({
-    Title = "Max Price", Desc = "Maximum price to pay", Default = tostring(Controller.Config.MaxPrice), Numeric = true,
+    Title = "Max Price", Desc = "Maximum price to pay", Default = tostring(Controller.Config.MaxPrice or 5), Numeric = true,
     Flag = "MaxPrice",
     Callback = function(txt) 
         Controller.Config.MaxPrice = tonumber(txt) or 5
@@ -333,7 +327,7 @@ UIElements.MaxPrice = BuySection:Input({
 })
 
 UIElements.AutoBuy = BuySection:Toggle({
-    Title = "Enable Auto Buy", Desc = "Snipe selected target", Default = false,
+    Title = "Enable Auto Buy", Desc = "Snipe selected target", Default = Controller.Config.AutoBuy or false,
     Flag = "AutoBuy",
     Callback = function(val)
         -- Validation
@@ -353,7 +347,7 @@ BuySection:Divider()
 local ListSection = MainTab:Section({ Title = "Auto List", Icon = "tag" })
 
 UIElements.Price = ListSection:Input({
-    Title = "Listing Price", Desc = "Price per item", Default = tostring(Controller.Config.Price), Numeric = true,
+    Title = "Listing Price", Desc = "Price per item", Default = tostring(Controller.Config.Price or 5), Numeric = true,
     Flag = "Price",
     Callback = function(txt) 
         Controller.Config.Price = tonumber(txt) or 5
@@ -362,7 +356,7 @@ UIElements.Price = ListSection:Input({
 })
 
 UIElements.AutoList = ListSection:Toggle({
-    Title = "Enable Auto List", Desc = "List selected target", Default = false,
+    Title = "Enable Auto List", Desc = "List selected target", Default = Controller.Config.AutoList or false,
     Flag = "AutoList",
     Callback = function(val)
         Controller.Config.AutoList = val
@@ -376,7 +370,7 @@ ListSection:Divider()
 local RemoveSection = MainTab:Section({ Title = "Auto Remove", Icon = "trash-2" })
 
 UIElements.AutoClear = RemoveSection:Toggle({
-    Title = "Enable Auto Remove", Desc = "Remove selected target", Default = false,
+    Title = "Enable Auto Remove", Desc = "Remove selected target", Default = Controller.Config.AutoClear or false,
     Flag = "AutoClear",
     Callback = function(val)
         Controller.Config.AutoClear = val
@@ -390,7 +384,7 @@ RemoveSection:Divider()
 local BoothSection = MainTab:Section({ Title = "Booth Control", Icon = "store" })
 
 UIElements.AutoClaim = BoothSection:Toggle({
-    Title = "Auto Claim Booth", Desc = "Automatically claim booth", Default = false,
+    Title = "Auto Claim Booth", Desc = "Automatically claim booth", Default = Controller.Config.AutoClaim or false,
     Flag = "AutoClaim",
     Callback = function(val)
         Controller.Config.AutoClaim = val
@@ -440,50 +434,20 @@ task.defer(function()
             -- [CONFIG LOAD VISUALS]
             print("✅ [XZNE] Applying Config to UI...")
             
-            -- [CONFIG LOAD VISUALS]
-            print("✅ [XZNE] Applying Config to UI...")
-            
-            -- 1. Sliders (Use :Set, verified in WindUI source)
-            if Controller.Config.Speed and UIElements.DelaySlider then 
-                pcall(function() UIElements.DelaySlider:Set(tonumber(Controller.Config.Speed) or 1) end) 
-            end
-
-            -- 2. Toggles (Use :Set, verified in WindUI source)
-            local toggles = {
-                AutoBuy = UIElements.AutoBuy,
-                AutoList = UIElements.AutoList,
-                AutoClear = UIElements.AutoClear,
-                AutoClaim = UIElements.AutoClaim
-            }
-            for key, toggle in pairs(toggles) do
-                if Controller.Config[key] ~= nil then
-                    -- Force boolean
-                    local state = (Controller.Config[key] == true)
-                    pcall(function() toggle:Set(state) end)
-                end
-            end
-
-            -- 3. Inputs (Use :Set, known working)
-            if Controller.Config.MaxPrice then 
-                pcall(function() UIElements.MaxPrice:Set(tostring(Controller.Config.MaxPrice)) end)
-            end
-            if Controller.Config.Price then 
-                 pcall(function() UIElements.Price:Set(tostring(Controller.Config.Price)) end)
-            end
-            
-            -- 4. Dropdowns (Use :Select, verified in WindUI source)
-            local savedTarget = Controller.Config.BuyTarget
-            if savedTarget and savedTarget ~= "— None —" then
-                task.defer(function()
-                    -- Try selecting in BOTH (One will succeed if item exists)
-                    pcall(function() UIElements.TargetPet:Select(savedTarget) end)
-                    pcall(function() UIElements.TargetItem:Select(savedTarget) end)
-                end)
-            end
-            
-        else
-             warn("⚠️ [XZNE] No config file found or load failed.")
+    -- Apply saved selections (only if valid and not None)
+    -- DROPWOWN ONLY (Late Update because dependent on DB)
+    task.wait(0.2)
+    pcall(function()
+        local savedTarget = Controller.Config.BuyTarget
+        if savedTarget and savedTarget ~= "— None —" then
+             print("✅ [XZNE] Applying Saved Target: "..tostring(savedTarget))
+             task.defer(function()
+                -- Try selecting in BOTH (One will succeed if item exists)
+                pcall(function() UIElements.TargetPet:Select(savedTarget) end)
+                pcall(function() UIElements.TargetItem:Select(savedTarget) end)
+             end)
         end
+    end)
     end)
     
 end)
