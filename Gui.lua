@@ -662,16 +662,6 @@ HopSection:Button({
     end
 })
 
--- BUTTON: Reset Visited Servers
-HopSection:Button({
-    Title = "Reset Server Blacklist",
-    Desc = "Clear daftar server yang sudah dikunjungi",
-    Icon = "rotate-ccw",
-    Callback = function()
-        Controller.ResetVisitedServers()
-    end
-})
-
 -- Simpan referensi window dan notifikasi user
 Controller.Window = Window
 WindUI:Notify({

@@ -660,184 +660,116 @@ function Controller.DoRejoin()
     end
 end
 
--- [FUNGSI] Reset Visited Servers (Clear blacklist)
-function Controller.ResetVisitedServers()
-    -- Clear semua visited servers dari memory
-    VisitedServers = {}
-    
-    -- Save file kosong
-    SaveVisitedServers()
-    
-    -- Notifikasi user (jika ada window)
-    if Controller.Window and Controller.Window.Notify then
-        pcall(function()
-            Controller.Window:Notify({
-                Title = "Visited Servers Reset",
-                Content = "Server blacklist telah direset. Anda bisa hop ke semua server lagi!",
-                Icon = "check-circle-2",
-                Duration = 5
-            })
-        end)
-    end
-end
-
+-- [FUNGSI] Smart Auto Hop ADVANCED (Server hopping cerdas dengan multi-strategy)
 -- [FUNGSI] Smart Auto Hop ADVANCED (Server hopping cerdas dengan multi-strategy)
 function Controller.SmartHop()
     local placeId = game.PlaceId
     local currentJobId = game.JobId
     local currentTime = tick()
     
-    -- MULTI-TIER STRATEGY: Coba berbagai pendekatan sampai berhasil
-    -- Tier 1: Desc + Strict (server terbaru, filter ketat)
-    -- Tier 2: Asc + Strict (server terlama, filter ketat)
-    -- Tier 3: Desc + Relaxed (server terbaru, filter longgar - TETAP BLACKLIST VISITED!)
-    -- Tier 4: Asc + Relaxed (server terlama, filter longgar - TETAP BLACKLIST VISITED!)
+    -- Pastikan server saat ini sudah di-blacklist sebelum mencari
+    MarkCurrentServer()
+    
+    -- MULTI-TIER STRATEGY: 
+    -- 1. Desc + Strict: Server baru, filter ketat (5-25 player, not visited)
+    -- 2. Asc + Strict: Server lama, filter ketat
+    -- 3. Desc + Relaxed: Server baru, allow old visit (>30m), ignore min/max
+    -- 4. Asc + Relaxed: Server lama, allow old visit (>30m), ignore min/max
+    -- 5. DESPERATE MODE: ANY server that is NOT current server (ignore visited, ignore min/max)
     local strategies = {
         {sortOrder = "Desc", strict = true, name = "Newest Strict"},
         {sortOrder = "Asc", strict = true, name = "Oldest Strict"},
         {sortOrder = "Desc", strict = false, name = "Newest Relaxed"},
         {sortOrder = "Asc", strict = false, name = "Oldest Relaxed"},
+        {sortOrder = "Desc", desperate = true, name = "Desperate Mode"} -- New Tier 5
     }
     
-    -- Coba setiap strategy sampai dapat server
     for strategyIndex, strategy in ipairs(strategies) do
         local servers = {}
         local cursor = ""
         local attempts = 0
-        local maxAttempts = 5  -- Increase to 5 pages (500 servers!) for better coverage
+        -- Pagination lebih dalam untuk Desperate Mode
+        local maxAttempts = strategy.desperate and 5 or 3 
         
-        -- PAGINATION LOOP: Fetch multiple pages
+        -- PAGINATION LOOP
         repeat
             attempts = attempts + 1
-            
-            -- Build URL dengan cursor untuk pagination
             local url = string.format(
                 "https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=%s&limit=100%s",
-                placeId,
-                strategy.sortOrder,
-                cursor ~= "" and ("&cursor=" .. cursor) or ""
+                placeId, strategy.sortOrder, cursor ~= "" and "&cursor="..cursor or ""
             )
             
-            -- Fetch server list
-            local success, result = pcall(function()
-                return game:HttpGet(url)
-            end)
-            
+            local success, result = pcall(function() return game:HttpGet(url) end)
             if not success or not result then break end
             
-            -- Parse JSON
-            local decodeSuccess, decoded = pcall(function() 
-                return HttpService:JSONDecode(result) 
-            end)
-            
+            local decodeSuccess, decoded = pcall(function() return HttpService:JSONDecode(result) end)
             if not decodeSuccess or not decoded or not decoded.data then break end
             
-            -- FILTER SERVERS berdasarkan strategy
+            -- FILTERING
             for _, server in ipairs(decoded.data) do
-                local players = server.playing
-                local maxPlayers = server.maxPlayers
                 local jobId = server.id
+                local players = server.playing
+                local max = server.maxPlayers
                 
-                local passFilter = false
-                
-                -- CRITICAL: SEMUA MODE WAJIB BLACKLIST VISITED SERVERS!
-                -- Tidak ada aging, sekali visited = permanent blacklist
-                local isVisited = VisitedServers[jobId] ~= nil
-                local isCurrent = jobId == currentJobId
-                
-                if strategy.strict then
-                    -- STRICT MODE: Filter ketat
-                    -- - Player count dalam range (Min-Max)
-                    -- - BELUM PERNAH dikunjungi (PERMANENT BLACKLIST)
-                    -- - Bukan server saat ini
-                    passFilter = players >= Config.HopMinPlayers 
-                        and players <= Config.HopMaxPlayers
-                        and not isVisited  -- PERMANENT BLACKLIST
-                        and not isCurrent
-                else
-                    -- RELAXED MODE: Filter longgar
-                    -- - TETAP BLACKLIST visited servers (NO AGING!)
-                    -- - Bukan server saat ini
-                    -- - Abaikan min/max players (any player count OK)
-                    passFilter = not isCurrent 
-                        and not isVisited  -- PERMANENT BLACKLIST - NO EXCEPTIONS!
-                        and players > 0  -- Minimal ada 1 player
-                end
-                
-                if passFilter then
-                    -- Calculate health score
-                    local playerPercent = (players / maxPlayers * 100)
-                    local healthScore = 100 - math.abs(playerPercent - 50)
+                -- CRITICAL: Jangan pernah join server saat ini
+                if jobId ~= currentJobId and players > 0 then
+                    local pass = false
                     
-                    table.insert(servers, {
-                        id = jobId,
-                        players = players,
-                        maxPlayers = maxPlayers,
-                        health = healthScore
-                    })
-                end
-            end
-            
-            -- Get next page cursor
-            cursor = decoded.nextPageCursor or ""
-            
-            -- Stop jika sudah dapat cukup server atau tidak ada cursor lagi
-        until cursor == "" or attempts >= maxAttempts or #servers >= 30  -- Collect more options
-        
-        -- Jika dapat server, pilih yang terbaik dan hop
-        if #servers > 0 then
-            -- Sort by health score (tertinggi duluan)
-            table.sort(servers, function(a, b) 
-                return a.health > b.health 
-            end)
-            
-            local bestServer = servers[1]
-            
-            -- DOUBLE CHECK: Pastikan server ini benar-benar belum pernah dikunjungi
-            if VisitedServers[bestServer.id] or bestServer.id == currentJobId then
-                -- SKIP! Server ini ternyata sudah pernah dikunjungi (data race condition)
-                -- Lanjut ke server berikutnya
-                for i = 2, #servers do
-                    if not VisitedServers[servers[i].id] and servers[i].id ~= currentJobId then
-                        bestServer = servers[i]
-                        break
+                    if strategy.desperate then
+                        -- Tier 5: Terima server APAPUN asal bukan yang sekarang
+                        -- Prioritas: Prefer not visited, but accept visited if needed
+                        pass = true 
+                    elseif strategy.strict then
+                        -- Tier 1-2: Strict Blacklist & Player Count
+                        pass = not VisitedServers[jobId] 
+                           and players >= Config.HopMinPlayers 
+                           and players <= Config.HopMaxPlayers
+                    else
+                        -- Tier 3-4: Relaxed blacklist (>30m old OK)
+                        local visitedTime = VisitedServers[jobId]
+                        local isOld = visitedTime and (currentTime - visitedTime > 1800)
+                        pass = (not visitedTime or isOld)
+                    end
+                    
+                    if pass then
+                        -- Scoring Logic
+                        local score = 0
+                        if strategy.desperate then
+                            -- Di desperate mode, prioritas server yang BELUM visited
+                            score = VisitedServers[jobId] and 0 or 100
+                        else
+                            -- Health score (balanced players)
+                            score = 100 - math.abs((players/max*100) - 50)
+                        end
+                        
+                        table.insert(servers, {id = jobId, score = score})
                     end
                 end
             end
             
-            -- FINAL CHECK sebelum teleport
-            if not VisitedServers[bestServer.id] and bestServer.id ~= currentJobId then
-                -- Mark server saat ini sebelum pindah
-                MarkCurrentServer()
-                
-                -- Mark destination server sebagai visited SEBELUM teleport
-                -- Ini mencegah double-hop ke server yang sama
-                VisitedServers[bestServer.id] = tick()
-                SaveVisitedServers()
-                
-                -- TELEPORT ke server terbaik
-                local teleportSuccess = pcall(function()
-                    TeleportService:TeleportToPlaceInstance(
-                        placeId, 
-                        bestServer.id, 
-                        LocalPlayer
-                    )
-                end)
-                
-                if teleportSuccess then
-                    return  -- SUCCESS! Hop berhasil
-                end
-            end
+            cursor = decoded.nextPageCursor or ""
+        until cursor == "" or attempts >= maxAttempts or #servers >= 20
+        
+        -- EXECUTE HOP
+        if #servers > 0 then
+            table.sort(servers, function(a,b) return a.score > b.score end)
+            local target = servers[1]
+            
+            -- Final safe: Mark current again
+            MarkCurrentServer()
+            
+            pcall(function()
+                TeleportService:TeleportToPlaceInstance(placeId, target.id, LocalPlayer)
+            end)
+            return -- Success!
         end
         
-        -- Strategy ini gagal, lanjut ke strategy berikutnya
-        task.wait(0.5)  -- Small delay antara strategy
+        task.wait(0.2)
     end
     
-    -- TIDAK ADA FALLBACK!
-    -- Jika semua strategy gagal = berarti SEMUA server sudah pernah dikunjungi
-    -- User harus manual reset visited servers atau tunggu lama
-    -- Ini lebih baik daripada hop ke server yang sama berulang-ulang
+    -- Note: Removed "Ultimate Fallback" (Direct Teleport) 
+    -- karena itu penyebab rejoining server yang sama.
+    -- Jika Tier 5 gagal, kita diam saja dan tunggu cycle berikutnya.
 end
 
 -- Inisialisasi: Load visited servers dan cleanup
