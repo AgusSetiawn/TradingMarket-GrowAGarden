@@ -291,6 +291,7 @@ UIElements.TargetPet = TargetSection:Dropdown({
     Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
     Flag = "BuyTarget", -- Binds to Config
     Callback = function(val) 
+        if _G.XZNE_Restoring then return end
         Controller.Config.BuyTarget = val
         -- Sync other keys for logic compatibility
         Controller.Config.ListTarget = val
@@ -308,6 +309,7 @@ UIElements.TargetItem = TargetSection:Dropdown({
     Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
     Flag = "BuyTargetItem", -- Separate flag for Item dropdown
     Callback = function(val) 
+        if _G.XZNE_Restoring then return end
         Controller.Config.BuyTarget = val
         -- Sync other keys
         Controller.Config.ListTarget = val
@@ -329,6 +331,7 @@ UIElements.DelaySlider = TargetSection:Slider({
     },
     Flag = "Speed",
     Callback = function(val)
+        if _G.XZNE_Restoring then return end
         Controller.Config.Speed = val
         AutoSave()
     end
@@ -343,6 +346,7 @@ UIElements.MaxPrice = BuySection:Input({
     Title = "Max Price", Desc = "Maximum price to pay", Default = tostring(Controller.Config.MaxPrice or 5), Numeric = true,
     Flag = "MaxPrice",
     Callback = function(txt) 
+        if _G.XZNE_Restoring then return end
         Controller.Config.MaxPrice = tonumber(txt) or 5
         AutoSave() 
     end
@@ -352,10 +356,10 @@ UIElements.AutoBuy = BuySection:Toggle({
     Title = "Enable Auto Buy", Desc = "Snipe selected target", Default = Controller.Config.AutoBuy or false,
     Flag = "AutoBuy",
     Callback = function(val)
+        if _G.XZNE_Restoring then return end
         -- Validation
         if val and (UIElements.TargetPet.Value == "— None —" and UIElements.TargetItem.Value == "— None —") then
-             -- No visual feedback needed, just don't enable config logic
-             -- WindUI might toggle visually, but Logic won't run if we don't set Config
+             -- No visual feedback needed
              warn("⚠️ Select a target first!")
         end
         Controller.Config.AutoBuy = val
@@ -372,6 +376,7 @@ UIElements.Price = ListSection:Input({
     Title = "Listing Price", Desc = "Price per item", Default = tostring(Controller.Config.Price or 5), Numeric = true,
     Flag = "Price",
     Callback = function(txt) 
+        if _G.XZNE_Restoring then return end
         Controller.Config.Price = tonumber(txt) or 5
         AutoSave() 
     end
@@ -381,6 +386,7 @@ UIElements.AutoList = ListSection:Toggle({
     Title = "Enable Auto List", Desc = "List selected target", Default = Controller.Config.AutoList or false,
     Flag = "AutoList",
     Callback = function(val)
+        if _G.XZNE_Restoring then return end
         Controller.Config.AutoList = val
         AutoSave()
     end
@@ -395,6 +401,7 @@ UIElements.AutoClear = RemoveSection:Toggle({
     Title = "Enable Auto Remove", Desc = "Remove selected target", Default = Controller.Config.AutoClear or false,
     Flag = "AutoClear",
     Callback = function(val)
+        if _G.XZNE_Restoring then return end
         Controller.Config.AutoClear = val
         AutoSave()
     end
@@ -409,6 +416,7 @@ UIElements.AutoClaim = BoothSection:Toggle({
     Title = "Auto Claim Booth", Desc = "Automatically claim booth", Default = Controller.Config.AutoClaim or false,
     Flag = "AutoClaim",
     Callback = function(val)
+        if _G.XZNE_Restoring then return end
         Controller.Config.AutoClaim = val
         AutoSave()
     end
