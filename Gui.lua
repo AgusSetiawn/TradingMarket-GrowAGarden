@@ -46,18 +46,28 @@ end
 
 -- Load Logic (Passive)
 local function LoadFromJSON()
+    print("📂 [XZNE DEBUG] Attempting to load config from: " .. ConfigFile)
     if isfile(ConfigFile) then
         local success, result = pcall(readfile, ConfigFile)
         if success and result then
+            print("   > File Read Success. Bytes: " .. #result)
             local decoded = HttpService:JSONDecode(result)
             if decoded then
+                print("   > JSON Decode Success. Keys found: " .. table.getn(decoded) or "N/A")
                 for k,v in pairs(decoded) do
                     Controller.Config[k] = v
                 end
                 Controller.UpdateCache()
+                print("   > Config Updated. MaxPrice is now: " .. tostring(Controller.Config.MaxPrice))
                 return true
+            else
+                 warn("❌ [XZNE DEBUG] JSON Decode Failed!")
             end
+        else
+            warn("❌ [XZNE DEBUG] Readfile Failed!")
         end
+    else
+        warn("⚠️ [XZNE DEBUG] Config file not found (First run?)")
     end
     return false
 end
@@ -65,8 +75,8 @@ end
 -- ⚡ FORCE LOAD CONFIG NOW (Before UI Creation)
 -- This ensures 'Default' values in UI are correct from birth!
 _G.XZNE_Restoring = true -- LOCK
-LoadFromJSON()
-print("✅ [XZNE DEBUG] Configuration Loaded (Force Init)")
+local loadStatus = LoadFromJSON()
+print("✅ [XZNE DEBUG] Config Init Done. Success: " .. tostring(loadStatus))
 
 
 
@@ -508,12 +518,24 @@ task.defer(function()
                     element:Select(value)
                     
                 elseif elementType == "Input" then
+                     -- DEBUG: Inspect available methods if first time
+                     if element == UIElements.MaxPrice then
+                         print("   > [DEBUG] Input Methods: ")
+                         for key,val in pairs(getmetatable(element) or element) do
+                              if type(val) == "function" then print("     - " .. tostring(key)) end
+                         end
+                     end
+
                      -- Input Strategy: Try SetText -> SetValue -> Set
                     local sVal = tostring(value)
-                    if element.SetText then element:SetText(sVal)
-                    elseif element.SetValue then element:SetValue(sVal)
-                    elseif element.Set then element:Set(sVal)
+                    local success = false
+                    
+                    if element.SetText then element:SetText(sVal); success = true; print("     -> Used SetText")
+                    elseif element.SetValue then element:SetValue(sVal); success = true; print("     -> Used SetValue")
+                    elseif element.Set then element:Set(sVal); success = true; print("     -> Used Set")
                     end
+                    
+                    if not success then warn("❌ [XZNE DEBUG] No suitable Set method found for Input!") end
                     
                 else -- Toggle, Slider use :Set()
                     if element.Set then element:Set(value) end
