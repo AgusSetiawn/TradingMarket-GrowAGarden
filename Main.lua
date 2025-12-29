@@ -570,44 +570,79 @@ local function RunAutoClear()
     end
 end
 
--- >> FUNGSI AUTO CLAIM
--- Otomatis claim booth kosong yang tidak ada pemiliknya
+-- >> FUNGSI AUTO CLAIM (Improved & Smart)
+-- Otomatis cari, teleport, dan claim booth kosong
 local function RunAutoClaim()
     -- Keluar jika fitur tidak aktif
     if not Config.AutoClaim then return end
     
-    -- Jika sudah punya booth, tidak perlu claim lagi
+    -- [SMART PAUSE] Jika sudah punya booth, pause (return)
+    -- Ini memungkinkan user mengaktifkan toggle terus menerus
     if GetMyBooth() then return end
     
     -- Cari folder yang berisi semua booth
     local folder = Workspace:FindFirstChild("TradeWorld") and Workspace.TradeWorld:FindFirstChild("Booths")
     if not folder then return end
     
-    -- Loop semua booth untuk mencari yang kosong
+    -- [1] Kumpulkan semua booth yang VALID untuk di-claim
+    local emptyBooths = {}
     for _, booth in pairs(folder:GetChildren()) do
-        -- Ambil OwnerId dari booth
-        local oid = booth:GetAttribute("OwnerId")
-        if not oid then 
-            local v = booth:FindFirstChild("OwnerId")
-            if v then oid = v.Value end
-        end
+        -- [Step A] Cek Visual (DynamicInstances)
+        -- Jika booth terlihat penuh/ada dekorasi, berarti pasti sudah ada yg punya. Skip!
+        -- Ini membantu akurasi scanning dengan membuang booth yang "terlihat" aktif.
+        local dyn = booth:FindFirstChild("DynamicInstances")
+        local isVisuallyOccupied = (dyn and #dyn:GetChildren() > 0)
         
-        -- Jika booth tidak ada pemilik, claim booth ini
-        if oid == nil or oid == 0 or oid == "" then
-            pcall(function() 
-                ClaimBoothRemote:FireServer(booth) 
-            end)
-            
-            -- Teleport karakter ke booth yang di-claim
-            if LocalPlayer.Character and LocalPlayer.Character.PrimaryPart then
-                LocalPlayer.Character:SetPrimaryPartCFrame(booth.PrimaryPart.CFrame + Vector3.new(0,3,0))
+        if not isVisuallyOccupied then
+            -- [Step B] Cek Data (OwnerId)
+            -- Ini penentu utama. Kalau visual kosong, pastikan data juga kosong.
+            local oid = booth:GetAttribute("OwnerId")
+            if not oid then 
+                local v = booth:FindFirstChild("OwnerId")
+                if v then oid = v.Value end
             end
             
-            task.wait(1)  -- Tunggu server memproses claim
+            local isUnclaimed = (oid == nil or oid == 0 or oid == "")
             
-            -- Jika sudah berhasil claim, keluar dari function
-            if GetMyBooth() then return end
+            -- Jika secara Visual KOSONG dan Data KOSONG -> Valid Candidate
+            if isUnclaimed then
+                table.insert(emptyBooths, booth)
+            end
         end
+    end
+    
+    -- Jika tidak ada booth kosong, keluar
+    if #emptyBooths == 0 then return end
+    
+    -- [2] RANDOMIZE (Anti-Stuck)
+    -- Pilih satu booth secara acak agar tidak nyangkut di booth bugged
+    local targetBooth = emptyBooths[math.random(1, #emptyBooths)]
+    if not targetBooth or not targetBooth.PrimaryPart then return end
+    
+    -- [3] TELEPORT FIRST
+    -- Teleport ke depan booth untuk memastikan claim valid
+    if LocalPlayer.Character and LocalPlayer.Character.PrimaryPart then
+        local cf = targetBooth.PrimaryPart.CFrame
+        LocalPlayer.Character:SetPrimaryPartCFrame(cf * CFrame.new(0, 0, 5)) -- Mundur dikit biar enak
+    end
+    
+    -- [4] VERIFY & CLAIM
+    -- Tunggu sebentar untuk pastikan server sync (anti-ghost claim)
+    task.wait(0.5) 
+    
+    -- Cek ulang apakah masih kosong setelah teleport
+    local oidCheck = targetBooth:GetAttribute("OwnerId")
+    if not oidCheck then 
+             local v = targetBooth:FindFirstChild("OwnerId")
+             if v then oidCheck = v.Value end
+    end
+    
+    -- Jika benar-benar kosong, GAS CLAIM!
+    if oidCheck == nil or oidCheck == 0 or oidCheck == "" then
+        pcall(function() 
+            ClaimBoothRemote:FireServer(targetBooth) 
+        end)
+        task.wait(1) -- Cooldown agar tidak spam remote
     end
 end
 
