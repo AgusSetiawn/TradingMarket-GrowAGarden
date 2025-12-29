@@ -460,7 +460,7 @@ local function RunAutoList()
                 end
             end
         end
-    end
+
 
     -- [2] LISTING ITEM
     local listItemTarget = CachedTargets.BuyItem
@@ -501,7 +501,7 @@ local function RunAutoList()
                 end
             end
         end
-    end
+
 end
 
 -- >> FUNGSI AUTO CLEAR (Smart Remove)
