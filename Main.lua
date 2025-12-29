@@ -83,8 +83,7 @@ _G.XZNE_Controller = {
         
         -- Pengaturan Auto Hop (NEW - Fitur Server Hopping)
         AutoHop = false,             -- Toggle fitur auto hop
-        HopInterval = 300,           -- Interval hop dalam detik (default 5 menit)
-        RejoinBypassPrivate = true   -- Bypass private server saat rejoin (true = rejoin ke public)
+        HopInterval = 5,             -- Interval hop dalam MENIT (default 5 menit)
     },
     Stats = {
         ListedCount = 0,             -- Jumlah item yang berhasil di-list
@@ -623,38 +622,21 @@ local function CleanOldVisitedServers()
     if changed then SaveVisitedServers() end
 end
 
--- [FUNGSI] Auto Rejoin (Manual button, bukan auto-detect)
+-- [FUNGSI] Auto Rejoin (Simplified)
 function Controller.DoRejoin()
     local placeId = game.PlaceId
-    local privateServerId = game.PrivateServerId
+    local jobId = game.JobId
     
-    -- Jika bypass private server aktif DAN kita sedang di private server
-    if Config.RejoinBypassPrivate and privateServerId and privateServerId ~= "" then
-        -- Rejoin ke PUBLIC server (bypass private)
+    -- Teleport back to the same server instance
+    if jobId and jobId ~= "" then
+        pcall(function()
+            TeleportService:TeleportToPlaceInstance(placeId, jobId, LocalPlayer)
+        end)
+    else
+        -- Fallback: Just teleport to the place (random server) if JobId is missing
         pcall(function()
             TeleportService:Teleport(placeId, LocalPlayer)
         end)
-    else
-        -- Rejoin ke server yang sama (termasuk private jika ada)
-        if privateServerId and privateServerId ~= "" then
-            -- Rejoin ke private server yang sama
-            pcall(function()
-                TeleportService:TeleportToPrivateServer(
-                    placeId, 
-                    privateServerId, 
-                    {LocalPlayer}
-                )
-            end)
-        else
-            -- Rejoin ke public server yang sama
-            pcall(function()
-                TeleportService:TeleportToPlaceInstance(
-                    placeId, 
-                    game.JobId, 
-                    LocalPlayer
-                )
-            end)
-        end
     end
 end
 
@@ -734,7 +716,10 @@ task.spawn(function()
             --     LastHopTime = currentTime
             -- end
             
-            if currentTime - LastHopTime >= Config.HopInterval then
+            -- Konversi menit ke detik (Config.HopInterval sekarang dalam menit)
+            local intervalSeconds = (Config.HopInterval or 5) * 60
+            
+            if currentTime - LastHopTime >= intervalSeconds then
                 -- Reset hopping flag jika sudah lewat interval jauh (safety)
                 _G.XZNE_Hopping = false 
                 Controller.SmartHop()

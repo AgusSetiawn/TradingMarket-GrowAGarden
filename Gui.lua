@@ -548,18 +548,8 @@ RejoinSection:Paragraph({
     Desc = "Rejoin server dengan 1 klik. Bisa bypass private server untuk join ke public server."
 })
 
--- TOGGLE: Bypass Private Server
-UIElements.RejoinBypassPrivate = RejoinSection:Toggle({
-    Title = "Bypass Private Server",
-    Desc = "Jika ON: rejoin ke public | Jika OFF: rejoin ke server sama",
-    Default = Controller.Config.RejoinBypassPrivate or true,
-    Flag = "RejoinBypassPrivate",
-    Callback = function(val)
-        if _G.XZNE_Restoring then return end
-        Controller.Config.RejoinBypassPrivate = val
-        AutoSave()
-    end
-})
+-- Toggle removed as requested
+-- Auto rejoin will now simply rejoin the current server
 
 -- BUTTON: Rejoin Now
 RejoinSection:Button({
@@ -598,15 +588,15 @@ UIElements.AutoHop = HopSection:Toggle({
     end
 })
 
--- SLIDER: Hop Interval
+-- SLIDER: Hop Interval (Updated to Minutes)
 UIElements.HopInterval = HopSection:Slider({
     Title = "Hop Interval",
-    Desc = "Waktu antar hop (60-600 detik)",
-    Step = 30,
+    Desc = "Waktu antar hop (1-60 menit)",
+    Step = 1,
     Value = {
-        Min = 60,
-        Max = 600,
-        Default = Controller.Config.HopInterval or 300,
+        Min = 1,
+        Max = 60,
+        Default = Controller.Config.HopInterval or 5,
     },
     Flag = "HopInterval",
     Callback = function(val)
@@ -689,7 +679,7 @@ task.defer(function()
     
     -- Sync NEW toggles (Auto Hop & Rejoin)
     Sync(UIElements.AutoHop, C.AutoHop, "Toggle")
-    Sync(UIElements.RejoinBypassPrivate, C.RejoinBypassPrivate, "Toggle")
+    -- RejoinBypassPrivate removed
     
     -- Sync Slider & Input
     Sync(UIElements.DelaySlider, C.Speed, "Slider")
