@@ -659,54 +659,142 @@ function Controller.DoRejoin()
 end
 
 -- [FUNGSI] Smart Auto Hop ADVANCED (Server hopping cerdas dengan multi-strategy)
--- [NEW] BACKGROUND SERVER CACHER (Untuk True Instant Hop)
+-- [OVERPOWERED] BACKGROUND SERVER CACHER (Enhanced Version)
 -- Thread ini berjalan di background untuk menimbun server kosong
 _G.XZNE_ServerCache = {}
 local function StartServerCacher()
-    task.spawn(function()
-        local PlaceID = game.PlaceId
-        local currentJobId = game.JobId
-        
-        while true do
-            -- Hanya cache jika cache kosong/sedikit untuk hemat bandwidth
-            if #_G.XZNE_ServerCache < 5 then
-                local url = 'https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Desc&limit=100'
-                local success, result = pcall(function() return game:HttpGet(url) end)
-                
-                if success and result then
-                    local Site = HttpService:JSONDecode(result)
-                    if Site and Site.data then
-                        local tempCache = {}
-                        for _, v in pairs(Site.data) do
-                            local ID = tostring(v.id)
-                            local maxPlayers = tonumber(v.maxPlayers) or 0
-                            local playing = tonumber(v.playing) or 0
-                            
-                            -- Filter: Beda Server & Tidak Penuh
-                            if ID ~= tostring(currentJobId) and maxPlayers > playing then
-                                table.insert(tempCache, ID)
-                            end
-                        end
-                        
-                        -- Update Global Cache jika ada hasil
-                        if #tempCache > 0 then
-                            -- Shuffle results agar lebih random
-                            for i = #tempCache, 2, -1 do
+	task.spawn(function()
+		local PlaceID = game.PlaceId
+		local currentJobId = game.JobId
+		
+		while true do
+			-- Cache lebih banyak untuk reliability (15 servers)
+			if #_G.XZNE_ServerCache < 15 then
+				-- FIX #1: Gunakan sortOrder=Asc untuk prioritaskan available servers
+				local url = 'https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Asc&limit=100'
+				
+				-- Retry mechanism (3 attempts)
+				local attempts = 0
+				local success, result = false, nil
+				while attempts < 3 and not success do
+					success, result = pcall(function() return game:HttpGet(url) end)
+					if not success then
+						attempts = attempts + 1
+						task.wait(1) -- Wait 1 sec before retry
+					end
+				end
+				
+				if success and result then
+					local Site = HttpService:JSONDecode(result)
+					if Site and Site.data then
+						local tempCache = {}
+						for _, v in pairs(Site.data) do
+							local ID = tostring(v.id)
+							local maxPlayers = tonumber(v.maxPlayers) or 0
+							local playing = tonumber(v.playing) or 0
+							
+							-- FIX #3: Filter visited servers juga!
+							local isVisited = VisitedServers[ID] ~= nil
+							
+							-- Filter: Beda Server & Tidak Penuh & Belum Dikunjungi
+							if ID ~= tostring(currentJobId) and maxPlayers > playing and not isVisited then
+								table.insert(tempCache, ID)
+							end
+						end
+						
+						-- Update Global Cache jika ada hasil
+						if #tempCache > 0 then
+							-- Shuffle results agar lebih random
+							for i = #tempCache, 2, -1 do
                                 local j = math.random(i)
                                 tempCache[i], tempCache[j] = tempCache[j], tempCache[i]
                             end
                             _G.XZNE_ServerCache = tempCache
                         end
-                    end
-                end
-            end
-            task.wait(15) -- Refresh cache setiap 15 detik
-        end
-    end)
+					end
+				end
+			end
+			task.wait(15) -- Refresh cache setiap 15 detik
+		end
+	end)
 end
 
 -- Start Cacher Immediately
 StartServerCacher()
+
+-- [NEW] HELPER FUNCTION: Multi-Page Server Fetching (OVERPOWERED)
+-- Fetch multiple pages of servers untuk pool yang lebih besar
+local function FetchServersMultiPage(maxPages, sortOrder)
+	maxPages = maxPages or 3  -- Default 3 pages (300 servers)
+	sortOrder = sortOrder or "Asc"  -- Default Asc (available servers first)
+	
+	local PlaceID = game.PlaceId
+	local currentJobId = game.JobId
+	local allServers = {}
+	local nextCursor = nil
+	local pageCount = 0
+	
+	while pageCount < maxPages do
+		local url = 'https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=' .. sortOrder .. '&limit=100'
+		if nextCursor then
+			url = url .. '&cursor=' .. nextCursor
+		end
+		
+		-- Retry mechanism untuk HTTP failures
+		local attempts = 0
+		local success, result = false, nil
+		while attempts < 3 and not success do
+			success, result = pcall(function() return game:HttpGet(url) end)
+			if not success then
+				attempts = attempts + 1
+				task.wait(0.5)
+			end
+		end
+		
+		if not success or not result then
+			break -- HTTP failed after retries, stop fetching
+		end
+		
+		local decoded = HttpService:JSONDecode(result)
+		if not decoded or not decoded.data then
+			break
+		end
+		
+		-- Process this page
+		for _, serverInfo in pairs(decoded.data) do
+			local serverID = tostring(serverInfo.id)
+			local maxPlayers = tonumber(serverInfo.maxPlayers) or 0
+			local playing = tonumber(serverInfo.playing) or 0
+			
+			-- Advanced Filtering
+			local isCurrentServer = (serverID == tostring(currentJobId))
+			local isVisited = (VisitedServers[serverID] ~= nil)
+			local hasSpace = (playing < maxPlayers)
+			local isOptimal = (playing >= 1 and playing <= maxPlayers * 0.8) -- Not empty, not too full
+			
+			if not isCurrentServer and not isVisited and hasSpace then
+				-- Prioritize optimal servers, but accept any with space
+				table.insert(allServers, {
+					id = serverID,
+					playing = playing,
+					maxPlayers = maxPlayers,
+					optimal = isOptimal
+				})
+			end
+		end
+		
+		-- Check if there's next page
+		nextCursor = decoded.nextPageCursor
+		if not nextCursor or nextCursor == "" then
+			break -- No more pages
+		end
+		
+		pageCount = pageCount + 1
+		task.wait(0.5) -- Rate limit protection
+	end
+	
+	return allServers
+end
 
 -- [FUNGSI UTAMA] Safe Teleport Logic
 -- Menangani kegagalan teleport secara live
@@ -754,90 +842,128 @@ local function SafeTeleport(PlaceID, TargetID)
     return Connection
 end
 
--- [FUNGSI] INSTANT RANDOM HOP (CACHED & HARDENED)
+-- [OVERPOWERED] INSTANT RANDOM HOP - 3-Layer Strategy
 function Controller.SmartHop()
-    if _G.XZNE_Hopping then return end
-    _G.XZNE_Hopping = true
-    
-    local PlaceID = game.PlaceId
-    
-    task.spawn(function()
-        -- Strategy: Combine Cache + Manual Fetch into one list
-        local candidates = {}
-        
-        -- 1. Ambil dari Cache dulu
-        while #_G.XZNE_ServerCache > 0 do
-            table.insert(candidates, table.remove(_G.XZNE_ServerCache, 1))
-        end
-        
-        -- 2. Jika kandidat sedikit (< 3), ambil manual fetch juga untuk nambah stok
-        if #candidates < 3 then
-            if WindUI then
-                 WindUI:Notify({Title = "Hopping...", Content = "Fetching server list...", Icon = "shuffle", Duration = 2})
-            end
-            
-            local url = 'https://games.roblox.com/v1/games/' .. PlaceID .. '/servers/Public?sortOrder=Desc&limit=100'
-            local success, result = pcall(function() return game:HttpGet(url) end)
-            if success and result then
-                local Site = HttpService:JSONDecode(result)
-                if Site and Site.data then
-                     local currentJobId = game.JobId
-                     for _, v in pairs(Site.data) do
-                        local ID = tostring(v.id)
-                        local maxPlayers = tonumber(v.maxPlayers) or 0
-                        local playing = tonumber(v.playing) or 0
-                        if ID ~= tostring(currentJobId) and maxPlayers > playing then
-                            table.insert(candidates, ID)
-                        end
-                    end
-                end
-            end
-        end
-        
-        -- 3. Shuffle (Randomize)
-        for i = #candidates, 2, -1 do
-            local j = math.random(i)
-            candidates[i], candidates[j] = candidates[j], candidates[i]
-        end
-        
-        -- 4. EXECUTE TELEPORT LOOP
-        if #candidates > 0 then
-            for i, targetID in ipairs(candidates) do
-                -- Reset failure flag
-                _G.XZNE_TeleportFailed = false
-                
-                -- Try Teleport
-                local conn = SafeTeleport(PlaceID, targetID)
-                
-                -- Tunggu sebentar untuk melihat apakah gagal (max 8 detik timeout)
-                local waited = 0
-                while waited < 8 do
-                    if _G.XZNE_TeleportFailed then
-                         break -- Gagal, lanjut loop server berikutnya
-                    end
-                    task.wait(1)
-                    waited = waited + 1
-                    -- Jika sukses, player seharusnya sudah leave game di titik ini
-                end
-                
-                if conn then conn:Disconnect() end
-                
-                -- Jika script masih berjalan sampai sini, berarti belum pindah
-                -- Lanjut ke kandidat berikutnya
-            end
-            
-            -- Jika habis kandidat
-             if WindUI then
-                WindUI:Notify({Title = "Hop Failed", Content = "All valid servers failed to join.", Icon = "alert-circle"})
-            end
-        else
-             if WindUI then
-                WindUI:Notify({Title = "No Servers", Content = "No valid servers found.", Icon = "x-circle"})
-            end
-        end
-        
-        _G.XZNE_Hopping = false
-    end)
+	if _G.XZNE_Hopping then return end
+	_G.XZNE_Hopping = true
+	
+	local PlaceID = game.PlaceId
+	
+	task.spawn(function()
+		if WindUI then
+			WindUI:Notify({Title = "🚀 Server Hopping", Content = "Finding best server...", Icon = "shuffle", Duration = 3})
+		end
+		
+		-- LAYER 1: Multi-Strategy Server Collection
+		local allServers = {}
+		
+		-- Strategy A: Ambil dari background cache (instant!)
+		while #_G.XZNE_ServerCache > 0 do
+			local cachedID = table.remove(_G.XZNE_ServerCache, 1)
+			table.insert(allServers, {id = cachedID, playing = 0, maxPlayers = 0, optimal = true})
+		end
+		
+		-- Strategy B: Multi-page fetching untuk pool lebih besar
+		if #allServers < 10 then
+			local fetchedServers = FetchServersMultiPage(3, "Asc") -- 3 pages, sortOrder Asc
+			for _, srv in ipairs(fetchedServers) do
+				table.insert(allServers, srv)
+			end
+		end
+		
+		-- LAYER 2: Advanced Filtering & Smart Selection
+		if #allServers == 0 then
+			-- No servers found at all
+			if WindUI then
+				WindUI:Notify({Title = "❌ No Servers", Content = "No valid servers found. Retrying...", Icon = "x-circle", Duration = 3})
+			end
+			_G.XZNE_Hopping = false
+			return
+		end
+		
+		-- Separate optimal vs acceptable servers
+		local optimalServers = {}
+		local acceptableServers = {}
+		
+		for _, srv in ipairs(allServers) do
+			if srv.optimal then
+				table.insert(optimalServers, srv.id)
+			else
+				table.insert(acceptableServers, srv.id)
+			end
+		end
+		
+		-- Prioritize optimal servers
+		local finalCandidates = {}
+		if #optimalServers > 0 then
+			-- USER'S CODE INSIGHT: Random dari top 1/3 untuk avoid pattern
+			local topCount = math.max(1, math.floor(#optimalServers / 3))
+			for i = 1, topCount do
+				if optimalServers[i] then
+					table.insert(finalCandidates, optimalServers[i])
+				end
+			end
+		else
+			-- Fallback ke acceptable servers
+			local topCount = math.max(1, math.floor(#acceptableServers / 3))
+			for i = 1, topCount do
+				if acceptableServers[i] then
+					table.insert(finalCandidates, acceptableServers[i])
+				end
+			end
+		end
+		
+		-- Shuffle candidates untuk randomization
+		for i = #finalCandidates, 2, -1 do
+			local j = math.random(i)
+			finalCandidates[i], finalCandidates[j] = finalCandidates[j], finalCandidates[i]
+		end
+		
+		-- LAYER 3: Instant Teleport with Fast Timeout
+		if #finalCandidates > 0 then
+			for attemptNum, targetID in ipairs(finalCandidates) do
+				-- FIX #4: Reduce timeout to 3 seconds (instant!)
+				_G.XZNE_TeleportFailed = false
+				
+				-- Mark this server as visited before teleporting
+				VisitedServers[targetID] = tick()
+				SaveVisitedServers()
+				
+				-- Attempt teleport
+				local conn = SafeTeleport(PlaceID, targetID)
+				
+				-- Wait max 3 seconds untuk instant hop
+				local waited = 0
+				while waited < 3 do
+					if _G.XZNE_TeleportFailed then
+						break -- Failed, try next candidate
+					end
+					task.wait(0.5)
+					waited = waited + 0.5
+				end
+				
+				if conn then conn:Disconnect() end
+				
+				-- If still here and failed, try next server
+				if not _G.XZNE_TeleportFailed then
+					-- Success! Player should be teleporting now
+					return
+				end
+			end
+			
+			-- All candidates failed
+			if WindUI then
+				WindUI:Notify({Title = "⚠️ Hop Failed", Content = "All servers failed. Try again.", Icon = "alert-triangle", Duration = 4})
+			end
+		else
+			-- No candidates after filtering (shouldn't happen but just in case)
+			if WindUI then
+				WindUI:Notify({Title = "❌ No Valid Servers", Content = "Please try again in a moment.", Icon = "x-circle", Duration = 4})
+			end
+		end
+		
+		_G.XZNE_Hopping = false
+	end)
 end
 
 -- Inisialisasi: Load visited servers dan cleanup
