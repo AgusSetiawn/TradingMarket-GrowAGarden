@@ -584,60 +584,62 @@ local function RunAutoClaim()
     local folder = Workspace:FindFirstChild("TradeWorld") and Workspace.TradeWorld:FindFirstChild("Booths")
     if not folder then return end
     
-    -- [1] Kumpulkan semua booth yang VALID untuk di-claim
-    local emptyBooths = {}
-    for _, booth in pairs(folder:GetChildren()) do
-        -- [CRITICAL FIX] Hapus Visual Check yang terlalu agresif
-        -- Kita hanya percaya pada DATA SERVER (OwnerId)
-        -- Visual check (DynamicInstances) dihapus karena sering false-positive
+    -- [NATIVE STRATEGY] Gunakan sistem teleport game yang akurat & aman
+    -- Info dari User: Remote ini 100% akurat menemukan booth kosong
+    
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local GameEvents = ReplicatedStorage:FindFirstChild("GameEvents")
+    local TeleportTrigger = GameEvents and GameEvents:FindFirstChild("PlayerTeleportTriggered")
+    
+    if TeleportTrigger then
+        -- 1. Minta Game cari & teleport ke booth kosong
+        -- Argumen "Booth" memberitahu game untuk cari booth
+        TeleportTrigger:FireServer("Booth")
         
-        local oid = booth:GetAttribute("OwnerId")
-        if not oid then 
-            local v = booth:FindFirstChild("OwnerId")
-            if v then oid = v.Value end
+        -- 2. Tunggu proses teleport selesai
+        -- Beri waktu agar char sampai di lokasi
+        task.wait(1.5)
+        
+        -- 3. Cari Booth Terdekat (Kita sudah ditelport ke depannya)
+        local char = LocalPlayer.Character
+        if not char or not char.PrimaryPart then return end
+        local myPos = char.PrimaryPart.Position
+        
+        local nearestBooth = nil
+        local minDst = 15 -- Jarak maksimal (kita harusnya sangat dekat)
+        
+        local folder = Workspace:FindFirstChild("TradeWorld") and Workspace.TradeWorld:FindFirstChild("Booths")
+        if folder then
+            for _, booth in pairs(folder:GetChildren()) do
+                if booth.PrimaryPart then
+                    local dist = (booth.PrimaryPart.Position - myPos).Magnitude
+                    if dist < minDst then
+                        minDst = dist
+                        nearestBooth = booth
+                    end
+                end
+            end
         end
         
-        local isUnclaimed = (oid == nil or oid == 0 or oid == "")
-        
-        -- Jika Data KOSONG -> Valid Candidate
-        if isUnclaimed then
-            table.insert(emptyBooths, booth)
+        -- 4. Claim Booth Terdekat
+        if nearestBooth then
+             -- Double Verify (Safety) - Walau game direction pasti benar
+            local oid = nearestBooth:GetAttribute("OwnerId")
+            if not oid then 
+                local v = nearestBooth:FindFirstChild("OwnerId")
+                if v then oid = v.Value end
+            end
+            
+            if oid == nil or oid == 0 or oid == "" then
+                pcall(function() 
+                    ClaimBoothRemote:FireServer(nearestBooth) 
+                end)
+                task.wait(1) -- Cooldown setelah claim
+            end
         end
     end
     
-    -- Jika tidak ada booth kosong, keluar
-    if #emptyBooths == 0 then return end
-    
-    -- [2] RANDOMIZE (Anti-Stuck)
-    -- Pilih satu booth secara acak agar tidak nyangkut di booth bugged
-    local targetBooth = emptyBooths[math.random(1, #emptyBooths)]
-    if not targetBooth or not targetBooth.PrimaryPart then return end
-    
-    -- [3] TELEPORT FIRST
-    -- Teleport ke depan booth untuk memastikan claim valid
-    if LocalPlayer.Character and LocalPlayer.Character.PrimaryPart then
-        local cf = targetBooth.PrimaryPart.CFrame
-        LocalPlayer.Character:SetPrimaryPartCFrame(cf * CFrame.new(0, 0, 5)) -- Mundur dikit biar enak
-    end
-    
-    -- [4] VERIFY & CLAIM
-    -- Tunggu sebentar untuk pastikan server sync (anti-ghost claim)
-    task.wait(0.5) 
-    
-    -- Cek ulang apakah masih kosong setelah teleport
-    local oidCheck = targetBooth:GetAttribute("OwnerId")
-    if not oidCheck then 
-             local v = targetBooth:FindFirstChild("OwnerId")
-             if v then oidCheck = v.Value end
-    end
-    
-    -- Jika benar-benar kosong, GAS CLAIM!
-    if oidCheck == nil or oidCheck == 0 or oidCheck == "" then
-        pcall(function() 
-            ClaimBoothRemote:FireServer(targetBooth) 
-        end)
-        task.wait(1) -- Cooldown agar tidak spam remote
-    end
+
 end
 
 -- [6] API EXPORTS (Fungsi yang bisa dipanggil dari GUI)
