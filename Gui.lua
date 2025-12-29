@@ -298,7 +298,8 @@ TargetSection:Space()  -- Pisahkan Guide dari Dropdown
 UIElements.TargetPet = TargetSection:Dropdown({
     Title = "Target Pet", 
     Desc = "🔍 Cari pets...",
-    Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
+    Values = {"— None —"}, Default = {}, SearchBarEnabled = true,
+    Multi = true, -- Enable Multi-Select
     Flag = "BuyTarget",  -- Bind ke Config
     Callback = function(val) 
         -- Skip jika sedang dalam fase restoring
@@ -327,7 +328,8 @@ TargetSection:Space()
 UIElements.TargetItem = TargetSection:Dropdown({
     Title = "Target Item", 
     Desc = "🔍 Cari items...",
-    Values = {"— None —"}, Default = 1, SearchBarEnabled = true,
+    Values = {"— None —"}, Default = {}, SearchBarEnabled = true,
+    Multi = true, -- Enable Multi-Select
     Flag = "BuyTargetItem",  -- Flag terpisah untuk Item dropdown
     Callback = function(val) 
         if _G.XZNE_Restoring then return end
@@ -649,8 +651,16 @@ task.defer(function()
         if element and value ~= nil then 
             pcall(function()
                 if elementType == "Dropdown" and element.Select then
-                    -- Dropdown menggunakan metode Select
-                    element:Select(value)
+                    -- Dropdown: Handle Single or Multi (Table)
+                    if type(value) == "table" then
+                        -- Table: Select multiple items
+                        for _, val in pairs(value) do
+                            element:Select(val)
+                        end
+                    else
+                        -- String: Single select (Legacy support)
+                        element:Select(value)
+                    end
                     
                 elseif elementType == "Input" then
                     -- Input: Coba SetText -> SetValue -> Set (fallback cascade)

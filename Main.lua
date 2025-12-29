@@ -149,19 +149,31 @@ end)
 -- [4] FUNGSI HELPER & OPTIMASI
 
 -- Fungsi untuk update cache string target (dipanggil saat Config berubah)
+-- Fungsi untuk update cache string target (dipanggil saat Config berubah)
+-- Supports String (Single) or Table (Multi)
 function Controller.UpdateCache()
-    -- Cache nama target dalam lowercase untuk pencarian lebih cepat
-    CachedTargets.Buy = string.lower(Config.BuyTarget or "")
-    CachedTargets.List = string.lower(Config.ListTarget or "")
-    CachedTargets.Remove = string.lower(Config.RemoveTarget or "")
+    -- Helper untuk process target (convert ke lowercase table/string)
+    local function ProcessTarget(val)
+        if type(val) == "table" then
+            local t = {}
+            for _, v in pairs(val) do 
+                if v ~= "— None —" then table.insert(t, string.lower(v)) end 
+            end
+            return t -- Return table of strings
+        else
+            local s = string.lower(tostring(val or ""))
+            return (s == "— none —") and "" or s
+        end
+    end
+
+    -- Cache terpisah untuk Pet dan Item (mendukung dual target & multi-choice)
+    CachedTargets.BuyPet = ProcessTarget(Config.BuyTargetPet)
+    CachedTargets.BuyItem = ProcessTarget(Config.BuyTargetItem)
     
-    -- Cache terpisah untuk Pet dan Item (mendukung dual target)
-    CachedTargets.BuyPet = string.lower(Config.BuyTargetPet or "")
-    CachedTargets.BuyItem = string.lower(Config.BuyTargetItem or "")
-    
-    -- Filter "— none —" menjadi string kosong untuk keamanan
-    if CachedTargets.BuyPet == "— none —" then CachedTargets.BuyPet = "" end
-    if CachedTargets.BuyItem == "— none —" then CachedTargets.BuyItem = "" end
+    -- Legacy/Fallback keys (jika masih dipakai logika lama)
+    CachedTargets.Buy = CachedTargets.BuyPet -- Pointer reference
+    CachedTargets.List = CachedTargets.BuyPet 
+    CachedTargets.Remove = CachedTargets.BuyPet
 end
 -- Inisialisasi cache pertama kali
 Controller.UpdateCache()
@@ -274,6 +286,26 @@ end
 
 -- [5] LOGIKA INTI
 
+-- [FUNGSI HELPER] Match Target (Multi/Single)
+-- Mengecek apakah 'name' cocok dengan 'target' (String atau Table)
+local function CheckTargetMatch(name, target)
+    if not name or not target then return false end
+    if target == "" or (type(target) == "table" and #target == 0) then return false end
+    
+    local nameLower = string_lower(name)
+    
+    if type(target) == "table" then
+        -- Multi-target search
+        for _, tVal in pairs(target) do
+            if string_find(nameLower, tVal) then return true end
+        end
+        return false
+    else
+        -- Single-target search
+        return string_find(nameLower, target)
+    end
+end
+
 -- >> FUNGSI AUTO BUY (SNIPER)
 -- Otomatis membeli item/pet yang sesuai target dengan harga dibawah MaxPrice
 local function RunAutoBuy()
@@ -305,10 +337,13 @@ local function RunAutoBuy()
                     local listType = listingInfo.ItemType
                     
                     -- Jika ini Pet dan kita punya target Pet, cocok
-                    if listType == "Pet" and CachedTargets.BuyPet ~= "" then 
+                    local buyPet = CachedTargets.BuyPet
+                    local buyItem = CachedTargets.BuyItem
+                    
+                    if listType == "Pet" and (type(buyPet) == "table" and #buyPet > 0 or buyPet ~= "") then 
                         targetMatch = true 
                     -- Jika ini Item dan kita punya target Item, cocok
-                    elseif listType == "Holdable" and CachedTargets.BuyItem ~= "" then 
+                    elseif listType == "Holdable" and (type(buyItem) == "table" and #buyItem > 0 or buyItem ~= "") then 
                         targetMatch = true
                     end
                     
@@ -323,13 +358,13 @@ local function RunAutoBuy()
                             
                             -- Cek nama spesifik berdasarkan tipe
                             if listingInfo.ItemType == "Pet" then
-                                -- Cocokkan dengan target Pet
-                                if string_find(lowerName, CachedTargets.BuyPet) then 
+                                -- Cocokkan dengan target Pet (Via Helper)
+                                if CheckTargetMatch(realName, CachedTargets.BuyPet) then 
                                     isMatch = true 
                                 end
                             elseif listingInfo.ItemType == "Holdable" then
                                 -- Cocokkan dengan target Item
-                                if string_find(lowerName, CachedTargets.BuyItem) then 
+                                if CheckTargetMatch(realName, CachedTargets.BuyItem) then 
                                     isMatch = true 
                                 end
                             end
@@ -367,10 +402,21 @@ local function RunAutoList()
     local data = GetBoothsData()
     local myData = data and data.Players[MyPlayerKey]
     local listedUUIDs = {}  -- Tabel untuk track UUID yang sudah di-list
+    local listingCount = 0  -- Counter jumlah listing
+    
     if myData and myData.Listings then
         for _, v in pairs(myData.Listings) do 
             listedUUIDs[v.ItemId] = true 
+            listingCount = listingCount + 1
         end
+    end
+    
+    -- [SMART FEATURE] Capacity Limit Detection
+    -- Jika booth sudah penuh (50 item), berhenti sementara (anti-spam)
+    if listingCount >= 50 then
+        -- Optional: Print debug info every 5 seconds
+        -- if tick() % 5 < 0.1 then print("⏸️ [XZNE] Booth Full (50/50). Auto List Paused.") end
+        return 
     end
     
     local price = Config.Price
@@ -380,9 +426,11 @@ local function RunAutoList()
     
     -- [1] LISTING PET
     -- BUG FIX: Gunakan Config.ListCategory, bukan CachedTargets.List
-    if Config.ListCategory == "Pet" or CachedTargets.BuyPet ~= "" then
-        local petTarget = CachedTargets.BuyPet
-        if petTarget ~= "" then
+    local listPetTarget = CachedTargets.BuyPet
+    local hasPetTarget = (type(listPetTarget) == "table" and #listPetTarget > 0) or (type(listPetTarget) == "string" and listPetTarget ~= "")
+
+    if (Config.ListCategory == "Pet" or hasPetTarget) and hasPetTarget then
+        -- Logic Check Passed
             -- Pet Listing membutuhkan DataService
             local playerData = DataService and DataService:GetData()
             if playerData and playerData.PetsData and playerData.PetsData.PetInventory then
@@ -395,11 +443,15 @@ local function RunAutoList()
                     if not listedUUIDs[petUUID] and (not ListingDebounce[petUUID] or currentTime - ListingDebounce[petUUID] > 5) then
                         local petName = petData.PetType or petData.Name
                         -- Cek apakah nama pet cocok dengan target
-                        if petName and string_find(string_lower(petName), petTarget) then
+                        if petName and CheckTargetMatch(petName, listPetTarget) then
                             -- List pet ini
                             pcall(function() 
                                 CreateListingRemote:InvokeServer("Pet", petUUID, price) 
                             end)
+                            
+                            -- Update counter manual (biar ga overshoot 50 di loop yang sama)
+                            listingCount = listingCount + 1
+                            if listingCount >= 50 then return end -- Cutoff immediate
                             ListingDebounce[petUUID] = currentTime
                             Stats.ListedCount = Stats.ListedCount + 1
                             task.wait(Config.Speed)
@@ -411,10 +463,11 @@ local function RunAutoList()
     end
 
     -- [2] LISTING ITEM
-    -- BUG FIX: Gunakan Config.ListCategory, bukan CachedTargets.List
-    if Config.ListCategory == "Item" or CachedTargets.BuyItem ~= "" then
-        local itemTarget = CachedTargets.BuyItem
-        if itemTarget ~= "" then
+    local listItemTarget = CachedTargets.BuyItem
+    local hasItemTarget = (type(listItemTarget) == "table" and #listItemTarget > 0) or (type(listItemTarget) == "string" and listItemTarget ~= "")
+    
+    if (Config.ListCategory == "Item" or hasItemTarget) and hasItemTarget then
+        -- Logic Check Passed
             -- Item Listing dari Backpack
             local backpack = LocalPlayer:FindFirstChild("Backpack")
             if backpack then
@@ -431,11 +484,14 @@ local function RunAutoList()
                         -- Cek apakah item ini belum terlisting dan tidak dalam debounce
                         if realName and uuid and not listedUUIDs[uuid] and (not ListingDebounce[uuid] or currentTime - ListingDebounce[uuid] > 5) then
                             -- Cek apakah nama item cocok dengan target
-                            if string_find(string_lower(realName), itemTarget) then
+                            if CheckTargetMatch(realName, listItemTarget) then
                                 -- List item ini
                                 pcall(function() 
                                     CreateListingRemote:InvokeServer("Holdable", uuid, price) 
                                 end)
+                                
+                                listingCount = listingCount + 1
+                                if listingCount >= 50 then return end
                                 ListingDebounce[uuid] = currentTime
                                 Stats.ListedCount = Stats.ListedCount + 1
                                 task.wait(Config.Speed)
@@ -455,11 +511,14 @@ local function RunAutoClear()
     if not Config.AutoClear then return end
     
     -- Ambil target Pet dan Item
-    local targetLowerPet = CachedTargets.BuyPet
-    local targetLowerItem = CachedTargets.BuyItem
+    local targetPet = CachedTargets.BuyPet
+    local targetItem = CachedTargets.BuyItem
+    
+    local hasPet = (type(targetPet) == "table" and #targetPet > 0) or targetPet ~= ""
+    local hasItem = (type(targetItem) == "table" and #targetItem > 0) or targetItem ~= ""
     
     -- Jika tidak DeleteAll dan tidak ada target, keluar
-    if not Config.DeleteAll and targetLowerPet == "" and targetLowerItem == "" then 
+    if not Config.DeleteAll and not hasPet and not hasItem then 
         return 
     end
     
@@ -489,10 +548,10 @@ local function RunAutoClear()
                     if Config.DeleteAll then 
                         -- Mode DeleteAll: hapus semua
                         shouldRemove = true
-                    elseif listingInfo.ItemType == "Pet" and targetLowerPet ~= "" and string_find(lowerName, targetLowerPet) then 
+                    elseif listingInfo.ItemType == "Pet" and hasPet and CheckTargetMatch(realName, targetPet) then 
                         -- Hapus Pet yang cocok target
                         shouldRemove = true
-                    elseif listingInfo.ItemType == "Holdable" and targetLowerItem ~= "" and string_find(lowerName, targetLowerItem) then 
+                    elseif listingInfo.ItemType == "Holdable" and hasItem and CheckTargetMatch(realName, targetItem) then 
                         -- Hapus Item yang cocok target
                         shouldRemove = true
                     end
