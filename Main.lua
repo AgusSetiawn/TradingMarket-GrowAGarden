@@ -587,27 +587,21 @@ local function RunAutoClaim()
     -- [1] Kumpulkan semua booth yang VALID untuk di-claim
     local emptyBooths = {}
     for _, booth in pairs(folder:GetChildren()) do
-        -- [Step A] Cek Visual (DynamicInstances)
-        -- Jika booth terlihat penuh/ada dekorasi, berarti pasti sudah ada yg punya. Skip!
-        -- Ini membantu akurasi scanning dengan membuang booth yang "terlihat" aktif.
-        local dyn = booth:FindFirstChild("DynamicInstances")
-        local isVisuallyOccupied = (dyn and #dyn:GetChildren() > 0)
+        -- [CRITICAL FIX] Hapus Visual Check yang terlalu agresif
+        -- Kita hanya percaya pada DATA SERVER (OwnerId)
+        -- Visual check (DynamicInstances) dihapus karena sering false-positive
         
-        if not isVisuallyOccupied then
-            -- [Step B] Cek Data (OwnerId)
-            -- Ini penentu utama. Kalau visual kosong, pastikan data juga kosong.
-            local oid = booth:GetAttribute("OwnerId")
-            if not oid then 
-                local v = booth:FindFirstChild("OwnerId")
-                if v then oid = v.Value end
-            end
-            
-            local isUnclaimed = (oid == nil or oid == 0 or oid == "")
-            
-            -- Jika secara Visual KOSONG dan Data KOSONG -> Valid Candidate
-            if isUnclaimed then
-                table.insert(emptyBooths, booth)
-            end
+        local oid = booth:GetAttribute("OwnerId")
+        if not oid then 
+            local v = booth:FindFirstChild("OwnerId")
+            if v then oid = v.Value end
+        end
+        
+        local isUnclaimed = (oid == nil or oid == 0 or oid == "")
+        
+        -- Jika Data KOSONG -> Valid Candidate
+        if isUnclaimed then
+            table.insert(emptyBooths, booth)
         end
     end
     
@@ -734,16 +728,7 @@ function Controller.DoRejoin()
     end
 end
 
--- [FUNGSI] Smart Auto Hop ADVANCED (Server hopping cerdas dengan multi-strategy)
--- [CRITICAL FIX] NO HTTP APPROACH - Works on ALL Games (Even Strict Ones)
--- Roblox blocks HttpGet to roblox.com for big games like Grow A Garden
--- Solution: Pure TeleportService random hop WITHOUT querying server lists
 
--- Note: Previous HttpGet-based methods REMOVED because they don't work on this game
-
--- [ULTIMATE FIX] PURE TELEPORTSERVICE HOP - NO HTTP!
--- Works on ALL games including those with strict HTTP blocking
--- Method: Random teleport menggunakan TeleportService:Teleport() only
 function Controller.SmartHop()
 	if _G.XZNE_Hopping then return end
 	_G.XZNE_Hopping = true
@@ -833,21 +818,30 @@ local MIN_SPEED = 0  -- Delay minimum (0 detik = instant)
 task.defer(function()
     task.wait(1)  -- Tunggu GUI selesai loading
     
-    -- Loop tak terbatas selama script berjalan
+    -- [LOOP 1] FAST LOOP (Auto Claim - Instant)
+    -- Jalan terpisah agar tidak terhambat Action Delay fitur lain
+    task.spawn(function()
+        while true do
+            if Config.Running and Config.AutoClaim then
+                RunAutoClaim()
+            end
+            task.wait(0.1) -- Cek sangat cepat (hampir instant)
+        end
+    end)
+
+    -- [LOOP 2] THROTTLED LOOP (Buy, List, Clear)
+    -- Jalan sesuai Speed setting
     while true do
         if not Config.Running then 
-            -- Jika script pause, tunggu 1 detik
             task.wait(1) 
         else
-            -- Jalankan semua fungsi auto yang aktif
             pcall(function()
-                if Config.AutoClaim then RunAutoClaim() end  -- Claim booth dulu
+                -- AutoClaim dipisah ke loop atas
                 if Config.AutoBuy   then RunAutoBuy()   end  -- Snipe items
                 if Config.AutoList  then RunAutoList()  end  -- List items
                 if Config.AutoClear then RunAutoClear() end  -- Remove listings
             end)
             
-            -- Tunggu sesuai setting Speed (dengan batas minimum)
             task.wait(math_max(Config.Speed or 1, MIN_SPEED))
         end
     end
