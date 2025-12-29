@@ -545,7 +545,7 @@ local RejoinSection = SettingsTab:Section({
 
 RejoinSection:Paragraph({
     Title = "Info",
-    Desc = "Rejoin server dengan 1 klik. Bisa bypass private server untuk join ke public server."
+    Desc = "Rejoin kembali ke server yang sama dengan satu klik."
 })
 
 -- Toggle removed as requested
@@ -572,13 +572,13 @@ local HopSection = SettingsTab:Section({
 
 HopSection:Paragraph({
     Title = "Info",
-    Desc = "Pindah server secara acak dan instan (menghindari server penuh & server saat ini)."
+    Desc = "Pindah server secara acak menggunakan teleportasi bawaan Roblox (Universal)."
 })
 
 -- TOGGLE: Enable Auto Hop
 UIElements.AutoHop = HopSection:Toggle({
     Title = "Enable Auto Hop",
-    Desc = "Hop otomatis setiap interval waktu",
+    Desc = "Hop otomatis sesuai interval menit",
     Default = Controller.Config.AutoHop or false,
     Flag = "AutoHop",
     Callback = function(val)
