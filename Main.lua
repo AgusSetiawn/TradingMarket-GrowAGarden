@@ -57,6 +57,7 @@ _G.XZNE_Controller = {
     Config = {
         -- Pengaturan Global
         Running = true,              -- Status script (aktif/nonaktif)
+        AntiAFK = false,             -- Toggle fitur anti afk
         Speed = 1.0,                 -- Delay global untuk semua aksi (detik)
         
         -- Pengaturan Auto Buy (Sniper)
@@ -80,6 +81,9 @@ _G.XZNE_Controller = {
         
         -- Pengaturan Auto Claim
         AutoClaim = false,           -- Toggle fitur auto claim booth
+        
+        -- Pengaturan Anti AFK (NEW)
+        AntiAFK = false,             -- Toggle fitur anti afk
         
         -- Pengaturan Auto Hop (NEW - Fitur Server Hopping)
         AutoHop = false,             -- Toggle fitur auto hop
@@ -576,70 +580,66 @@ local function RunAutoClaim()
     -- Keluar jika fitur tidak aktif
     if not Config.AutoClaim then return end
     
-    -- [SMART PAUSE] Jika sudah punya booth, pause (return)
-    -- Ini memungkinkan user mengaktifkan toggle terus menerus
+    -- [STRICT CHECK] Jika sudah punya booth, pause (return)
+    -- Ini mencegah spam claim saat sudah punya booth
     if GetMyBooth() then return end
     
-    -- Cari folder yang berisi semua booth
+    -- Gunakan Module Game Internal untuk Teleport (Lebih Akurat)
+    local success, err = pcall(function()
+        -- Require module internal game sesuai request user
+        local TradeBoothController = require(ReplicatedStorage.Modules.TradeBoothControllers.TradeBoothController)
+        -- Panggil fungsi teleport asli game
+        TradeBoothController:TeleportToBooth()
+    end)
+    
+    if not success then
+        -- Opsional: Fallback atau warn
+        -- warn("[AutoClaim] Failed to use Game Module:", err)
+        return
+    end
+
+    -- Tunggu proses teleport selesai
+    -- Beri waktu agar char sampai di lokasi
+    task.wait(1.5)
+    
+    -- Cari Booth Terdekat (Kita sudah ditelport ke depannya)
+    local char = LocalPlayer.Character
+    if not char or not char.PrimaryPart then return end
+    local myPos = char.PrimaryPart.Position
+    
+    local nearestBooth = nil
+    local minDst = 15 -- Jarak maksimal (kita harusnya sangat dekat)
+    
     local folder = Workspace:FindFirstChild("TradeWorld") and Workspace.TradeWorld:FindFirstChild("Booths")
-    if not folder then return end
-    
-    -- [NATIVE STRATEGY] Gunakan sistem teleport game yang akurat & aman
-    -- Info dari User: Remote ini 100% akurat menemukan booth kosong
-    
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local GameEvents = ReplicatedStorage:FindFirstChild("GameEvents")
-    local TeleportTrigger = GameEvents and GameEvents:FindFirstChild("PlayerTeleportTriggered")
-    
-    if TeleportTrigger then
-        -- 1. Minta Game cari & teleport ke booth kosong
-        -- Argumen "Booth" memberitahu game untuk cari booth
-        TeleportTrigger:FireServer("Booth")
-        
-        -- 2. Tunggu proses teleport selesai
-        -- Beri waktu agar char sampai di lokasi
-        task.wait(1.5)
-        
-        -- 3. Cari Booth Terdekat (Kita sudah ditelport ke depannya)
-        local char = LocalPlayer.Character
-        if not char or not char.PrimaryPart then return end
-        local myPos = char.PrimaryPart.Position
-        
-        local nearestBooth = nil
-        local minDst = 15 -- Jarak maksimal (kita harusnya sangat dekat)
-        
-        local folder = Workspace:FindFirstChild("TradeWorld") and Workspace.TradeWorld:FindFirstChild("Booths")
-        if folder then
-            for _, booth in pairs(folder:GetChildren()) do
-                if booth.PrimaryPart then
-                    local dist = (booth.PrimaryPart.Position - myPos).Magnitude
-                    if dist < minDst then
-                        minDst = dist
-                        nearestBooth = booth
-                    end
+    if folder then
+        for _, booth in pairs(folder:GetChildren()) do
+            if booth.PrimaryPart then
+                local dist = (booth.PrimaryPart.Position - myPos).Magnitude
+                if dist < minDst then
+                    minDst = dist
+                    nearestBooth = booth
                 end
-            end
-        end
-        
-        -- 4. Claim Booth Terdekat
-        if nearestBooth then
-             -- Double Verify (Safety) - Walau game direction pasti benar
-            local oid = nearestBooth:GetAttribute("OwnerId")
-            if not oid then 
-                local v = nearestBooth:FindFirstChild("OwnerId")
-                if v then oid = v.Value end
-            end
-            
-            if oid == nil or oid == 0 or oid == "" then
-                pcall(function() 
-                    ClaimBoothRemote:FireServer(nearestBooth) 
-                end)
-                task.wait(1) -- Cooldown setelah claim
             end
         end
     end
     
-
+    -- 4. Claim Booth Terdekat
+    if nearestBooth then
+         -- Double Verify (Safety) - Walau game direction pasti benar
+        local oid = nearestBooth:GetAttribute("OwnerId")
+        if not oid then 
+            local v = nearestBooth:FindFirstChild("OwnerId")
+            if v then oid = v.Value end
+        end
+        
+        -- Hanya claim jika OID nil, 0, atau kosong (Anti-Steal Check)
+        if oid == nil or oid == 0 or oid == "" then
+            pcall(function() 
+                ClaimBoothRemote:FireServer(nearestBooth) 
+            end)
+            task.wait(1) -- Cooldown setelah claim
+        end
+    end
 end
 
 -- [6] API EXPORTS (Fungsi yang bisa dipanggil dari GUI)
@@ -810,6 +810,18 @@ task.spawn(function()
         else
             task.wait(30)  -- Jika tidak aktif, check lebih jarang
         end
+    end
+end)
+
+-- [ANTI-AFK SYSTEM]
+-- Mencegah player dikick karena idle 20 menit
+local VirtualUser = game:GetService("VirtualUser")
+LocalPlayer.Idled:Connect(function()
+    if Config.AntiAFK then
+        pcall(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        end)
     end
 end)
 

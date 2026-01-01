@@ -631,18 +631,47 @@ WindUI:Notify({
 -- [7] SINKRONISASI VISUAL EKSPLISIT
 -- Paksa UI untuk match dengan Config setelah dibuat
 -- Ini memastikan semua toggle, slider, dan dropdown menampilkan nilai yang benar
+-- === SECTION: ANTI AFK ===
+local AfkSection = SettingsTab:Section({
+    Title = "Anti AFK",
+    Icon = "clock"
+})
+
+UIElements.AntiAFK = AfkSection:Toggle({
+    Title = "Enable Anti-AFK", 
+    Desc = "Mencegah kick idle 20 menit", 
+    Default = Controller.Config.AntiAFK or false,
+    Flag = "AntiAFK",
+    Callback = function(val)
+        if _G.XZNE_Restoring then return end
+        Controller.Config.AntiAFK = val
+        AutoSave()
+    end
+})
+
+AfkSection:Divider()
+
+
+-- [7] SINKRONISASI VISUAL EKSPLISIT
+-- Paksa UI untuk match dengan Config setelah dibuat
+-- Ini memastikan semua toggle, slider, dan dropdown menampilkan nilai yang benar
 task.defer(function()
     _G.XZNE_Restoring = true  -- KUNCI (mencegah autosave saat sync)
     
     -- Tunggu UI fully rendered DAN database siap (untuk Dropdown)
-    task.wait(1.5) 
+    -- BUG FIX: Extend wait time dan pastikan loop menunggu signal benar-benar siap
+    task.wait(2) 
     
-    -- Timeout untuk menunggu database
     local Timeout = 0
-    while not DatabaseReady and Timeout < 5 do
+    -- Tunggu database ready lebih lama (hingga 10 detik)
+    while not DatabaseReady and Timeout < 10 do
         task.wait(0.5)
         Timeout = Timeout + 0.5
     end
+    
+    -- Tunggu sebentar lagi untuk memastikan SafeUpdate (Dropdown.Refresh) sudah selesai dijalankan
+    -- Ini krusial untuk memperbaiki bug "Load cuma satu"
+    task.wait(1) 
     
     local C = Controller.Config
     
@@ -654,8 +683,10 @@ task.defer(function()
                     -- Dropdown: Handle Single or Multi (Table)
                     if type(value) == "table" then
                         -- Table: Select multiple items
+                        -- NOTE: WindUI mungkin butuh delay antar seleksi atau clear dulu
                         for _, val in pairs(value) do
                             element:Select(val)
+                            task.wait(0.05) -- Beri napas sedikit
                         end
                     else
                         -- String: Single select (Legacy support)
@@ -686,10 +717,10 @@ task.defer(function()
     Sync(UIElements.AutoList, C.AutoList, "Toggle")
     Sync(UIElements.AutoClear, C.AutoClear, "Toggle")
     Sync(UIElements.AutoClaim, C.AutoClaim, "Toggle")
+    Sync(UIElements.AntiAFK, C.AntiAFK, "Toggle")
     
     -- Sync NEW toggles (Auto Hop & Rejoin)
     Sync(UIElements.AutoHop, C.AutoHop, "Toggle")
-    -- RejoinBypassPrivate removed
     
     -- Sync Slider & Input
     Sync(UIElements.DelaySlider, C.Speed, "Slider")
@@ -700,11 +731,12 @@ task.defer(function()
     Sync(UIElements.HopInterval, C.HopInterval, "Slider")
     
     -- Sync Dropdown (INDEPENDENT - Bisa simultanlam)
-    if C.BuyTargetPet and C.BuyTargetPet ~= "— None —" then
+    -- BUG FIX: Pastikan dropdown sudah terisi sebelum sync
+    if UIElements.TargetPet and C.BuyTargetPet and C.BuyTargetPet ~= "— None —" then
          Sync(UIElements.TargetPet, C.BuyTargetPet, "Dropdown")
     end
     
-    if C.BuyTargetItem and C.BuyTargetItem ~= "— None —" then
+    if UIElements.TargetItem and C.BuyTargetItem and C.BuyTargetItem ~= "— None —" then
          Sync(UIElements.TargetItem, C.BuyTargetItem, "Dropdown")
     end
     
