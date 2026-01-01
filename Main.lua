@@ -631,6 +631,12 @@ local function RunAutoClaim()
                     if v then oid = v.Value end
                 end
                 
+                -- [STOP CHECK] Jika booth ini sudah jadi milik kita, HENTIKAN SPAM
+                if tostring(oid) == tostring(LocalUserId) then
+                     BoothCache.booth = nearestBooth -- Update cache manual biar hemat waktu
+                     break 
+                end
+                
                 -- Hanya claim jika kosong (nil/0/empty) ATAU jika kita percaya diri
                 if not oid or oid == 0 or oid == "" then
                     pcall(function() 
