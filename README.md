@@ -8,7 +8,7 @@
 ## 🚀 Cara Pakai (Super Mudah!)
 
 ### Step 1: Buka Executor
-Buka executor favorit kamu (Synapse, KRNL, Fluxus, dll)
+Buka executor favorit kamu 
 
 ### Step 2: Copy & Paste
 Copy code ini, paste ke executor:
