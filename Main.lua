@@ -594,59 +594,54 @@ local function RunAutoClaim()
     if not success then return end
 
     -- [SPAM CLAIM STRATEGY]
-    -- Teleport butuh waktu, tapi kita tidak mau ketinggalan window claim
-    -- Jadi kita spam check & claim selama 3 detik
-    
     local StartTime = tick()
-    local MaxDuration = 3.5 -- Durasi spam claim
+    local MaxDuration = 4.0 -- Naikkan sedikit durasi (4 detik)
     
-    -- Loop spam claim
     while (tick() - StartTime) < MaxDuration do
-        -- Cek lagi jika sudah dapet booth (biar stop spam)
         if GetMyBooth() then break end
         
-        -- Cari Booth Terdekat
         local char = LocalPlayer.Character
         if char and char.PrimaryPart then
             local myPos = char.PrimaryPart.Position
             local nearestBooth = nil
-            local minDst = 25 -- Jarak toleransi (karena teleport mungkin agak meleset dikit)
+            local minDst = 20
             
             local folder = Workspace:FindFirstChild("TradeWorld") and Workspace.TradeWorld:FindFirstChild("Booths")
             if folder then
                 for _, booth in pairs(folder:GetChildren()) do
-                    if booth.PrimaryPart then
-                        local dist = (booth.PrimaryPart.Position - myPos).Magnitude
-                        if dist < minDst then
-                            minDst = dist
-                            nearestBooth = booth
-                        end
+                    -- Gunakan PVInstance:GetPivot() agar lebih aman daripada PrimaryPart
+                    local boothPos = booth:GetPivot().Position
+                    local dist = (boothPos - myPos).Magnitude
+                    
+                    if dist < minDst then
+                        minDst = dist
+                        nearestBooth = booth
                     end
                 end
             end
             
             -- Attempt Claim
             if nearestBooth then
-                local oid = nearestBooth:GetAttribute("OwnerId")
+                -- Cek status ownership (Opsional: Kita bisa paksa claim jika glitch)
+                local oid = nearestBooth:GetAttribute("OwnerId") or nearestBooth:GetAttribute("UserId")
+                
+                -- Fallback cari Value Object jika Attribute tidak ada
                 if not oid then 
                     local v = nearestBooth:FindFirstChild("OwnerId")
                     if v then oid = v.Value end
                 end
                 
-                -- Hanya claim jika kosong (atau nil/0)
-                if oid == nil or oid == 0 or oid == "" then
+                -- Hanya claim jika kosong (nil/0/empty) ATAU jika kita percaya diri
+                if not oid or oid == 0 or oid == "" then
                     pcall(function() 
                         ClaimBoothRemote:FireServer(nearestBooth) 
                     end)
                 end
             end
         end
-        
-        -- Delay sangat kecil antar spam (agar remote terbaca server)
         task.wait(0.1) 
     end
     
-    -- Delay pendingin (agar tidak teleport ulang terlalu cepat jika gagal)
     task.wait(2)
 end
 
