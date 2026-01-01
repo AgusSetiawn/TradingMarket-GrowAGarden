@@ -576,70 +576,78 @@ end
 
 -- >> FUNGSI AUTO CLAIM (Improved & Smart)
 -- Otomatis cari, teleport, dan claim booth kosong
+-- >> FUNGSI AUTO CLAIM (Improved & Smart)
+-- Otomatis cari, teleport, dan claim booth kosong
 local function RunAutoClaim()
     -- Keluar jika fitur tidak aktif
     if not Config.AutoClaim then return end
     
     -- [STRICT CHECK] Jika sudah punya booth, pause (return)
-    -- Ini mencegah spam claim saat sudah punya booth
     if GetMyBooth() then return end
     
-    -- Gunakan Module Game Internal untuk Teleport (Lebih Akurat)
+    -- Gunakan Module Game Internal untuk Teleport
     local success, err = pcall(function()
-        -- Require module internal game sesuai request user
         local TradeBoothController = require(ReplicatedStorage.Modules.TradeBoothControllers.TradeBoothController)
-        -- Panggil fungsi teleport asli game
         TradeBoothController:TeleportToBooth()
     end)
     
-    if not success then
-        -- Opsional: Fallback atau warn
-        -- warn("[AutoClaim] Failed to use Game Module:", err)
-        return
-    end
+    if not success then return end
 
-    -- Tunggu proses teleport selesai
-    -- Beri waktu agar char sampai di lokasi
-    task.wait(1.5)
+    -- [SPAM CLAIM STRATEGY]
+    -- Teleport butuh waktu, tapi kita tidak mau ketinggalan window claim
+    -- Jadi kita spam check & claim selama 3 detik
     
-    -- Cari Booth Terdekat (Kita sudah ditelport ke depannya)
-    local char = LocalPlayer.Character
-    if not char or not char.PrimaryPart then return end
-    local myPos = char.PrimaryPart.Position
+    local StartTime = tick()
+    local MaxDuration = 3.5 -- Durasi spam claim
     
-    local nearestBooth = nil
-    local minDst = 15 -- Jarak maksimal (kita harusnya sangat dekat)
-    
-    local folder = Workspace:FindFirstChild("TradeWorld") and Workspace.TradeWorld:FindFirstChild("Booths")
-    if folder then
-        for _, booth in pairs(folder:GetChildren()) do
-            if booth.PrimaryPart then
-                local dist = (booth.PrimaryPart.Position - myPos).Magnitude
-                if dist < minDst then
-                    minDst = dist
-                    nearestBooth = booth
+    -- Loop spam claim
+    while (tick() - StartTime) < MaxDuration do
+        -- Cek lagi jika sudah dapet booth (biar stop spam)
+        if GetMyBooth() then break end
+        
+        -- Cari Booth Terdekat
+        local char = LocalPlayer.Character
+        if char and char.PrimaryPart then
+            local myPos = char.PrimaryPart.Position
+            local nearestBooth = nil
+            local minDst = 25 -- Jarak toleransi (karena teleport mungkin agak meleset dikit)
+            
+            local folder = Workspace:FindFirstChild("TradeWorld") and Workspace.TradeWorld:FindFirstChild("Booths")
+            if folder then
+                for _, booth in pairs(folder:GetChildren()) do
+                    if booth.PrimaryPart then
+                        local dist = (booth.PrimaryPart.Position - myPos).Magnitude
+                        if dist < minDst then
+                            minDst = dist
+                            nearestBooth = booth
+                        end
+                    end
+                end
+            end
+            
+            -- Attempt Claim
+            if nearestBooth then
+                local oid = nearestBooth:GetAttribute("OwnerId")
+                if not oid then 
+                    local v = nearestBooth:FindFirstChild("OwnerId")
+                    if v then oid = v.Value end
+                end
+                
+                -- Hanya claim jika kosong (atau nil/0)
+                if oid == nil or oid == 0 or oid == "" then
+                    pcall(function() 
+                        ClaimBoothRemote:FireServer(nearestBooth) 
+                    end)
                 end
             end
         end
+        
+        -- Delay sangat kecil antar spam (agar remote terbaca server)
+        task.wait(0.1) 
     end
     
-    -- 4. Claim Booth Terdekat
-    if nearestBooth then
-         -- Double Verify (Safety) - Walau game direction pasti benar
-        local oid = nearestBooth:GetAttribute("OwnerId")
-        if not oid then 
-            local v = nearestBooth:FindFirstChild("OwnerId")
-            if v then oid = v.Value end
-        end
-        
-        -- Hanya claim jika OID nil, 0, atau kosong (Anti-Steal Check)
-        if oid == nil or oid == 0 or oid == "" then
-            pcall(function() 
-                ClaimBoothRemote:FireServer(nearestBooth) 
-            end)
-            task.wait(1) -- Cooldown setelah claim
-        end
-    end
+    -- Delay pendingin (agar tidak teleport ulang terlalu cepat jika gagal)
+    task.wait(2)
 end
 
 -- [6] API EXPORTS (Fungsi yang bisa dipanggil dari GUI)
